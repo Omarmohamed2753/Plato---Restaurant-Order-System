@@ -11,7 +11,7 @@ import java.util.List;
 public class User extends Person {
 
     private String email;
-    private String password;
+    // private String password;
     private List<Address> addresses;
     private boolean isElite;
     private Subscription subscription;
@@ -27,7 +27,7 @@ public class User extends Person {
         super(id, name, age, phoneNumber); 
         
         this.email = email;
-        this.password = password; // In a real app, this would be hashed
+        // this.password = password; // In a real app, this would be hashed
         
         // Initialize lists
         this.addresses = new ArrayList<>();
@@ -66,7 +66,7 @@ public class User extends Person {
     }
 
     public void setPassword(String password) {
-        this.password = password;
+        // this.password = password;
     }
 
     public List<Address> getAddresses() {
