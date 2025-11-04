@@ -2,24 +2,25 @@ package javaproject1.Model;
 
 /**
  * Represents a restaurant staff member.
- * Inherits from User (Lecture 4).
+ * Inherits from User.
  */
 public class Employee extends Person {
 
-    private int employeeId;
-    private String name;
+    
+    private int experiencesYear;
+    private String imagePath;
     private String role; // e.g., "Manager", "Chef", "DeliveryPerson"
     
-    // Association relationship (Lecture 4)
+    // Association relationship
     private Restaurant restaurant; 
-
-    public Employee(int employeeId, String name,int age, String role, String phoneNumber) {
-        super(employeeId, name, age, phoneNumber);
-        this.employeeId = employeeId;
-        this.name = name;
+    
+    public Employee(int id, String name, int age, String role, String phoneNumber, String imagePath, int experiencesYear) {
+        super(id, name, age, phoneNumber);
+        this.experiencesYear = experiencesYear;
+        this.imagePath = imagePath;
         this.role = role;
     }
-
+    
     /**
      * A generic method representing employee duties.
      */
@@ -31,33 +32,41 @@ public class Employee extends Person {
             System.out.println("Preparing food...");
         }
     }
-
+    
     // --- Getters and Setters ---
 
-    public int getEmployeeId() {
-        return employeeId;
+    public int getExperiencesYear() {
+        return experiencesYear;
     }
 
-    public void setEmployeeId(int employeeId) {
-        this.employeeId = employeeId;
+    public String getImagePath() {
+        return imagePath;
     }
 
+    public void setExperiencesYear(int experiencesYear) {
+        this.experiencesYear = experiencesYear;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
+    
     public String getName() {
         return name;
     }
-
+    
     public void setName(String name) {
         this.name = name;
     }
-
+    
     public String getRole() {
         return role;
     }
-
+    
     public void setRole(String role) {
         this.role = role;
     }
-
+    
     public Restaurant getRestaurant() {
         return restaurant;
     }
@@ -67,11 +76,13 @@ public class Employee extends Person {
     }
 
     @Override
-    public String toString() {
-        return "Employee{" +
-                "employeeId='" + employeeId + '\'' +
-                ", name='" + name + '\'' +
-                ", role='" + role + '\'' +
-                '}';
-    }
+public String toString() {
+    return "Employee{" +
+            "id=" + getId() +
+            ", name='" + getName() + '\'' +
+            ", role='" + role + '\'' +
+            ", experiencesYear=" + experiencesYear +
+            '}';
+}
+
 }

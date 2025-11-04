@@ -13,7 +13,6 @@ public class MenuItem {
     private String description;
     private double price;
     private String category;
-    private boolean isAvailable;
 
     public MenuItem(String itemId, String name, String description, double price, String category) {
         this.itemId = itemId;
@@ -21,7 +20,6 @@ public class MenuItem {
         this.description = description;
         this.price = price;
         this.category = category;
-        this.isAvailable = true; // Default to available
     }
 
     // --- Getters and Setters ---
@@ -60,14 +58,6 @@ public class MenuItem {
 
     public void setCategory(String category) {
         this.category = category;
-    }
-
-    public boolean isAvailable() {
-        return isAvailable;
-    }
-
-    public void setAvailable(boolean available) {
-        isAvailable = available;
     }
 
     // --- Overriding Object methods (Lecture 2) ---

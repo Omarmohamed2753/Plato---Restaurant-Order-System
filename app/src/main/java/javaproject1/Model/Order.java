@@ -11,8 +11,6 @@ import javaproject1.Enums.*;    ;
 public class Order {
     
     private String orderId;
-    private User user;
-    private Restaurant restaurant;
     private List<CartItem> items;
     private double totalAmount;
     private OrderStatus status;
@@ -25,8 +23,6 @@ public class Order {
 
     public Order(String orderId, User user, Restaurant restaurant, List<CartItem> items, Address deliveryAddress) {
         this.orderId = orderId;
-        this.user = user;
-        this.restaurant = restaurant;
         this.items = items;
         this.deliveryAddress = deliveryAddress;
         
@@ -42,7 +38,7 @@ public class Order {
     public double calculateTotal() {
         double total = 0.0;
         for (CartItem item : items) {
-            total += item.calculateSubtotal();
+            total += item.getSubPrice();
         }
         // Could add taxes or delivery fees here
         return total;
@@ -57,14 +53,6 @@ public class Order {
 
     public String getOrderId() {
         return orderId;
-    }
-
-    public User getCustomer() {
-        return user;
-    }
-
-    public Restaurant getRestaurant() {
-        return restaurant;
     }
 
     public List<CartItem> getItems() {
@@ -107,8 +95,6 @@ public class Order {
     public String toString() {
         return "Order{" +
                 "orderId='" + orderId + '\'' +
-                ", customer=" + user.getName() +
-                ", restaurant=" + restaurant.getName() +
                 ", totalAmount=" + totalAmount +
                 ", status=" + status +
                 '}';
