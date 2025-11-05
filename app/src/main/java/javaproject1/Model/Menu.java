@@ -1,42 +1,15 @@
 package javaproject1.Model;
 
-
-
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Represents a restaurant's menu.
- * Contains a list of MenuItems (Lecture 3 - Collections).
- */
 public class Menu {
-    
-    // List of menu items
     private List<MenuItem> items;
 
     public Menu() {
         this.items = new ArrayList<>();
     }
 
-    public void addItem(MenuItem item) {
-        this.items.add(item);
-    }
-
-    public void removeItem(MenuItem item) {
-        this.items.remove(item);
-    }
-
-    public MenuItem getMenuItem(String itemName) {
-        for (MenuItem item : items) {
-            if (item.getName().equalsIgnoreCase(itemName)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
-    // --- Getters and Setters ---
-    
     public List<MenuItem> getItems() {
         return items;
     }
@@ -45,10 +18,24 @@ public class Menu {
         this.items = items;
     }
 
+    public void addItem(MenuItem item) {
+        if (!items.contains(item)) {
+            items.add(item);
+        }
+    }
+    public void removeItem(MenuItem item) {
+        items.remove(item);
+    }
+    public void displayMenu() {
+        for (MenuItem item : items) {
+            System.out.println(item);
+        }
+    }
+
     @Override
     public String toString() {
         return "Menu{" +
-                "itemCount=" + items.size() +
+                "items=" + items +
                 '}';
     }
 }

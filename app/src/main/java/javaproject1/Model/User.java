@@ -3,107 +3,101 @@ package javaproject1.Model;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Renamed from Customer. Now represents the application user (customer).
- * Inherits from Person.
- * Contains new attributes: email, password, addresses, isElite, subscription.
- */
 public class User extends Person {
-
     private String email;
     private String password;
     private List<Address> addresses;
     private boolean isElite;
     private Subscription subscription;
-    
-    // Kept from old Customer class, as they are essential for a User
     private Cart cart;
     private List<Order> orders;
 
-    public User(int id, String name, int age, String phoneNumber, 
+    public User(int id, String name, int age, String phoneNumber,
                 String email, String password, Address initialAddress) {
-        
-        // Call parent constructor
-        super(id, name, age, phoneNumber); 
-        
+        super(id, name, age, phoneNumber);
         this.email = email;
-        this.password = password; // In a real app, this would be hashed
-        
-        // Initialize lists
+        this.password = password;
         this.addresses = new ArrayList<>();
-        if (initialAddress != null) {
-            this.addresses.add(initialAddress);
-        }
-        
-        this.orders = new ArrayList<>();
+        if (initialAddress != null) this.addresses.add(initialAddress);
+        this.isElite = false;
+        this.subscription = null;
         this.cart = new Cart();
-        
-        this.isElite = false; // Default to false
+        this.orders = new ArrayList<>();
+    }
+
+    // User-specific methods
+    public boolean createAccount(List<User> allUsers) {
+        for (User u : allUsers) {
+            if (u.getEmail().equalsIgnoreCase(this.email)) {
+                System.out.println("Email already exists!");
+                return false;
+            }
+        }
+        allUsers.add(this);
+        System.out.println("Account created successfully for: " + this.name);
+        return true;
+    }
+
+    public boolean login(String email, String password) {
+        return this.email != null && this.email.equals(email) && this.password.equals(password);
+    }
+
+    public void updateProfile(String name, int age, String phoneNumber, String email, String password, boolean isElite, Subscription subscription) {
+        this.setName(name);
+        this.setAge(age);
+        this.setPhoneNumber(phoneNumber);
+        this.email = email;
+        this.password = password;
+        this.isElite = isElite;
+        this.subscription = subscription;
+    }
+
+    public List<MenuItem> browseMenu(Restaurant restaurant) {
+        if (restaurant == null || restaurant.getMenu() == null) {
+            System.out.println("No menu available for this restaurant.");
+            return new ArrayList<>();
+        }
+        System.out.println("Menu for " + restaurant.getName() + ":");
+        for (MenuItem item : restaurant.getMenu().getItems()) {
+            System.out.println("- " + item.getName() + " : " + item.getPrice());
+        }
+        return restaurant.getMenu().getItems();
     }
     
-    // --- User-specific methods ---
+    public void subscribeElite(Subscription subscription) {
+        this.isElite = true;
+        this.subscription = subscription;
+    }
 
     public void addAddress(Address address) {
         this.addresses.add(address);
     }
 
-    public void addOrder(Order order) {
-        this.orders.add(order);
+    public void removeAddress(Address address) {
+        this.addresses.remove(address);
     }
 
-    // --- Getters and Setters ---
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return ""; // Don't return the actual password
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public List<Address> getAddresses() {
-        return addresses;
-    }
-
-    public boolean isElite() {
-        return isElite;
-    }
-
-    public void setElite(boolean elite) {
-        isElite = elite;
-    }
-
-    public Subscription getSubscription() {
-        return subscription;
-    }
-
-    public void setSubscription(Subscription subscription) {
-        this.subscription = subscription;
-    }
-
-    public Cart getCart() {
-        return cart;
-    }
-
-    public List<Order> getOrders() {
-        return orders;
-    }
-
-    // --- Overriding Object methods ---
+    // getters/setters
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    public List<Address> getAddresses() { return addresses; }
+    public void setAddresses(List<Address> addresses) { this.addresses = addresses; }
+    public boolean isElite() { return isElite; }
+    public void setElite(boolean elite) { isElite = elite; }
+    public Subscription getSubscription() { return subscription; }
+    public void setSubscription(Subscription subscription) { this.subscription = subscription; }
+    public Cart getCart() { return cart; }
+    public void setCart(Cart cart) { this.cart = cart; }
+    public List<Order> getOrders() { return orders; }
+    public void setOrders(List<Order> orders) { this.orders = orders; }
 
     @Override
     public String toString() {
         return "User{" +
                 "email='" + email + '\'' +
-                ", name='" + name + '\'' + // 'name' is from Person
+                ", name='" + name + '\'' +
                 ", isElite=" + isElite +
                 '}';
     }

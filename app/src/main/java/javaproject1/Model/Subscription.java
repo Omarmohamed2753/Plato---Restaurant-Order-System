@@ -1,18 +1,16 @@
 package javaproject1.Model;
 
 import java.util.Date;
-
-/**
- * Represents a customer's subscription plan.
- */
 public class Subscription {
-    
-    private String planName;
+    private double cost;
+    private double discountRate;
     private Date startDate;
     private Date endDate;
+    private boolean active;
 
-    public Subscription(String planName, Date startDate, Date endDate) {
-        this.planName = planName;
+    public Subscription(double cost, double discountRate, Date startDate, Date endDate) {
+        this.cost = cost;
+        this.discountRate = discountRate;
         this.startDate = startDate;
         this.endDate = endDate;
     }
@@ -24,15 +22,18 @@ public class Subscription {
         Date now = new Date();
         return now.after(startDate) && now.before(endDate);
     }
-
     // --- Getters and Setters ---
-
-    public String getPlanName() {
-        return planName;
+    public double getCost() {
+        return cost;
     }
-
-    public void setPlanName(String planName) {
-        this.planName = planName;
+    public void setCost(double cost) {
+        this.cost = cost;
+    }
+    public double getDiscountRate() {
+        return discountRate;
+    }
+    public void setDiscountRate(double discountRate) {
+        this.discountRate = discountRate;
     }
 
     public Date getStartDate() {
@@ -50,12 +51,19 @@ public class Subscription {
     public void setEndDate(Date endDate) {
         this.endDate = endDate;
     }
-
+    public boolean getActive() {
+        return active;
+    }
+    public void setActive(boolean active) {
+        this.active = active;
+    }
     @Override
     public String toString() {
         return "Subscription{" +
-                "planName='" + planName + '\'' +
-                ", active=" + isActive() +
+                "cost=" + cost +
+                ", discountRate=" + discountRate +
+                ", startDate=" + startDate +
+                ", endDate=" + endDate +
                 '}';
     }
 }
