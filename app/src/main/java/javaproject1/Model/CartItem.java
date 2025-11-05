@@ -50,9 +50,4 @@ public class CartItem {
         CartItem cartItem = (CartItem) o;
         return Objects.equals(menuItem, cartItem.menuItem);
     }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(menuItem);
-    }
 }

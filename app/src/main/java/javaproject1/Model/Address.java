@@ -36,9 +36,4 @@ public class Address {
                 Objects.equals(street, address.street) &&
                 Objects.equals(city, address.city);
     }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(street, city, buildingNumber);
-    }
 }

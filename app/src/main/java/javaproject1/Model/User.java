@@ -25,7 +25,7 @@ public class User extends Person {
         this.orders = new ArrayList<>();
     }
 
-    // User-specific methods
+    // Person account creation
     public boolean createAccount(List<User> allUsers) {
         for (User u : allUsers) {
             if (u.getEmail().equalsIgnoreCase(this.email)) {
@@ -37,7 +37,7 @@ public class User extends Person {
         System.out.println("Account created successfully for: " + this.name);
         return true;
     }
-
+    // Authentication
     public boolean login(String email, String password) {
         return this.email != null && this.email.equals(email) && this.password.equals(password);
     }

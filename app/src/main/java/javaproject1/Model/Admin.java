@@ -15,7 +15,7 @@ public class Admin extends Person {
         this.password = password;
         this.restaurant = restaurant;
     }
-
+    //@
     // Admin account creation
     public boolean createAdmin(List<Admin> allAdmins) {
         if (!allAdmins.isEmpty()) {
@@ -27,7 +27,7 @@ public class Admin extends Person {
         System.out.println("Admin account created successfully for: " + this.name);
         return true;
     }
-
+    //@
     // Authentication
     public boolean loginAdmin(String username, String password) {
         return this.email != null && this.email.equals(username) && this.password.equals(password);
@@ -50,6 +50,7 @@ public class Admin extends Person {
         }
         System.out.println("User not found!");
     }
+    //@
     // Order management
     public void manageOrder(Order order, Delivery delivery) {
     if (restaurant == null || !restaurant.getOrders().contains(order)) {
@@ -120,6 +121,7 @@ public class Admin extends Person {
             restaurant.updateMenu(menu);
         }
     }
+    //@
     // View restaurant details
     public void showEmployees() {
         if (restaurant != null) restaurant.showEmployees();
