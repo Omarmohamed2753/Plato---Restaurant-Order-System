@@ -1,4 +1,4 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 import java.util.Date;
 
@@ -16,19 +16,6 @@ public class Payment {
         this.paymentMethod = paymentMethod;
         this.orderId = orderId;
         this.status = "Pending";
-    }
-
-    public boolean processPayment() {
-        if (this.amount <= 0) {
-            System.out.println("Invalid payment amount!");
-            this.status = "Failed";
-            return false;
-        }
-        System.out.println("Processing payment of $" + amount + " via " + paymentMethod);
-        this.status = "Completed";
-        this.transactionDate = new Date();
-        System.out.println("Payment successful.");
-        return true;
     }
 
     // getters/setters

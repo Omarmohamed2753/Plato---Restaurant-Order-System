@@ -1,4 +1,4 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 import java.util.Date;
 public class Subscription {
@@ -11,13 +11,6 @@ public class Subscription {
     public Subscription(Date startDate, Date endDate) {
         this.startDate = startDate;
         this.endDate = endDate;
-    }
-    /**
-     * Checks if the subscription is currently active.
-     */
-    public boolean isActive() {
-        Date now = new Date();
-        return now.after(startDate) && now.before(endDate);
     }
     // --- Getters and Setters ---
     public double getCost() {

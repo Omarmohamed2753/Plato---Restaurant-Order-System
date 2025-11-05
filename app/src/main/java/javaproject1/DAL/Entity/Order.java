@@ -1,8 +1,8 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 import java.util.Date;
 import java.util.List;
-import javaproject1.Enums.*;
+import javaproject1.DAL.Enums.*;
 
 public class Order {
     private String orderId;
@@ -16,6 +16,8 @@ public class Order {
     private Payment payment;
     private Delivery delivery;
 
+    public Order() {
+    }
     public Order(String orderId, User user, Restaurant restaurant, List<CartItem> items, Address deliveryAddress) {
         this.orderId = orderId;
         this.user = user;
@@ -24,48 +26,6 @@ public class Order {
         this.deliveryAddress = deliveryAddress;
         this.orderDate = new Date();
         this.status = OrderStatus.PENDING;
-        this.totalAmount = calculateTotal(user.getSubscription());
-
-        // register this order with restaurant and user
-        if (restaurant != null) restaurant.addOrder(this);
-        if (user != null) user.getOrders().add(this);
-    }
-
-    public double calculateTotal(Subscription subscription) {
-        if (items == null || items.isEmpty()) {
-            System.out.println("No items in order!");
-            return 0.0;
-        }
-
-        double subtotal = 0.0;
-        for (CartItem item : items) {
-            subtotal += item.getSubPrice();
-        }
-
-        double tax = subtotal * 0.1;    // Fixed 10% tax
-        double deliveryFee = 30.0;      //  Fixed delivery fee
-        double discount = 0.0;          //   virtual discount
-        double tempTotal = subtotal + tax + deliveryFee;
-        //  If there's an active subscription, apply discount
-        if (subscription != null && subscription.isActive()) {
-            discount = tempTotal * 0.10;   
-            System.out.println("Subscription discount applied: 10%");
-        }
-        double total = tempTotal - discount;
-        this.totalAmount = total;       
-        System.out.println("Subtotal: " + subtotal +
-                " | Tax: " + tax +
-                " | Delivery: " + deliveryFee +
-                " | Discount: " + discount +
-                " | Total: " + total);
-
-        return total;
-}
-
-
-    public void updateStatus(OrderStatus status) {
-        this.status = status;
-        System.out.println("Order " + orderId + " status updated to " + status);
     }
 
     // getters/setters
@@ -81,6 +41,40 @@ public class Order {
     public void setPayment(Payment payment) { this.payment = payment; }
     public Delivery getDelivery() { return delivery; }
     public void setDelivery(Delivery delivery) { this.delivery = delivery; }
+
+
+    public void setOrderId(String orderId) {
+    this.orderId = orderId;
+}
+
+public void setUser(User user) {
+    this.user = user;
+}
+
+public void setRestaurant(Restaurant restaurant) {
+    this.restaurant = restaurant;
+}
+
+public void setItems(List<CartItem> items) {
+    this.items = items;
+}
+
+public void setTotalAmount(double totalAmount) {
+    this.totalAmount = totalAmount;
+}
+
+public void setStatus(OrderStatus status) {
+    this.status = status;
+}
+
+public void setOrderDate(Date orderDate) {
+    this.orderDate = orderDate;
+}
+
+public void setDeliveryAddress(Address deliveryAddress) {
+    this.deliveryAddress = deliveryAddress;
+}
+
 
     @Override
     public String toString() {

@@ -1,4 +1,4 @@
-package javaproject1.Enums;
+package javaproject1.DAL.Enums;
 
 /**
  * Represents the possible states of an order using an Enum.

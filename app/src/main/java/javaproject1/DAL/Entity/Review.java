@@ -1,4 +1,4 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 public class Review {
     private int id;
@@ -14,26 +14,26 @@ public class Review {
         this.rating = rating;
         this.comment = comment;
     }
-    public void submitReview(Restaurant restaurant) {
-        if (restaurant == null) {
-            System.out.println("Invalid restaurant!");
-            return;
-        }
-        restaurant.addReview(this);
-        System.out.println("Review submitted by " + user.getName() + " for " + restaurant.getName());
-    }
-    public void editReview(Review review, int newRating, String newComment) {
-        review.setRating(newRating);
-        review.setComment(newComment);
-    }
-    public void deleteReview(Restaurant restaurant, Review review) {
-        restaurant.removeReview(review);
-    }
-    public void viewReviews(Restaurant restaurant) {
-        for (Review review : restaurant.getReviews()) {
-            System.out.println(review);
-        }
-    }
+    // public void submitReview(Restaurant restaurant) {
+    //     if (restaurant == null) {
+    //         System.out.println("Invalid restaurant!");
+    //         return;
+    //     }
+    //     restaurant.addReview(this);
+    //     System.out.println("Review submitted by " + user.getName() + " for " + restaurant.getName());
+    // }
+    // public void editReview(Review review, int newRating, String newComment) {
+    //     review.setRating(newRating);
+    //     review.setComment(newComment);
+    // }
+    // public void deleteReview(Restaurant restaurant, Review review) {
+    //     restaurant.removeReview(review);
+    // }
+    // public void viewReviews(Restaurant restaurant) {
+    //     for (Review review : restaurant.getReviews()) {
+    //         System.out.println(review);
+    //     }
+    // }
     // getters/setters
     public int getId() { return id; }
     public User getUser() { return user; }

@@ -1,10 +1,14 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
+
 public abstract class Person {
     protected int id;
     protected String name;
     protected int age;
     protected String phoneNumber;
+    
+    public Person() {
 
+    }
     public Person(int id, String name, int age, String phoneNumber) {
         this.id = id;
         this.name = name;

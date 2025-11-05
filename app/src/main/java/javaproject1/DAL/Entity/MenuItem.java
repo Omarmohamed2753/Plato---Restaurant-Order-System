@@ -1,26 +1,39 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 import java.util.Objects;
 
 public class MenuItem {
-    private String itemId;
+    private int itemId;
     private String name;
     private String description;
     private double price;
     private String category;
     private String imagePath;
-
-    public MenuItem(String itemId, String name, String description, double price, String category) {
+    public MenuItem() {
+    }
+    public MenuItem(int itemId, String name, String description, double price, String category) {
         this.itemId = itemId;
         this.name = name;
         this.description = description;
         this.price = price;
         this.category = category;
     }
+    public MenuItem(int itemId, String name, double price) {
+    this.itemId = itemId;
+    this.name = name;
+    this.price = price;
+}
+public MenuItem(String name, String description, double price, String category) {
+    this.name = name;
+    this.description = description;
+    this.price = price;
+    this.category = category;
+}
+
 
     // getters/setters
-    public String getItemId() { return itemId; }
-    public void setItemId(String itemId) { this.itemId = itemId; }
+    public int getItemId() { return itemId; }
+    public void setItemId(int itemId) { this.itemId = itemId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }

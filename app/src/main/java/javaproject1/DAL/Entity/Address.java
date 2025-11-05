@@ -1,4 +1,4 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 import java.util.Objects;
 

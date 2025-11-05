@@ -1,8 +1,6 @@
-package javaproject1.Model;
+package javaproject1.DAL.Entity;
 
 import java.util.Date;
-
-import javaproject1.Enums.OrderStatus;
 
 public class Delivery {
     private String deliveryId;
@@ -13,22 +11,6 @@ public class Delivery {
     public Delivery(String deliveryId) {
         this.deliveryId = deliveryId;
         this.status = "Pending Assignment";
-    }
-    //@
-    public void assignDeliveryPerson(Employee person, Order order) {
-        if (person == null || !person.getRole().equalsIgnoreCase("DeliveryPerson")) {
-            System.out.println("Cannot assign: employee is not a delivery person!");
-            return;
-        }
-        this.deliveryPerson = person;
-        this.status = "Assigned";
-        order.updateStatus(OrderStatus.OUT_FOR_DELIVERY);
-        System.out.println("Delivery assigned to " + person.getName() + " for order #" + order.getOrderId());
-    }
-
-    public void updateDeliveryStatus(String status) {
-        this.status = status;
-        System.out.println("Delivery " + deliveryId + " status updated to " + status);
     }
 
     // getters/setters
