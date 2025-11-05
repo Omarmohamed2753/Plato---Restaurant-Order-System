@@ -45,15 +45,13 @@ public class Order {
         double tax = subtotal * 0.1;    // Fixed 10% tax
         double deliveryFee = 30.0;      //  Fixed delivery fee
         double discount = 0.0;          //   virtual discount
-
+        double tempTotal = subtotal + tax + deliveryFee;
         //  If there's an active subscription, apply discount
         if (subscription != null && subscription.isActive()) {
-            discount = subtotal * subscription.getDiscountRate();
-            System.out.println("Subscription discount applied: " + (subscription.getDiscountRate() * 100) + "%");
+            discount = tempTotal * 0.10;   
+            System.out.println("Subscription discount applied: 10%");
         }
-
-        double total = subtotal + tax + deliveryFee - discount;
-
+        double total = tempTotal - discount;
         this.totalAmount = total;       
         System.out.println("Subtotal: " + subtotal +
                 " | Tax: " + tax +
