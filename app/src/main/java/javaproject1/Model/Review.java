@@ -1,12 +1,14 @@
 package javaproject1.Model;
 
 public class Review {
+    private int id;
     private User user;
     private Restaurant restaurant;
     private int rating;
     private String comment;
 
-    public Review(User user, Restaurant restaurant, int rating, String comment) {
+    public Review(int id,User user, Restaurant restaurant, int rating, String comment) {
+        this.id = id;
         this.user = user;
         this.restaurant = restaurant;
         this.rating = rating;
@@ -33,6 +35,7 @@ public class Review {
         }
     }
     // getters/setters
+    public int getId() { return id; }
     public User getUser() { return user; }
     public Restaurant getRestaurant() { return restaurant; }
     public int getRating() { return rating; }
