@@ -6,6 +6,7 @@ import javaproject1.DAL.Entity.Order;
 import javaproject1.DAL.Enums.OrderStatus;
 
 import java.sql.*;
+import java.util.List;
 
 public class OrderRepo implements IOrderRepo {
 
@@ -82,5 +83,10 @@ public class OrderRepo implements IOrderRepo {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public List<Order> getAllOrders() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAllOrders'");
     }
 }

@@ -51,4 +51,8 @@ public class Subscription {
                 ", endDate=" + endDate +
                 '}';
     }
+    public boolean isActive() {
+        Date now = new Date();
+        return now.after(startDate) && now.before(endDate);
+    }
 }

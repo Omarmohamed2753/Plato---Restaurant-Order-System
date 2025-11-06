@@ -7,12 +7,14 @@ import javaproject1.DAL.Repo.abstraction.IMenuItemRepo;
 import java.sql.*;
 
 public class MenuRepo implements IMenuItemRepo {
-
+    private Connection connection;
+    public MenuRepo(Connection connection) {
+        this.connection = connection;
+    }
     @Override
     public void addMenuItem(MenuItem item) {
         String sql = "INSERT INTO menu_items(name, price) VALUES(?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
 
             stmt.setString(1, item.getName());
             stmt.setDouble(2, item.getPrice());
@@ -71,5 +73,27 @@ public class MenuRepo implements IMenuItemRepo {
         } catch (SQLException e) {
             System.out.println("Delete Error: " + e.getMessage());
         }
+    }
+    @Override
+    public java.util.List<MenuItem> getAllMenuItems() {
+        String sql = "SELECT * FROM menu_items";
+        java.util.List<MenuItem> items = new java.util.ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                MenuItem item = new MenuItem();
+                item.setItemId(rs.getInt("id"));
+                item.setName(rs.getString("name"));
+                item.setPrice(rs.getDouble("price"));
+                items.add(item);
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Get All Error: " + e.getMessage());
+        }
+        return items;
     }
 }

@@ -4,7 +4,7 @@ import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Repo.abstraction.IMenuItemRepo;
 
 import java.sql.*;
-
+import java.util.List;
 public class MenuItemRepo implements IMenuItemRepo {
 
     private Connection connection;
@@ -70,5 +70,24 @@ public class MenuItemRepo implements IMenuItemRepo {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public List<MenuItem> getAllMenuItems() {
+        String sql = "SELECT * FROM MenuItems";
+        List<MenuItem> itemList = new java.util.ArrayList<>();
+        try (Statement stmt = connection.createStatement()) {
+            ResultSet rs = stmt.executeQuery(sql);
+            while (rs.next()) {
+                MenuItem item = new MenuItem();
+                item.setItemId(rs.getInt("id"));
+                item.setName(rs.getString("name"));
+                item.setPrice(rs.getDouble("price"));
+                item.setDescription(rs.getString("description"));
+                itemList.add(item);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+    }    return itemList;
     }
 }

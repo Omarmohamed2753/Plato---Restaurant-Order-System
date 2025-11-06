@@ -4,6 +4,8 @@ import javaproject1.DAL.Repo.abstraction.IUserRepo;
 import javaproject1.DAL.Entity.User;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserRepo implements IUserRepo {
 
@@ -70,5 +72,24 @@ public class UserRepo implements IUserRepo {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+    @Override
+    public List<User> getAllUsers() {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM Users";
+        try (Statement stmt = connection.createStatement()) {
+            ResultSet rs = stmt.executeQuery(sql);
+            while (rs.next()) {
+                User user = new User();
+                user.setId(rs.getInt("id"));
+                user.setName(rs.getString("name"));
+                user.setEmail(rs.getString("email"));
+                user.setPassword(rs.getString("password"));
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return users;
     }
 }
