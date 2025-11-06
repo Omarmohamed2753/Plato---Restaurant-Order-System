@@ -1,9 +1,4 @@
 package javaproject1.DAL.Entity;
-
-import java.util.List;
-
-import javaproject1.DAL.Enums.OrderStatus;
-
 public class Admin extends Person {
     private String email;
     private String password;

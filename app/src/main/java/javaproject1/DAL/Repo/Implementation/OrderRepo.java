@@ -48,7 +48,7 @@ public class OrderRepo implements IOrderRepo {
                 order.setOrderDate(rs.getTimestamp("orderDate"));
 
                 int userId = rs.getInt("userId");
-                order.setUser(userRepo.getUserById(userId)); // ✅ ربط اليوزر صح
+                order.setUser(userRepo.getUserById(userId));
 
                 return order;
             }

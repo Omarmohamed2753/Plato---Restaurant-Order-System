@@ -23,41 +23,6 @@ public class Cart {
     public void setItems(List<CartItem> items) {
         this.items = items;
     }
-
-    // public void addItem(CartItem newItem) {
-    //     for (CartItem item : items) {
-    //         if (item.getMenuItem().equals(newItem.getMenuItem())) {
-    //             item.setQuantity(item.getQuantity() + newItem.getQuantity());
-    //             item.calculateSubtotal();
-    //             return;
-    //         }
-    //     }
-    //     newItem.calculateSubtotal();
-    //     this.items.add(newItem);
-    // }
-
-    // public void removeItem(CartItem item) {
-    //     this.items.remove(item);
-    // }
-
-    // public double checkout() {
-    //     double total = calculateTotal();
-    //     clearCart();
-    //     return total;
-    // }
-
-    // public void clearCart() {
-    //     this.items.clear();
-    // }
-
-    // public double calculateTotal() {
-    //     double total = 0.0;
-    //     for (CartItem item : items) {
-    //         total += item.calculateSubtotal();
-    //     }
-    //     return total;
-    // }
-
     @Override
     public String toString() {
         return "Cart{" +

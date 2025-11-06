@@ -15,6 +15,7 @@ public class Restaurant {
     private List<Review> reviews;
     private List<Order> orders;
 
+    
     public Restaurant(String restaurantId, String name, String address, String phoneNumber, String email, String openingHours, double rating, String imagePath) {
         this.restaurantId = restaurantId;
         this.name = name;
@@ -29,89 +30,6 @@ public class Restaurant {
         this.reviews = new ArrayList<>();
         this.orders = new ArrayList<>();
     }
-
-    // public String getRestaurantinfo(){
-    //     return "Restaurant{" +
-    //             "name='" + name + '\'' +
-    //             ", address='" + address + '\'' +
-    //             ", phoneNumber='" + phoneNumber + '\'' +
-    //             ", email='" + email + '\'' +
-    //             ", openingHours='" + openingHours + '\'' +
-    //             ", rating=" + rating +
-    //             '}';
-    // }
-    // Menu management
-    
-    // public void updateMenu(Menu newMenu) {
-        //     this.menu = newMenu;
-        //     System.out.println("Menu updated for restaurant: " + this.name);
-        // }
-        
-        // public void addMenuItem(MenuItem item) {
-    //     this.menu.addItem(item);
-    //     System.out.println("Item " + item.getName() + " added to " + this.name + "'s menu.");
-    // }
-
-    // public void removeMenuItem(MenuItem item) {
-        //     this.menu.removeItem(item);
-    //     System.out.println("Item " + item.getName() + " removed from " + this.name + "'s menu.");
-    // }
-    // public void displayMenu() {
-    //     System.out.println("Menu for " + this.name + ":");
-    //     for (MenuItem item : menu.getItems()) {
-        //         System.out.println("- " + item.getName() + ": $" + item.getPrice());
-    //     }
-    // }
-    // Employee management
-    // public void hireEmployee(Employee employee) {
-    //     this.employees.add(employee);
-    //     employee.setRestaurant(this);
-    //     System.out.println(employee.getName() + " hired at " + this.name + " as " + employee.getRole());
-    // }
-
-    // public void fireEmployee(Employee employee) {
-    //     this.employees.remove(employee);
-    //     if (employee.getRestaurant() == this) employee.setRestaurant(null);
-    //     System.out.println(employee.getName() + " fired from " + this.name);
-    // }
-    // public void showEmployees() {
-    //     System.out.println("Employees of " + name + ":");
-    //     for (Employee e : employees) {
-    //         System.out.println("- " + e.getName() + " (" + e.getRole() + ")");
-    //     }
-    // }
-    
-    // // Reviews management
-    // public void addReview(Review review) {
-    //     this.reviews.add(review);
-    // }
-    // public void removeReview(Review review) {
-    //     this.reviews.remove(review);
-    // }
-    // public List<Review> getReviews() {
-    //     return reviews;
-    // }
-    // public void displayReviews() {
-    //     System.out.println("Reviews for " + this.name + ":");
-    //     for (Review r : reviews) {
-    //         System.out.println("- " + r.getUser().getName() + ": " + r.getComment() + " (Rating: " + r.getRating() + ")");
-    //     }
-    // }
-    // // Orders management
-    // public void addOrder(Order order) {
-    //     this.orders.add(order);
-    // }
-    // public List<Order> getOrders() {
-    //     return orders;
-    // }
-    // public void showorders() {
-    //     System.out.println("Orders for " + this.name + ":");
-    //     for (Order o : orders) {
-    //         System.out.println("- Order ID: " + o.getOrderId() + ", Status: " + o.getStatus() 
-    //         + "Delivery person : " + (o.getDelivery() != null && o.getDelivery().getDeliveryPerson() != null ? o.getDelivery().getDeliveryPerson().getName() : "Unassigned"));
-    //     }
-    // }
-    
     // getters/setters for the rest
     public Menu getMenu() { return menu; }
     public String getRestaurantId() { return restaurantId; }
@@ -132,6 +50,13 @@ public class Restaurant {
     public void setEmployees(List<Employee> employees) { this.employees = employees; }
     public String getImagePath() { return imagePath; }
     public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+    public List<Review> getReviews() {
+        return reviews;
+    }
+    public List<Order> getOrders() {return orders;}
+    public void setMenu(Menu menu) {this.menu = menu;}
+    public void setReviews(List<Review> reviews) {this.reviews = reviews;}
+    public void setOrders(List<Order> orders) {this.orders = orders;}
 
     @Override
     public String toString() {

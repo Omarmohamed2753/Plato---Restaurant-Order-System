@@ -12,11 +12,6 @@ public class CartItem {
         // calculateSubtotal();
     }
 
-    // Calculate subtotal and store it
-    // public double calculateSubtotal() {
-    //     this.subPrice = this.menuItem.getPrice() * this.quantity;
-    //     return this.subPrice;
-    // }
 
     // getters/setters
     public int getCartItemID() { return cartItemID; }
@@ -24,14 +19,7 @@ public class CartItem {
     public double getSubPrice() { return subPrice; }
     public void setSubPrice(double subPrice) { this.subPrice = subPrice; }
     public int getQuantity() { return quantity; }
-    // public void setQuantity(int quantity) { this.quantity = quantity; calculateSubtotal(); }
     public MenuItem getMenuItem() { return menuItem; }
-    // public void setMenuItem(MenuItem menuItem) { this.menuItem = menuItem; calculateSubtotal(); }
-
-    // public void updateQuantity() {
-    //     this.quantity++;
-    //     calculateSubtotal();
-    // }
 
     @Override
     public String toString() {
