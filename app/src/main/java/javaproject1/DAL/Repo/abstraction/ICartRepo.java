@@ -1,5 +1,7 @@
 package javaproject1.DAL.Repo.abstraction;
 
+import java.util.List;
+
 import javaproject1.DAL.Entity.Cart;
 
 public interface ICartRepo {
@@ -8,5 +10,5 @@ public interface ICartRepo {
     public Cart getCartById(int id);
     public void updateCart(Cart cart);
     public void deleteCart(int id);
-    
+    List<Cart> getAllCarts();
 }

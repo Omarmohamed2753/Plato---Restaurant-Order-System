@@ -1,8 +1,7 @@
 package javaproject1.BLL.Service;
 
-import javaproject1.DAL.Repo.Implementation.UserRepo;
-import javaproject1.DAL.Repo.Implementation.MenuRepo;
-import javaproject1.DAL.Repo.Implementation.OrderRepo;
+import javaproject1.DAL.Repo.Implementation.UserRepoImpl;
+import javaproject1.DAL.Repo.Implementation.MenuRepoImpl;
 import javaproject1.DAL.Entity.User;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Entity.Order;
@@ -11,14 +10,14 @@ import java.sql.Connection;
 import java.util.List;
 
 public class AdminService {
-    private final UserRepo userRepo;
-    private final MenuRepo menuRepo;
-    private final OrderRepo orderRepo;
+    private final UserRepoImpl userRepo;
+    private final MenuRepoImpl menuRepo;
+    private final Order orderRepo;
 
     public AdminService(Connection connection) {
-        this.userRepo = new UserRepo(connection);
-        this.menuRepo = new MenuRepo(connection);
-        this.orderRepo = new OrderRepo(connection, userRepo);
+        this.userRepo = new UserRepoImpl();
+        this.menuRepo = new MenuRepoImpl();
+        this.orderRepo = new Order();
     }
 
     public List<User> getAllUsers() {
@@ -39,7 +38,7 @@ public class AdminService {
     }
 
     public List<MenuItem> getAllMenuItems() {
-        return menuRepo.getAllMenuItems();
+        return ((AdminService) menuRepo).getAllMenuItems();
     }
 
     public void addMenuItem(String name, String description, double price) {

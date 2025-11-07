@@ -2,15 +2,15 @@ package javaproject1.BLL.Service;
 
 import javaproject1.DAL.Entity.Order;
 import javaproject1.DAL.Enums.OrderStatus;
-import javaproject1.DAL.Repo.Implementation.OrderRepo;
+import javaproject1.DAL.Repo.Implementation.OrderRepoImpl;
 
 import java.sql.Connection;
 import java.util.List;
 
 public class OrderService {
-    private final OrderRepo orderRepo;
+    private final OrderRepoImpl orderRepo;
 
-    public OrderService(Connection connection, OrderRepo orderRepo) {
+    public OrderService(Connection connection, OrderRepoImpl orderRepo) {
         this.orderRepo = orderRepo;
     }
 
@@ -19,7 +19,7 @@ public class OrderService {
         System.out.println("Order added: " + order.getOrderId());
     }
 
-    public Order getOrderById(String id) {
+    public Order getOrderById(int id) {
         return orderRepo.getOrderById(id);
     }
 
@@ -28,7 +28,7 @@ public class OrderService {
         System.out.println("Order updated: " + order.getOrderId());
     }
 
-    public void deleteOrder(String id) {
+    public void deleteOrder(int id) {
         orderRepo.deleteOrder(id);
         System.out.println("Order deleted with ID: " + id);
     }

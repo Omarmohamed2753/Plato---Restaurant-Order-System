@@ -1,16 +1,16 @@
 package javaproject1.BLL.Service;
 
 import javaproject1.DAL.Entity.*;
-import javaproject1.DAL.Repo.Implementation.UserRepo;
+import javaproject1.DAL.Repo.Implementation.UserRepoImpl;
 
 import java.sql.Connection;
 import java.util.List;
 
 public class UserService {
-    private final UserRepo userRepo;
+    private final UserRepoImpl userRepo;
 
     public UserService(Connection connection) {
-        this.userRepo = new UserRepo(connection);
+        this.userRepo = new UserRepoImpl();
     }
 
     public void registerUser(String name, String email, String password) {

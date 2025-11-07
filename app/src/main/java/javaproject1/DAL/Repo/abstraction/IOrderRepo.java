@@ -1,10 +1,13 @@
 package javaproject1.DAL.Repo.abstraction;
 
+import java.util.List;
+
 import javaproject1.DAL.Entity.Order;
 
 public interface IOrderRepo {
     void addOrder(Order order);
-    Order getOrderById(String id);
+    Order getOrderById(int id);
     void updateOrder(Order order);
-    void deleteOrder(String id);
+    void deleteOrder(int id);
+    List<Order> getAllOrders();
 }

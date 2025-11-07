@@ -2,7 +2,7 @@ package javaproject1.DAL.Entity;
 import java.util.ArrayList;
 import java.util.List;
 public class Restaurant {
-    private String restaurantId;
+    private int restaurantId;
     private String name;
     private String address;
     private String phoneNumber;
@@ -14,9 +14,8 @@ public class Restaurant {
     private String imagePath;
     private List<Review> reviews;
     private List<Order> orders;
-
-    
-    public Restaurant(String restaurantId, String name, String address, String phoneNumber, String email, String openingHours, double rating, String imagePath) {
+    public Restaurant() {}
+    public Restaurant(int restaurantId, String name, String address, String phoneNumber, String email, String openingHours, double rating, String imagePath) {
         this.restaurantId = restaurantId;
         this.name = name;
         this.address = address;
@@ -30,10 +29,9 @@ public class Restaurant {
         this.reviews = new ArrayList<>();
         this.orders = new ArrayList<>();
     }
-    // getters/setters for the rest
     public Menu getMenu() { return menu; }
-    public String getRestaurantId() { return restaurantId; }
-    public void setRestaurantId(String restaurantId) { this.restaurantId = restaurantId; }
+    public int getRestaurantId() { return restaurantId; }
+    public void setRestaurantId(int restaurantId) { this.restaurantId = restaurantId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getAddress() { return address; }
@@ -50,14 +48,11 @@ public class Restaurant {
     public void setEmployees(List<Employee> employees) { this.employees = employees; }
     public String getImagePath() { return imagePath; }
     public void setImagePath(String imagePath) { this.imagePath = imagePath; }
-    public List<Review> getReviews() {
-        return reviews;
-    }
+    public List<Review> getReviews() {return reviews;}
     public List<Order> getOrders() {return orders;}
     public void setMenu(Menu menu) {this.menu = menu;}
     public void setReviews(List<Review> reviews) {this.reviews = reviews;}
     public void setOrders(List<Order> orders) {this.orders = orders;}
-
     @Override
     public String toString() {
         return "Restaurant{" +
@@ -72,5 +67,12 @@ public class Restaurant {
                 ", employees=" + employees +
                 ", imagePath='" + imagePath + '\'' +
                 '}';
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Restaurant that = (Restaurant) o;
+        return restaurantId == that.restaurantId;
     }
 }

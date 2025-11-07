@@ -1,8 +1,6 @@
 package javaproject1.DAL.Entity;
-
 import java.util.ArrayList;
 import java.util.List;
-
 public class User extends Person {
     private String email;
     private String password;
@@ -11,11 +9,8 @@ public class User extends Person {
     private Subscription subscription;
     private Cart cart;
     private List<Order> orders;
-    public User() {
-    }
-
-    public User(int id, String name, int age, String phoneNumber,
-                String email, String password, Address initialAddress) {
+    public User() {}
+    public User(int id, String name, int age, String phoneNumber,String email, String password, Address initialAddress) {
         super(id, name, age, phoneNumber);
         this.email = email;
         this.password = password;
@@ -26,7 +21,6 @@ public class User extends Person {
         this.cart = new Cart();
         this.orders = new ArrayList<>();
     }
-    // getters/setters
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     public String getPassword() { return password; }
@@ -41,7 +35,6 @@ public class User extends Person {
     public void setCart(Cart cart) { this.cart = cart; }
     public List<Order> getOrders() { return orders; }
     public void setOrders(List<Order> orders) { this.orders = orders; }
-
     @Override
     public String toString() {
         return "User{" +
@@ -49,5 +42,20 @@ public class User extends Person {
                 ", name='" + name + '\'' +
                 ", isElite=" + isElite +
                 '}';
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        if (!super.equals(o)) return false;
+        User user = (User) o;
+        return isElite == user.isElite &&
+                email.equals(user.email) &&
+                password.equals(user.password) &&
+                addresses.equals(user.addresses) &&
+                ((subscription == null && user.subscription == null) ||
+                 (subscription != null && subscription.equals(user.subscription))) &&
+                cart.equals(user.cart) &&
+                orders.equals(user.orders);
     }
 }
