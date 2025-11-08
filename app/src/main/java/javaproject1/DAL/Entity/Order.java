@@ -43,6 +43,7 @@ public class Order {
     public void setStatus(OrderStatus status) {this.status = status;}
     public void setOrderDate(Date orderDate) {this.orderDate = orderDate;}
     public void setDeliveryAddress(Address deliveryAddress) {this.deliveryAddress = deliveryAddress;}
+    
     @Override
     public String toString() {
         return "Order{" +

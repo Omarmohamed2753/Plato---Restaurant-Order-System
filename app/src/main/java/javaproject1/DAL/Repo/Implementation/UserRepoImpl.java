@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserRepoImpl implements IUserRepo {
-
+    public UserRepoImpl() {
+    }
     @Override
     public void addUser(User user) {
         String sql = "INSERT INTO users (name, age, phone, email, password, is_elite) VALUES (?, ?, ?, ?, ?, ?)";

@@ -17,10 +17,11 @@ public class CartItem {
         calculateSubPrice();
     }
     // Auto-calculate subtotal
-    private void calculateSubPrice() {
+    public double calculateSubPrice() {
         if (menuItem != null) {
             this.subPrice = menuItem.getPrice() * quantity;
         }
+        return this.subPrice;
     }
     public int getCartItemID() { return cartItemID; }
     public void setCartItemID(int cartItemID) { this.cartItemID = cartItemID; }
