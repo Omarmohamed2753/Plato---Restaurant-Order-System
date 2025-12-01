@@ -7,16 +7,22 @@ import javaproject1.DAL.Enums.OrderStatus;
 import javaproject1.DAL.Repo.Implementation.OrderRepoImpl;
 import javaproject1.DAL.Repo.Implementation.UserRepoImpl;
 import javaproject1.DAL.Repo.abstraction.IUserRepo;
+import javaproject1.DAL.Repo.abstraction.IOrderRepo;
 
 import java.util.List;
 
 public class OrderServiceImpl implements IOrderService {
 
-    private final OrderRepoImpl orderRepo;
+    private final IOrderRepo orderRepo;
     private final IUserRepo userRepo;
+
     public OrderServiceImpl() {
-        this.userRepo = new UserRepoImpl();
-        this.orderRepo = new OrderRepoImpl(userRepo);
+        this(new OrderRepoImpl(new UserRepoImpl()), new UserRepoImpl());
+    }
+
+    public OrderServiceImpl(IOrderRepo orderRepo, IUserRepo userRepo) {
+        this.orderRepo = orderRepo;
+        this.userRepo = userRepo;
     }
 
     @Override

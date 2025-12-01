@@ -3,15 +3,20 @@ package javaproject1.BLL.Service.implementation;
 import javaproject1.BLL.Service.abstraction.IAddressService;
 import javaproject1.DAL.Entity.Address;
 import javaproject1.DAL.Repo.Implementation.AddressRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IAddressRepo;
 
 import java.util.List;
 
 public class AddressServiceImpl implements IAddressService {
 
-    private final AddressRepoImpl addressRepo;
+    private final IAddressRepo addressRepo;
 
     public AddressServiceImpl() {
-        this.addressRepo = new AddressRepoImpl();
+        this(new AddressRepoImpl());
+    }
+
+    public AddressServiceImpl(IAddressRepo addressRepo) {
+        this.addressRepo = addressRepo;
     }
 
     @Override

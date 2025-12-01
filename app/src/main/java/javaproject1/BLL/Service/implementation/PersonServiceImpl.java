@@ -2,16 +2,21 @@ package javaproject1.BLL.Service.implementation;
 
 import javaproject1.DAL.Entity.Person;
 import javaproject1.DAL.Repo.Implementation.PersonRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IPersonRepo;
 import javaproject1.BLL.Service.abstraction.PersonServiceAbs;
 
 import java.util.List;
 
 public class PersonServiceImpl implements PersonServiceAbs {
 
-    private final PersonRepoImpl personRepo;
+    private final IPersonRepo personRepo;
 
     public PersonServiceImpl() {
-        this.personRepo = new PersonRepoImpl();
+        this(new PersonRepoImpl());
+    }
+
+    public PersonServiceImpl(IPersonRepo personRepo) {
+        this.personRepo = personRepo;
     }
 
     @Override

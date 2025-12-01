@@ -3,16 +3,21 @@ package javaproject1.BLL.Service.implementation;
 import javaproject1.BLL.Service.abstraction.IPaymentService;
 import javaproject1.DAL.Entity.Payment;
 import javaproject1.DAL.Repo.Implementation.PaymentRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IPaymentRepo;
 
 import java.util.Date;
 import java.util.List;
 
 public class PaymentServiceImpl implements IPaymentService {
 
-    private final PaymentRepoImpl paymentRepo;
+    private final IPaymentRepo paymentRepo;
 
     public PaymentServiceImpl() {
-        this.paymentRepo = new PaymentRepoImpl();
+        this(new PaymentRepoImpl());
+    }
+
+    public PaymentServiceImpl(IPaymentRepo paymentRepo) {
+        this.paymentRepo = paymentRepo;
     }
 
     @Override
@@ -29,9 +34,9 @@ public class PaymentServiceImpl implements IPaymentService {
         }
 
         System.out.println("Processing payment of $" + payment.getAmount() +
-                           " via " + payment.getMethod());
+                           " via " + payment.getPaymentMethod());
         payment.setStatus("Completed");
-        payment.setPaymentDate(new Date());
+        payment.setTransactionDate(new Date());
         paymentRepo.updatePayment(payment);
         System.out.println("Payment successful.");
         return true;

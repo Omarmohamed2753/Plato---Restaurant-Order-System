@@ -3,15 +3,20 @@ package javaproject1.BLL.Service.implementation;
 import javaproject1.BLL.Service.abstraction.ICartItemService;
 import javaproject1.DAL.Entity.CartItem;
 import javaproject1.DAL.Repo.Implementation.CartItemRepoImpl;
+import javaproject1.DAL.Repo.abstraction.ICartItemRepo;
 
 import java.util.List;
 
 public class CartItemServiceImpl implements ICartItemService {
 
-    private final CartItemRepoImpl cartItemRepo;
+    private final ICartItemRepo cartItemRepo;
 
     public CartItemServiceImpl() {
-        this.cartItemRepo = new CartItemRepoImpl();
+        this(new CartItemRepoImpl());
+    }
+
+    public CartItemServiceImpl(ICartItemRepo cartItemRepo) {
+        this.cartItemRepo = cartItemRepo;
     }
 
     @Override

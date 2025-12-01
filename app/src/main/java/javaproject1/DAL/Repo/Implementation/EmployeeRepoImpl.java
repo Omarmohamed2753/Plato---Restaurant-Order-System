@@ -15,7 +15,7 @@ public class EmployeeRepoImpl implements IEmployeeRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            stmt.setInt(1, employee.getId());
+            stmt.setString(1, employee.getId());
             stmt.setString(2, employee.getName());
             stmt.setInt(3, employee.getAge());
             stmt.setString(4, employee.getRole());
@@ -45,7 +45,7 @@ public class EmployeeRepoImpl implements IEmployeeRepo {
 
             if (rs.next()) {
                 Employee emp = new Employee();
-                emp.setId(rs.getInt("id"));
+                emp.setId(rs.getString("id"));
                 emp.setName(rs.getString("name"));
                 emp.setAge(rs.getInt("age"));
                 emp.setRole(rs.getString("role"));
@@ -76,7 +76,7 @@ public class EmployeeRepoImpl implements IEmployeeRepo {
             stmt.setObject(7,
                 (employee.getRestaurant() != null) ? employee.getRestaurant().getRestaurantId() : null,
                 java.sql.Types.INTEGER);
-            stmt.setInt(8, employee.getId());
+            stmt.setString(8, employee.getId());
 
             int rows = stmt.executeUpdate();
             if (rows > 0)
@@ -118,7 +118,7 @@ public class EmployeeRepoImpl implements IEmployeeRepo {
 
             while (rs.next()) {
                 Employee emp = new Employee();
-                emp.setId(rs.getInt("id"));
+                emp.setId(rs.getString("id"));
                 emp.setName(rs.getString("name"));
                 emp.setAge(rs.getInt("age"));
                 emp.setRole(rs.getString("role"));

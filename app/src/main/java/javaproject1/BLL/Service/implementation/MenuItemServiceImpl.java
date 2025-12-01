@@ -12,7 +12,11 @@ public class MenuItemServiceImpl implements MenuItemServiceAbs {
     private final IMenuItemRepo menuItemRepo;
 
     public MenuItemServiceImpl() {
-        this.menuItemRepo = new MenuItemRepoImpl();
+        this(new MenuItemRepoImpl());
+    }
+
+    public MenuItemServiceImpl(IMenuItemRepo menuItemRepo) {
+        this.menuItemRepo = menuItemRepo;
     }
 
     @Override

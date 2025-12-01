@@ -6,15 +6,20 @@ import javaproject1.DAL.Entity.Employee;
 import javaproject1.DAL.Entity.Order;
 import javaproject1.DAL.Enums.OrderStatus;
 import javaproject1.DAL.Repo.Implementation.DeliveryRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IDeliveryRepo;
 
 import java.util.List;
 
 public class DeliveryServiceImpl implements IDeliveryService {
 
-    private final DeliveryRepoImpl deliveryRepo;
+    private final IDeliveryRepo deliveryRepo;
 
     public DeliveryServiceImpl() {
-        this.deliveryRepo = new DeliveryRepoImpl();
+        this(new DeliveryRepoImpl());
+    }
+
+    public DeliveryServiceImpl(IDeliveryRepo deliveryRepo) {
+        this.deliveryRepo = deliveryRepo;
     }
 
     @Override

@@ -3,17 +3,22 @@ package javaproject1.BLL.Service.implementation;
 import javaproject1.BLL.Service.abstraction.IUserService;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Repo.Implementation.UserRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IUserRepo;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class UserServiceImpl implements IUserService {
 
-    private final UserRepoImpl userRepo;
+    private final IUserRepo userRepo;
     private final List<User> allUsers; // for createAccount tracking (temporary, could sync with DB)
 
     public UserServiceImpl() {
-        this.userRepo = new UserRepoImpl();
+        this(new UserRepoImpl());
+    }
+
+    public UserServiceImpl(IUserRepo userRepo) {
+        this.userRepo = userRepo;
         this.allUsers = userRepo.getAllUsers(); // load from DB
     }
 
@@ -37,7 +42,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     public void deleteUser(int id) {
         userRepo.deleteUser(id);
-        allUsers.removeIf(u -> u.getId() == id);
+        allUsers.removeIf(u -> u.getId().equals(String.valueOf(id)));
     }
 
     @Override

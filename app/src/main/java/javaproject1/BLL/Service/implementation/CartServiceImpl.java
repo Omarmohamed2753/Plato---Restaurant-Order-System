@@ -4,15 +4,20 @@ import javaproject1.BLL.Service.abstraction.ICartService;
 import javaproject1.DAL.Entity.Cart;
 import javaproject1.DAL.Entity.CartItem;
 import javaproject1.DAL.Repo.Implementation.CartRepoImpl;
+import javaproject1.DAL.Repo.abstraction.ICartRepo;
 
 import java.util.List;
 
 public class CartServiceImpl implements ICartService {
 
-    private final CartRepoImpl cartRepo;
+    private final ICartRepo cartRepo;
 
     public CartServiceImpl() {
-        this.cartRepo = new CartRepoImpl();
+        this(new CartRepoImpl());
+    }
+
+    public CartServiceImpl(ICartRepo cartRepo) {
+        this.cartRepo = cartRepo;
     }
 
     @Override
@@ -55,13 +60,13 @@ public class CartServiceImpl implements ICartService {
         for (CartItem item : cart.getItems()) {
             if (item.getMenuItem().equals(newItem.getMenuItem())) {
                 item.setQuantity(item.getQuantity() + newItem.getQuantity());
-                item.calculateSubPrice();
+                item.calculateSubtotal();
                 found = true;
                 break;
             }
         }
         if (!found) {
-            newItem.calculateSubPrice();
+            newItem.calculateSubtotal();
             cart.getItems().add(newItem);
         }
 
@@ -82,7 +87,7 @@ public class CartServiceImpl implements ICartService {
         if (cart == null) return 0.0;
         double total = 0.0;
         for (CartItem item : cart.getItems()) {
-            total += item.calculateSubPrice();
+            total += item.calculateSubtotal();
         }
         return total;
     }

@@ -63,7 +63,7 @@ public class UserRepoImpl implements IUserRepo {
             stmt.setString(4, user.getEmail());
             stmt.setString(5, user.getPassword());
             stmt.setBoolean(6, user.isElite());
-            stmt.setInt(7, user.getId());
+            stmt.setString(7, user.getId());
             stmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -128,7 +128,7 @@ public class UserRepoImpl implements IUserRepo {
 
     private User mapToUser(ResultSet rs) throws SQLException {
         User user = new User();
-        user.setId(rs.getInt("user_id"));
+        user.setId(rs.getString("user_id"));
         user.setName(rs.getString("name"));
         user.setAge(rs.getInt("age"));
         user.setPhoneNumber(rs.getString("phone"));

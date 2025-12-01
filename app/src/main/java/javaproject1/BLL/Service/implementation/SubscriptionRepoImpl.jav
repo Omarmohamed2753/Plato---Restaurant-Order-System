@@ -3,15 +3,20 @@ package javaproject1.BLL.Service.implementation;
 import javaproject1.BLL.Service.abstraction.ISubscriptionService;
 import javaproject1.DAL.Entity.Subscription;
 import javaproject1.DAL.Repo.Implementation.SubscriptionRepoImpl;
+import javaproject1.DAL.Repo.abstraction.ISubscriptionRepo;
 
 import java.util.List;
 
 public class SubscriptionServiceImpl implements ISubscriptionService {
 
-    private final SubscriptionRepoImpl subscriptionRepo;
+    private final ISubscriptionRepo subscriptionRepo;
 
     public SubscriptionServiceImpl() {
-        this.subscriptionRepo = new SubscriptionRepoImpl();
+        this(new SubscriptionRepoImpl());
+    }
+
+    public SubscriptionServiceImpl(ISubscriptionRepo subscriptionRepo) {
+        this.subscriptionRepo = subscriptionRepo;
     }
 
     @Override

@@ -32,7 +32,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
-                    restaurant.setRestaurantId(rs.getInt(1));
+                    restaurant.setRestaurantId(rs.getString(1));
                 }
             }
 
@@ -78,7 +78,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
             stmt.setString(5, restaurant.getOpeningHours());
             stmt.setDouble(6, restaurant.getRating());
             stmt.setString(7, restaurant.getImagePath());
-            stmt.setInt(8, restaurant.getRestaurantId());
+            stmt.setString(8, restaurant.getRestaurantId());
 
             int rows = stmt.executeUpdate();
             if (rows > 0) System.out.println("Restaurant updated (id=" + restaurant.getRestaurantId() + ").");
@@ -105,7 +105,6 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
         }
     }
 
-    // Optional helper: get all restaurants
     public List<Restaurant> getAllRestaurants() {
         String sql = "SELECT * FROM restaurants";
         List<Restaurant> list = new ArrayList<>();
@@ -124,10 +123,11 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
         return list;
     }
-    private Restaurant mapToRestaurant(ResultSet rs,Connection conn) throws SQLException {
+    
+    private Restaurant mapToRestaurant(ResultSet rs, Connection conn) throws SQLException {
         Restaurant restaurant = new Restaurant();
         int id = rs.getInt("restaurant_id");
-        restaurant.setRestaurantId(id);
+        restaurant.setRestaurantId(String.valueOf(id));
         restaurant.setName(rs.getString("name"));
         restaurant.setAddress(rs.getString("address"));
         restaurant.setPhoneNumber(rs.getString("phone_number"));
@@ -135,12 +135,13 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
         restaurant.setOpeningHours(rs.getString("opening_hours"));
         restaurant.setRating(rs.getDouble("rating"));
         restaurant.setImagePath(rs.getString("image_path"));
-         restaurant.setMenu(loadMenu(conn, id));
+        restaurant.setMenu(loadMenu(conn, id));
         restaurant.setEmployees(loadEmployees(conn, id));
-        restaurant.setReviews(loadReviews(conn, id));
-        restaurant.setOrders(loadOrders(conn, id));
+        restaurant.setReviews(loadReviews(conn, String.valueOf(id)));
+        restaurant.setOrders(loadOrders(conn, String.valueOf(id)));
         return restaurant;
     }
+    
     private Menu loadMenu(Connection conn, int restaurantId) throws SQLException {
         String sql = "SELECT menu_id FROM menu WHERE restaurant_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -148,7 +149,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     Menu m = new Menu();
-                    m.setMenuId(rs.getInt("menu_id"));
+                    m.setMenuId(rs.getString("menu_id"));
                     return m;
                 }
             }
@@ -164,10 +165,9 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Employee e = new Employee();
-                    e.setId(rs.getInt("employee_id"));
+                    e.setId(rs.getString("employee_id"));
                     e.setName(rs.getString("name"));
                     e.setRole(rs.getString("role"));
-                    
                     e.setPhoneNumber(rs.getString("phone_number"));
                     list.add(e);
                 }
@@ -176,15 +176,15 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
         return list;
     }
 
-    private List<Review> loadReviews(Connection conn, int restaurantId) throws SQLException {
+    private List<Review> loadReviews(Connection conn, String restaurantId) throws SQLException {
         List<Review> list = new ArrayList<>();
         String sql = "SELECT * FROM reviews WHERE restaurant_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, restaurantId);
+            stmt.setString(1, restaurantId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Review review = new Review();
-                    review.setId(rs.getInt("review_id"));
+                    review.setReviewId(rs.getString("review_id"));
                     review.setRating(rs.getInt("rating"));
                     review.setComment(rs.getString("comment"));
                     list.add(review);
@@ -194,15 +194,15 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
         return list;
     }
 
-    private List<Order> loadOrders(Connection conn, int restaurantId) throws SQLException {
+    private List<Order> loadOrders(Connection conn, String restaurantId) throws SQLException {
         List<Order> list = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE restaurant_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, restaurantId);
+            stmt.setString(1, restaurantId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Order o = new Order();
-                    o.setOrderId(rs.getInt("order_id"));
+                    o.setOrderId(rs.getString("order_id"));
                     o.setTotalAmount(rs.getDouble("total_amount"));
                     o.setStatus(javaproject1.DAL.Enums.OrderStatus.valueOf(rs.getString("status").toUpperCase()));
                     o.setOrderDate(rs.getDate("order_date"));

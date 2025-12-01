@@ -59,7 +59,7 @@ public class PersonRepoImpl implements IPersonRepo {
             stmt.setString(1, person.getName());
             stmt.setInt(2, person.getAge());
             stmt.setString(3, person.getPhoneNumber());
-            stmt.setInt(4, person.getId());
+            stmt.setString(4, person.getId());
             stmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -104,7 +104,7 @@ public class PersonRepoImpl implements IPersonRepo {
 
     private Person mapToPerson(ResultSet rs) throws SQLException {
         Person p = new Person() {};
-        p.setId(rs.getInt("id"));
+        p.setId(rs.getString("id"));
         p.setName(rs.getString("name"));
         p.setAge(rs.getInt("age"));
         p.setPhoneNumber(rs.getString("phone_number"));

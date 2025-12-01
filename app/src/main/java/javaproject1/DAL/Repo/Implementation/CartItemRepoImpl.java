@@ -18,7 +18,7 @@ public class CartItemRepoImpl implements ICartItemRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, cartItem.getMenuItem().getItemId());
+            stmt.setString(1, cartItem.getMenuItem().getItemId());
             stmt.setInt(2, cartItem.getQuantity());
             stmt.setDouble(3, cartItem.getSubPrice());
             stmt.executeUpdate();
@@ -62,7 +62,7 @@ public class CartItemRepoImpl implements ICartItemRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, cartItem.getMenuItem().getItemId());
+            stmt.setString(1, cartItem.getMenuItem().getItemId());
             stmt.setInt(2, cartItem.getQuantity());
             stmt.setDouble(3, cartItem.getSubPrice());
             stmt.setInt(4, cartItem.getCartItemID());
@@ -116,7 +116,7 @@ public class CartItemRepoImpl implements ICartItemRepo {
         cartItem.setSubPrice(rs.getDouble("sub_price"));
 
         MenuItem menuItem = new MenuItem();
-        menuItem.setItemId(rs.getInt("menu_item_id"));
+        menuItem.setItemId(rs.getString("menu_item_id"));
         cartItem.setMenuItem(menuItem);
 
         return cartItem;

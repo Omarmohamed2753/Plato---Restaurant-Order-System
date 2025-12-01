@@ -16,8 +16,8 @@ public class ReviewRepoImpl implements IReviewRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, review.getUser() != null ? review.getUser().getId() : Types.NULL);
-            stmt.setInt(2, review.getRestaurant() != null ? review.getRestaurant().getRestaurantId() : Types.NULL);
+            stmt.setString(1, review.getUser() != null ? review.getUser().getId() : "");
+            stmt.setString(2, review.getRestaurant() != null ? review.getRestaurant().getRestaurantId() : "");
             stmt.setInt(3, review.getRating());
             stmt.setString(4, review.getComment());
             stmt.executeUpdate();
@@ -54,11 +54,11 @@ public class ReviewRepoImpl implements IReviewRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, review.getUser() != null ? review.getUser().getId() : Types.NULL);
-            stmt.setInt(2, review.getRestaurant() != null ? review.getRestaurant().getRestaurantId() : Types.NULL);
+            stmt.setString(1, review.getUser() != null ? review.getUser().getId() : "");
+            stmt.setString(2, review.getRestaurant() != null ? review.getRestaurant().getRestaurantId() : "");
             stmt.setInt(3, review.getRating());
             stmt.setString(4, review.getComment());
-            stmt.setInt(5, review.getId());
+            stmt.setString(5, review.getReviewId());
             stmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -101,17 +101,17 @@ public class ReviewRepoImpl implements IReviewRepo {
     }
 
     private Review mapToReview(ResultSet rs) throws SQLException {
-        Review review = new Review(0, null, null, 0, null);
-        review.setId(rs.getInt("review_id"));
+        Review review = new Review();
+        review.setReviewId(rs.getString("review_id"));
         review.setRating(rs.getInt("rating"));
         review.setComment(rs.getString("comment"));
 
         User user = new User();
-        user.setId(rs.getInt("user_id"));
+        user.setId(rs.getString("user_id"));
         review.setUser(user);
 
         Restaurant restaurant = new Restaurant();
-        restaurant.setRestaurantId(rs.getInt("restaurant_id"));
+        restaurant.setRestaurantId(rs.getString("restaurant_id"));
         review.setRestaurant(restaurant);
 
         return review;

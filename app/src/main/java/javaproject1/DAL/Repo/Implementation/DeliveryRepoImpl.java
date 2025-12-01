@@ -7,7 +7,6 @@ import javaproject1.DAL.DataBase.DBConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class DeliveryRepoImpl implements IDeliveryRepo {
@@ -19,9 +18,9 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, delivery.getDeliveryId());
+            stmt.setString(1, delivery.getDeliveryId());
             if (delivery.getDeliveryPerson() != null) {
-                stmt.setInt(2, delivery.getDeliveryPerson().getId());
+                stmt.setString(2, delivery.getDeliveryPerson().getId());
             } else {
                 stmt.setNull(2, Types.INTEGER);
             }
@@ -69,7 +68,7 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             if (delivery.getDeliveryPerson() != null) {
-                stmt.setInt(1, delivery.getDeliveryPerson().getId());
+                stmt.setString(1, delivery.getDeliveryPerson().getId());
             } else {
                 stmt.setNull(1, Types.INTEGER);
             }
@@ -79,7 +78,7 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
             } else {
                 stmt.setNull(3, Types.TIMESTAMP);
             }
-            stmt.setInt(4, delivery.getDeliveryId());
+            stmt.setString(4, delivery.getDeliveryId());
 
             stmt.executeUpdate();
 
@@ -124,19 +123,13 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
     }
     // Helper to map ResultSet to Delivery object
     private Delivery mapToDelivery(ResultSet rs) throws SQLException {
-        int deliveryId = rs.getInt("delivery_id");
+        String deliveryId = rs.getString("delivery_id");
         int deliveryPersonId = rs.getInt("delivery_person_id");
-        String status = rs.getString("status");
-        Timestamp estimatedTime = rs.getTimestamp("estimated_delivery_time");
-
         Employee employee = null;
         if (deliveryPersonId > 0) {
             employee = new Employee();
-            employee.setId(deliveryPersonId);
+            employee.setId(String.valueOf(deliveryPersonId));
         }
-
-        Date estimatedDate = (estimatedTime != null) ? new Date(estimatedTime.getTime()) : null;
-
-        return new Delivery(deliveryId, employee, status, estimatedDate);
+        return new Delivery(deliveryId.toString());
     }
 }

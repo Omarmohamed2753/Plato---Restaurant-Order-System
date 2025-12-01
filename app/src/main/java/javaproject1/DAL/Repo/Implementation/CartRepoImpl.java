@@ -63,7 +63,7 @@ public class CartRepoImpl implements ICartRepo {
                     item.setSubPrice(rs.getDouble("sub_price"));
 
                     MenuItem menuItem = new MenuItem();
-                    menuItem.setItemId(rs.getInt("menu_item_id"));
+                    menuItem.setItemId(rs.getString("menu_item_id"));
                     item.setMenuItem(menuItem);
 
                     items.add(item);

@@ -3,15 +3,20 @@ package javaproject1.BLL.Service.implementation;
 import javaproject1.BLL.Service.abstraction.IEmployeeService;
 import javaproject1.DAL.Entity.Employee;
 import javaproject1.DAL.Repo.Implementation.EmployeeRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IEmployeeRepo;
 
 import java.util.List;
 
 public class EmployeeServiceImpl implements IEmployeeService {
 
-    private final EmployeeRepoImpl employeeRepo;
+    private final IEmployeeRepo employeeRepo;
 
     public EmployeeServiceImpl() {
-        this.employeeRepo = new EmployeeRepoImpl();
+        this(new EmployeeRepoImpl());
+    }
+
+    public EmployeeServiceImpl(IEmployeeRepo employeeRepo) {
+        this.employeeRepo = employeeRepo;
     }
 
     @Override

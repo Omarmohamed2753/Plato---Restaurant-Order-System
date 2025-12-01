@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 public class DBConnection {
-    private static final String PROPS_FILE = "/config.properties";
+    private static final String PROPS_FILE = "/javaproject1/Resources/config.properties";    
     private static String url;
     private static String user;
     private static String pass;

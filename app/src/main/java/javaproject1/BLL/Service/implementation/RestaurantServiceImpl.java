@@ -12,7 +12,11 @@ public class RestaurantServiceImpl implements RestaurantServiceAbs {
     private final IRestaurantRepo restaurantRepo;
 
     public RestaurantServiceImpl() {
-        this.restaurantRepo = new RestaurantRepoImpl();
+        this(new RestaurantRepoImpl());
+    }
+
+    public RestaurantServiceImpl(IRestaurantRepo restaurantRepo) {
+        this.restaurantRepo = restaurantRepo;
     }
 
     // CRUD
@@ -53,14 +57,24 @@ public class RestaurantServiceImpl implements RestaurantServiceAbs {
 
     @Override
     public void addMenuItem(Restaurant restaurant, MenuItem item) {
-        restaurant.getMenu().addItem(item);
+        if (restaurant.getMenu() == null) {
+            restaurant.setMenu(new Menu());
+        }
+        if (restaurant.getMenu().getItems() == null) {
+            restaurant.getMenu().setItems(new java.util.ArrayList<>());
+        }
+        if (!restaurant.getMenu().getItems().contains(item)) {
+            restaurant.getMenu().getItems().add(item);
+        }
         restaurantRepo.updateRestaurant(restaurant);
         System.out.println("Item " + item.getName() + " added to " + restaurant.getName() + "'s menu.");
     }
 
     @Override
     public void removeMenuItem(Restaurant restaurant, MenuItem item) {
-        restaurant.getMenu().removeItem(item);
+        if (restaurant.getMenu() != null && restaurant.getMenu().getItems() != null) {
+            restaurant.getMenu().getItems().remove(item);
+        }
         restaurantRepo.updateRestaurant(restaurant);
         System.out.println("Item " + item.getName() + " removed from " + restaurant.getName() + "'s menu.");
     }
@@ -68,8 +82,12 @@ public class RestaurantServiceImpl implements RestaurantServiceAbs {
     @Override
     public void displayMenu(Restaurant restaurant) {
         System.out.println("Menu for " + restaurant.getName() + ":");
-        for (MenuItem item : restaurant.getMenu().getItems()) {
-            System.out.println("- " + item.getName() + ": $" + item.getPrice());
+        if (restaurant.getMenu() != null && restaurant.getMenu().getItems() != null) {
+            for (MenuItem item : restaurant.getMenu().getItems()) {
+                System.out.println("- " + item.getName() + ": $" + item.getPrice());
+            }
+        } else {
+            System.out.println("No menu items available for this restaurant.");
         }
     }
 

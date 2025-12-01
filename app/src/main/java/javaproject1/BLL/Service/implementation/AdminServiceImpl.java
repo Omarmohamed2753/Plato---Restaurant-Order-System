@@ -4,23 +4,33 @@ import javaproject1.BLL.Service.abstraction.IAdminService;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Enums.OrderStatus;
 import javaproject1.DAL.Repo.Implementation.AdminRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IAdminRepo;
 
 import java.util.List;
 
 public class AdminServiceImpl implements IAdminService {
 
-    private final AdminRepoImpl adminRepo;
+    private final IAdminRepo adminRepo;
     private final MenuServiceImpl menuService;
     private final OrderServiceImpl orderService;
     private final DeliveryServiceImpl deliveryService;
     private final RestaurantServiceImpl restaurantService;
 
     public AdminServiceImpl() {
-        this.adminRepo = new AdminRepoImpl();
-        this.menuService = new MenuServiceImpl();
-        this.orderService = new OrderServiceImpl();
-        this.deliveryService = new DeliveryServiceImpl();
-        this.restaurantService = new RestaurantServiceImpl();
+        this(new AdminRepoImpl(), new MenuServiceImpl(), new OrderServiceImpl(),
+                new DeliveryServiceImpl(), new RestaurantServiceImpl());
+    }
+
+    public AdminServiceImpl(IAdminRepo adminRepo,
+                            MenuServiceImpl menuService,
+                            OrderServiceImpl orderService,
+                            DeliveryServiceImpl deliveryService,
+                            RestaurantServiceImpl restaurantService) {
+        this.adminRepo = adminRepo;
+        this.menuService = menuService;
+        this.orderService = orderService;
+        this.deliveryService = deliveryService;
+        this.restaurantService = restaurantService;
     }
 
     @Override
@@ -61,7 +71,7 @@ public class AdminServiceImpl implements IAdminService {
     public void manageUser(Admin admin, List<User> users, int userId) {
         if (admin == null || users == null) return;
         for (User u : users) {
-            if (u.getId() == userId) {
+            if (u.getId().equals(String.valueOf(userId))) {
                 System.out.println("Managing user: " + u.getName());
                 if (u.getSubscription() != null) {
                     u.getSubscription().setActive(!u.getSubscription().isActive());
@@ -119,21 +129,21 @@ public class AdminServiceImpl implements IAdminService {
     @Override
     public void addMenuItem(Admin admin, MenuItem item, Menu menu) {
         if (admin != null && admin.getRestaurant() != null) {
-            menuService.addItem(admin.getRestaurant().getMenu().getMenuId(), item);
+            menuService.addItem(Integer.parseInt(admin.getRestaurant().getMenu().getMenuId()), item);
         }
     }
 
     @Override
     public void removeMenuItem(Admin admin, MenuItem item, Menu menu) {
         if (admin != null && admin.getRestaurant() != null) {
-            menuService.removeItem(admin.getRestaurant().getMenu().getMenuId(), item);
+            menuService.removeItem(Integer.parseInt(admin.getRestaurant().getMenu().getMenuId()), item);
         }
     }
 
     @Override
     public void manageMenu(Admin admin, Menu menu) {
         if (admin != null && admin.getRestaurant() != null) {
-            menuService.updateMenu(admin.getRestaurant().getMenu().getMenuId(), menu);
+            menuService.updateMenu(Integer.parseInt(admin.getRestaurant().getMenu().getMenuId()), menu);      
         }
     }
 
@@ -154,7 +164,7 @@ public class AdminServiceImpl implements IAdminService {
     @Override
     public void showMenu(Admin admin) {
         if (admin != null && admin.getRestaurant() != null) {
-            menuService.displayMenu(admin.getRestaurant().getMenu().getMenuId());
+            menuService.displayMenu(Integer.parseInt(admin.getRestaurant().getMenu().getMenuId()));
         }
     }
 

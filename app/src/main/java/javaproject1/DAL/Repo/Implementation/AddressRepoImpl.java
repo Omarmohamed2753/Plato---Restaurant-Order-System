@@ -24,7 +24,7 @@ public class AddressRepoImpl implements IAddressRepo {
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
-                    address.setId(rs.getInt(1)); // حفظ الـ id اللي تولد تلقائيًا
+                    address.setId(rs.getString(1));
                 }
             }
 
@@ -64,7 +64,7 @@ public class AddressRepoImpl implements IAddressRepo {
             stmt.setString(1, address.getStreet());
             stmt.setString(2, address.getCity());
             stmt.setInt(3, address.getBuildingNumber());
-            stmt.setInt(4, address.getId());
+            stmt.setString(4, address.getId());
 
             stmt.executeUpdate();
 
@@ -110,7 +110,7 @@ public class AddressRepoImpl implements IAddressRepo {
     // Helper method to convert ResultSet to Address
     private Address extractAddressFromResultSet(ResultSet rs) throws SQLException {
         Address address = new Address();
-        address.setId(rs.getInt("id"));
+        address.setId(rs.getString("id"));
         address.setStreet(rs.getString("street"));
         address.setCity(rs.getString("city"));
         address.setBuildingNumber(rs.getInt("building_number"));

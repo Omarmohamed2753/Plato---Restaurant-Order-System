@@ -25,7 +25,7 @@ public class AdminRepoImpl implements IAdminRepo {
             stmt.setString(5, admin.getPassword());
 
             if (admin.getRestaurant() != null) {
-                stmt.setInt(6, admin.getRestaurant().getRestaurantId());
+                stmt.setString(6, admin.getRestaurant().getRestaurantId());
             } else {
                 stmt.setNull(6, java.sql.Types.INTEGER);
             }
@@ -34,7 +34,7 @@ public class AdminRepoImpl implements IAdminRepo {
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
-                    admin.setId(rs.getInt(1));
+                    admin.setId(rs.getString(1));
                 }
             }
 
@@ -79,12 +79,12 @@ public class AdminRepoImpl implements IAdminRepo {
             stmt.setString(5, admin.getPassword());
 
             if (admin.getRestaurant() != null) {
-                stmt.setInt(6, admin.getRestaurant().getRestaurantId());
+                stmt.setString(6, admin.getRestaurant().getRestaurantId());
             } else {
                 stmt.setNull(6, java.sql.Types.INTEGER);
             }
 
-            stmt.setInt(7, admin.getId());
+            stmt.setString(7, admin.getId());
             stmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -129,14 +129,14 @@ public class AdminRepoImpl implements IAdminRepo {
     //  Helper method
     private Admin extractAdminFromResultSet(ResultSet rs) throws SQLException {
         Restaurant restaurant = null;
-        int restaurantId = rs.getInt("restaurant_id");
-        if (restaurantId != 0) {
+        String restaurantId = rs.getString("restaurant_id");
+        if (restaurantId != null) {
             restaurant = new Restaurant();
             restaurant.setRestaurantId(restaurantId);
         }
 
         return new Admin(
-                rs.getInt("id"),
+                rs.getString("id"),
                 rs.getString("name"),
                 rs.getInt("age"),
                 rs.getString("phone_number"),

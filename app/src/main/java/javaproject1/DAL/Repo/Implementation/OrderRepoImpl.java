@@ -30,14 +30,14 @@ public class OrderRepoImpl implements IOrderRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, order.getOrderId());
+            stmt.setString(1, order.getOrderId());
 
             if (order.getUser() != null)
-                stmt.setInt(2, order.getUser().getId());
+                stmt.setString(2, order.getUser().getId());
             else stmt.setNull(2, Types.INTEGER);
 
             if (order.getRestaurant() != null)
-                stmt.setInt(3, order.getRestaurant().getRestaurantId());
+                stmt.setString(3, order.getRestaurant().getRestaurantId());
             else stmt.setNull(3, Types.INTEGER);
 
             stmt.setDouble(4, order.getTotalAmount());
@@ -45,15 +45,15 @@ public class OrderRepoImpl implements IOrderRepo {
             stmt.setTimestamp(6, new Timestamp(order.getOrderDate().getTime()));
 
             if (order.getDeliveryAddress() != null)
-                stmt.setInt(7, order.getDeliveryAddress().getId());
+                stmt.setString(7, order.getDeliveryAddress().getId());
             else stmt.setNull(7, Types.INTEGER);
 
             if (order.getPayment() != null)
-                stmt.setInt(8, order.getPayment().getPaymentId());
+                stmt.setString(8, order.getPayment().getPaymentId());
             else stmt.setNull(8, Types.INTEGER);
 
             if (order.getDelivery() != null)
-                stmt.setInt(9, order.getDelivery().getDeliveryId());
+                stmt.setString(9, order.getDelivery().getDeliveryId());
             else stmt.setNull(9, Types.INTEGER);
 
             stmt.executeUpdate();
@@ -98,11 +98,11 @@ public class OrderRepoImpl implements IOrderRepo {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             if (order.getUser() != null)
-                stmt.setInt(1, order.getUser().getId());
+                stmt.setString(1, order.getUser().getId());
             else stmt.setNull(1, Types.INTEGER);
 
             if (order.getRestaurant() != null)
-                stmt.setInt(2, order.getRestaurant().getRestaurantId());
+                stmt.setString(2, order.getRestaurant().getRestaurantId());
             else stmt.setNull(2, Types.INTEGER);
 
             stmt.setDouble(3, order.getTotalAmount());
@@ -110,18 +110,18 @@ public class OrderRepoImpl implements IOrderRepo {
             stmt.setTimestamp(5, new Timestamp(order.getOrderDate().getTime()));
 
             if (order.getDeliveryAddress() != null)
-                stmt.setInt(6, order.getDeliveryAddress().getId());
+                stmt.setString(6, order.getDeliveryAddress().getId());
             else stmt.setNull(6, Types.INTEGER);
 
             if (order.getPayment() != null)
-                stmt.setInt(7, order.getPayment().getPaymentId());
+                stmt.setString(7, order.getPayment().getPaymentId());
             else stmt.setNull(7, Types.INTEGER);
 
             if (order.getDelivery() != null)
-                stmt.setInt(8, order.getDelivery().getDeliveryId());
+                stmt.setString(8, order.getDelivery().getDeliveryId());    
             else stmt.setNull(8, Types.INTEGER);
 
-            stmt.setInt(9, order.getOrderId());
+            stmt.setString(9, order.getOrderId());
 
             stmt.executeUpdate();
 
@@ -168,13 +168,13 @@ public class OrderRepoImpl implements IOrderRepo {
     private Order mapToOrder(ResultSet rs) throws SQLException {
         int orderId = rs.getInt("order_id");
         int userId = rs.getInt("user_id");
-        int restaurantId = rs.getInt("restaurant_id");
+        String restaurantId = rs.getString("restaurant_id");
         double totalAmount = rs.getDouble("total_amount");
         String status = rs.getString("status");
         Timestamp orderDate = rs.getTimestamp("order_date");
-        int addressId = rs.getInt("address_id");
-        int paymentId = rs.getInt("payment_id");
-        int deliveryId = rs.getInt("delivery_id");
+        String addressId = rs.getString("address_id");
+        String paymentId = rs.getString("payment_id");
+        String deliveryId = rs.getString("delivery_id");
 
         User user = (userId > 0) ? userRepo.getUserById(userId) : null;
 
@@ -194,7 +194,7 @@ public class OrderRepoImpl implements IOrderRepo {
         Date date = (orderDate != null) ? new Date(orderDate.getTime()) : null;
 
         Order order = new Order();
-        order.setOrderId(orderId);
+        order.setOrderId(String.valueOf(orderId));
         order.setUser(user);
         order.setRestaurant(restaurant);
         order.setTotalAmount(totalAmount);

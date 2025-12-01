@@ -5,14 +5,20 @@ import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Entity.Restaurant;
 import javaproject1.DAL.Repo.Implementation.MenuRepoImpl;
 import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
+import javaproject1.DAL.Repo.abstraction.IMenuRepo;
+import javaproject1.DAL.Repo.abstraction.IRestaurantRepo;
 public class MenuServiceImpl implements MenuServiceAbs {
 
-    private final RestaurantRepoImpl restaurantRepo;
-    private final MenuRepoImpl menuRepo;
+    private final IRestaurantRepo restaurantRepo;
+    private final IMenuRepo menuRepo;
 
     public MenuServiceImpl() {
-        this.restaurantRepo = new RestaurantRepoImpl();
-        this.menuRepo = new MenuRepoImpl();
+        this(new RestaurantRepoImpl(), new MenuRepoImpl());
+    }
+
+    public MenuServiceImpl(IRestaurantRepo restaurantRepo, IMenuRepo menuRepo) {
+        this.restaurantRepo = restaurantRepo;
+        this.menuRepo = menuRepo;
     }
 
     @Override
@@ -61,7 +67,12 @@ public class MenuServiceImpl implements MenuServiceAbs {
                 menuRepo.addMenu(menu);         
                 restaurant.setMenu(menu);
             }
-            menu.addItem(item);                  
+            if (menu.getItems() == null) {
+                menu.setItems(new java.util.ArrayList<>());
+            }
+            if (!menu.getItems().contains(item)) {
+                menu.getItems().add(item);
+            }
             menuRepo.updateMenu(menu);           
             restaurantRepo.updateRestaurant(restaurant);
             System.out.println("Item " + item.getName() + " added to " + restaurant.getName() + "'s menu.");
@@ -76,7 +87,7 @@ public class MenuServiceImpl implements MenuServiceAbs {
         if (restaurant != null) {
             Menu menu = restaurant.getMenu();
             if (menu != null && menu.getItems() != null && menu.getItems().contains(item)) {
-                menu.removeItem(item);           
+                menu.getItems().remove(item);
                 menuRepo.updateMenu(menu);      
                 restaurantRepo.updateRestaurant(restaurant);
                 System.out.println("Item " + item.getName() + " removed from " + restaurant.getName() + "'s menu.");
@@ -95,7 +106,9 @@ public class MenuServiceImpl implements MenuServiceAbs {
             Menu menu = restaurant.getMenu();
             if (menu != null && menu.getItems() != null && !menu.getItems().isEmpty()) {
                 System.out.println("Menu for " + restaurant.getName() + ":");
-                menu.displayMenu();
+                for (MenuItem item : menu.getItems()) {
+                    System.out.println(item);
+                }
             } else {
                 System.out.println("No menu items available for this restaurant.");
             }

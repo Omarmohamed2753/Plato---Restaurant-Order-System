@@ -2,6 +2,7 @@ package javaproject1.DAL.Repo.Implementation;
 
 import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Payment;
+import javaproject1.DAL.Enums.PaymentM;
 import javaproject1.DAL.Repo.abstraction.IPaymentRepo;
 
 import java.sql.*;
@@ -20,12 +21,12 @@ public class PaymentRepoImpl implements IPaymentRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, payment.getPaymentId());
-            stmt.setInt(2, payment.getOrderId());
+            stmt.setString(1, payment.getPaymentId());
+            stmt.setString(2, payment.getOrderId());
             stmt.setDouble(3, payment.getAmount());
-            stmt.setString(4, payment.getMethod());
+            stmt.setString(4, payment.getPaymentMethod().toString());
             stmt.setString(5, payment.getStatus());
-            stmt.setTimestamp(6, new Timestamp(payment.getPaymentDate().getTime()));
+            stmt.setTimestamp(6, new Timestamp(payment.getTransactionDate().getTime()));
 
             stmt.executeUpdate();
 
@@ -67,12 +68,12 @@ public class PaymentRepoImpl implements IPaymentRepo {
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, payment.getOrderId());
+            stmt.setString(1, payment.getOrderId());
             stmt.setDouble(2, payment.getAmount());
-            stmt.setString(3, payment.getMethod());
+            stmt.setString(3, payment.getPaymentMethod().toString());
             stmt.setString(4, payment.getStatus());
-            stmt.setTimestamp(5, new Timestamp(payment.getPaymentDate().getTime()));
-            stmt.setInt(6, payment.getPaymentId());
+            stmt.setTimestamp(5, new Timestamp(payment.getTransactionDate().getTime()));
+            stmt.setString(6, payment.getPaymentId());
 
             stmt.executeUpdate();
 
@@ -118,12 +119,12 @@ public class PaymentRepoImpl implements IPaymentRepo {
 
     private Payment mapToPayment(ResultSet rs) throws SQLException {
         Payment payment = new Payment();
-        payment.setPaymentId(rs.getInt("payment_id"));
-        payment.setOrderId(rs.getInt("order_id"));
+        payment.setPaymentId(rs.getString("payment_id"));
+        payment.setOrderId(rs.getString("order_id"));
         payment.setAmount(rs.getDouble("amount"));
-        payment.setMethod(rs.getString("method"));
+        payment.setPaymentMethod(PaymentM.valueOf(rs.getString("method")) == PaymentM.CreditCard ? PaymentM.CreditCard : PaymentM.Cash);
         payment.setStatus(rs.getString("status"));
-        payment.setPaymentDate(rs.getTimestamp("payment_date"));
+        payment.setTransactionDate(rs.getTimestamp("payment_date"));
         return payment;
     }
 }

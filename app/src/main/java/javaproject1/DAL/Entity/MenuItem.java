@@ -1,33 +1,28 @@
 package javaproject1.DAL.Entity;
 import java.util.Objects;
+
 public class MenuItem {
-    private int itemId;
+    private String itemId;
     private String name;
     private String description;
     private double price;
     private String category;
     private String imagePath;
-    public MenuItem() {}
-    public MenuItem(int itemId, String name, String description, double price, String category) {
+
+    public MenuItem(String itemId, String name, String description, double price, String category) {
         this.itemId = itemId;
         this.name = name;
         this.description = description;
         this.price = price;
         this.category = category;
     }
-    public MenuItem(int itemId, String name, double price) {
-        this.itemId = itemId;
-        this.name = name;
-        this.price = price;
+
+    public MenuItem() {
     }
-    public MenuItem(String name, String description, double price, String category) {
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.category = category;
-    }
-    public int getItemId() { return itemId; }
-    public void setItemId(int itemId) { this.itemId = itemId; }
+
+    // getters/setters
+    public String getItemId() { return itemId; }
+    public void setItemId(String itemId) { this.itemId = itemId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }
@@ -38,6 +33,7 @@ public class MenuItem {
     public void setCategory(String category) { this.category = category; }
     public String getImagePath() { return imagePath; }
     public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+
     @Override
     public String toString() {
         return "MenuItem{" +
@@ -47,6 +43,7 @@ public class MenuItem {
                 ", category='" + category + '\'' +
                 '}';
     }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

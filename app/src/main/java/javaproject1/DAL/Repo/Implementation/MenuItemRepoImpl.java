@@ -39,7 +39,7 @@ public class MenuItemRepoImpl implements IMenuItemRepo {
 
             if (rs.next()) {
                 MenuItem item = new MenuItem();
-                item.setItemId(rs.getInt("id"));
+                item.setItemId(rs.getString("id"));
                 item.setName(rs.getString("name"));
                 item.setPrice(rs.getDouble("price"));
                 item.setDescription(rs.getString("description"));
@@ -61,7 +61,7 @@ public class MenuItemRepoImpl implements IMenuItemRepo {
             stmt.setString(1, item.getName());
             stmt.setDouble(2, item.getPrice());
             stmt.setString(3, item.getDescription());
-            stmt.setInt(4, item.getItemId());
+            stmt.setString(4, item.getItemId());
 
             int rows = stmt.executeUpdate();
             if (rows > 0)
@@ -104,7 +104,7 @@ public class MenuItemRepoImpl implements IMenuItemRepo {
 
             while (rs.next()) {
                 MenuItem item = new MenuItem();
-                item.setItemId(rs.getInt("id"));
+                item.setItemId(rs.getString("id"));
                 item.setName(rs.getString("name"));
                 item.setPrice(rs.getDouble("price"));
                 item.setDescription(rs.getString("description"));

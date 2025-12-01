@@ -1,9 +1,4 @@
 package javaproject1.DAL.Enums;
-
-/**
- * Represents the possible states of an order using an Enum.
- * Enums are a special type of class in Java.
- */
 public enum OrderStatus {
     PENDING,
     CONFIRMED,
