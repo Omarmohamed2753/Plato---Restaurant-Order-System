@@ -13,7 +13,10 @@ import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Enums.OrderStatus;
 
 import java.util.List;
-class CartController {
+import javafx.scene.control.Alert;
+import javafx.scene.layout.HBox;
+
+public class CartController {
     private static CartServiceImpl cartService = new CartServiceImpl();
 
     public static void show(Stage stage, User user) {

@@ -9,8 +9,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.scene.control.Alert;
+import javafx.scene.layout.HBox;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
+import javaproject1.DAL.Entity.Admin;
 import javaproject1.DAL.Enums.OrderStatus;
 
 import java.util.List;
@@ -118,19 +121,19 @@ public class AdminDashboardController {
         dashboardBtn.setOnAction(e -> show(stage, admin));
 
         Button ordersBtn = createSidebarButton("📦 Orders", false);
-        ordersBtn.setOnAction(e -> AdminOrdersController.show(stage, admin));
+        ordersBtn.setOnAction(e -> AdminControllers.AdminOrdersController.show(stage, admin));
 
         Button menuBtn = createSidebarButton("🍽️ Menu", false);
-        menuBtn.setOnAction(e -> AdminMenuController.show(stage, admin));
+        menuBtn.setOnAction(e -> AdminControllers.AdminMenuController.show(stage, admin));
 
         Button employeesBtn = createSidebarButton("👥 Employees", false);
-        employeesBtn.setOnAction(e -> AdminEmployeesController.show(stage, admin));
+        employeesBtn.setOnAction(e -> AdminControllers.AdminEmployeesController.show(stage, admin));
 
         Button usersBtn = createSidebarButton("👤 Users", false);
-        usersBtn.setOnAction(e -> AdminUsersController.show(stage, admin));
+        usersBtn.setOnAction(e -> AdminControllers.AdminUsersController.show(stage, admin));
 
         Button reviewsBtn = createSidebarButton("⭐ Reviews", false);
-        reviewsBtn.setOnAction(e -> AdminReviewsController.show(stage, admin));
+        reviewsBtn.setOnAction(e -> AdminControllers.AdminReviewsController.show(stage, admin));
 
         sidebar.getChildren().addAll(
             menuLabel,

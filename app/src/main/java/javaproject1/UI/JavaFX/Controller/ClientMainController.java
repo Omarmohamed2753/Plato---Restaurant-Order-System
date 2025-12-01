@@ -56,7 +56,7 @@ public class ClientMainController {
         stage.setScene(scene);
     }
 
-    private static HBox createNavBar(Stage stage, User user) {
+    public static HBox createNavBar(Stage stage, User user) {
         HBox navbar = new HBox(20);
         navbar.setPadding(new Insets(15, 30, 15, 30));
         navbar.setAlignment(Pos.CENTER_LEFT);

@@ -1,5 +1,6 @@
 package javaproject1.UI.JavaFX.Controller;
-
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -9,6 +10,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.scene.control.Alert;
+import javafx.scene.layout.HBox;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Enums.OrderStatus;
@@ -46,9 +49,9 @@ public class MenuController {
         VBox itemsBox = new VBox(15);
         itemsBox.setPadding(new Insets(20));
 
-        Menu menu = restaurant.getMenu();
+        javaproject1.DAL.Entity.Menu menu = restaurant.getMenu();
         if (menu != null && menu.getItems() != null) {
-            for (MenuItem item : menu.getItems()) {
+            for (javaproject1.DAL.Entity.MenuItem item : menu.getItems()) {
                 itemsBox.getChildren().add(createMenuItemCard(user, item));
             }
         }
@@ -59,7 +62,7 @@ public class MenuController {
         return scrollPane;
     }
 
-    private static HBox createMenuItemCard(User user, MenuItem item) {
+    private static HBox createMenuItemCard(User user, javaproject1.DAL.Entity.MenuItem item) {
         HBox card = new HBox(20);
         card.setPadding(new Insets(15));
         card.setAlignment(Pos.CENTER_LEFT);

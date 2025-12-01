@@ -13,7 +13,9 @@ import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Enums.OrderStatus;
 
 import java.util.List;
-class CheckoutController {
+import javafx.scene.control.Alert;
+
+public class CheckoutController {
     public static void show(Stage stage, User user) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, 
             "Checkout feature coming soon!");
