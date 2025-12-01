@@ -18,6 +18,10 @@ public class SignInController {
 
     private static UserServiceImpl userService = new UserServiceImpl();
     private static AdminServiceImpl adminService = new AdminServiceImpl();
+    
+    // Thread references for management
+    private static Thread clientThread;
+    private static Thread adminThread;
 
     public static void show(Stage stage) {
         BorderPane root = new BorderPane();
@@ -83,7 +87,7 @@ public class SignInController {
             "-fx-background-radius: 22.5; " +
             "-fx-cursor: hand;"
         );
-
+        
         Label messageLabel = new Label();
         messageLabel.setFont(Font.font("System", 14));
 
@@ -96,29 +100,67 @@ public class SignInController {
                 return;
             }
 
+            // Disable button during login process
+            signInButton.setDisable(true);
+            messageLabel.setText("Logging in...");
+            messageLabel.setTextFill(Color.web("#3498db"));
+
             try {
                 boolean success = userService.login(email, password);
                 if (success) {
                     User user = userService.getUserByEmail(email);
-                    showSuccess(messageLabel, "Login successful!");
-                    
-                    // Start client thread and show main screen
-                    Thread clientThread = new Thread(() -> {
+                    showSuccess(messageLabel, "Login successful! Loading...");
+
+                    clientThread = new Thread(() -> {
                         try {
+                            System.out.println(" Client Thread Started: " + Thread.currentThread().getName());
+                            System.out.println("   User: " + user.getName() + " (ID: " + user.getId() + ")");
+                            
+                            // Simulate loading/initialization
                             Thread.sleep(500);
-                            javafx.application.Platform.runLater(() -> 
-                                ClientMainController.show(stage, user)
-                            );
+                            
+                            // Update UI on JavaFX Application Thread
+                            javafx.application.Platform.runLater(() -> {
+                                System.out.println("   Navigating to Client Main Screen...");
+                                ClientMainController.show(stage, user);
+                                System.out.println(" Client Thread: UI Loaded Successfully");
+                            });
+                            
                         } catch (InterruptedException ex) {
+                            System.err.println(" Client Thread Interrupted: " + ex.getMessage());
                             ex.printStackTrace();
+                            
+                            // Handle interruption on UI thread
+                            javafx.application.Platform.runLater(() -> {
+                                showError(messageLabel, "Login interrupted. Please try again.");
+                                signInButton.setDisable(false);
+                            });
+                        } catch (Exception ex) {
+                            System.err.println(" Client Thread Error: " + ex.getMessage());
+                            ex.printStackTrace();
+                            
+                            // Handle errors on UI thread
+                            javafx.application.Platform.runLater(() -> {
+                                showError(messageLabel, "Error loading dashboard: " + ex.getMessage());
+                                signInButton.setDisable(false);
+                            });
                         }
-                    }, "ClientThread");
+                    }, "ClientThread-" + user.getId()); // Unique thread name
+                    
+                    // Set as daemon thread (will stop when app closes)
+                    clientThread.setDaemon(true);
+                    
+                    // Start the thread
                     clientThread.start();
+                    
                 } else {
                     showError(messageLabel, "Invalid email or password!");
+                    signInButton.setDisable(false);
                 }
             } catch (Exception ex) {
                 showError(messageLabel, "Error: " + ex.getMessage());
+                signInButton.setDisable(false);
+                ex.printStackTrace();
             }
         });
 
@@ -161,31 +203,72 @@ public class SignInController {
                 return;
             }
 
+            // Disable button during login process
+            signInButton.setDisable(true);
+            messageLabel.setText("Authenticating admin...");
+            messageLabel.setTextFill(Color.web("#3498db"));
+
             try {
                 // Get admin by ID (you may need to add getAdminByEmail method)
                 // For now, trying to get first admin
                 Admin admin = adminService.getAdminById(1);
                 
                 if (admin != null && adminService.loginAdmin(admin, email, password)) {
-                    showSuccess(messageLabel, "Admin login successful!");
+                    showSuccess(messageLabel, "Admin login successful! Loading dashboard...");
                     
-                    // Start admin thread and show dashboard
-                    Thread adminThread = new Thread(() -> {
+                    adminThread = new Thread(() -> {
                         try {
+                            System.out.println(" Admin Thread Started: " + Thread.currentThread().getName());
+                            System.out.println("   Admin: " + admin.getName() + " (ID: " + admin.getId() + ")");
+                            if (admin.getRestaurant() != null) {
+                                System.out.println("   Restaurant: " + admin.getRestaurant().getName());
+                            }
+                            
+                            // Simulate loading/initialization
                             Thread.sleep(500);
-                            javafx.application.Platform.runLater(() -> 
-                                AdminDashboardController.show(stage, admin)
-                            );
+                            
+                            // Update UI on JavaFX Application Thread
+                            javafx.application.Platform.runLater(() -> {
+                                System.out.println("   Navigating to Admin Dashboard...");
+                                AdminDashboardController.show(stage, admin);
+                                System.out.println(" Admin Thread: Dashboard Loaded Successfully");
+                            });
+                            
                         } catch (InterruptedException ex) {
+                            System.err.println("Admin Thread Interrupted: " + ex.getMessage());
                             ex.printStackTrace();
+                            
+                            // Handle interruption on UI thread
+                            javafx.application.Platform.runLater(() -> {
+                                showError(messageLabel, "Login interrupted. Please try again.");
+                                signInButton.setDisable(false);
+                            });
+                        } catch (Exception ex) {
+                            System.err.println("Admin Thread Error: " + ex.getMessage());
+                            ex.printStackTrace();
+                            
+                            // Handle errors on UI thread
+                            javafx.application.Platform.runLater(() -> {
+                                showError(messageLabel, "Error loading dashboard: " + ex.getMessage());
+                                signInButton.setDisable(false);
+                            });
                         }
-                    }, "AdminThread");
+                    }, "AdminThread-" + admin.getId()); // Unique thread name
+                    
+                    // Set as daemon thread (will stop when app closes)
+                    adminThread.setDaemon(true);
+                    
+                    // Start the thread
                     adminThread.start();
+                    
                 } else {
                     showError(messageLabel, "Invalid admin credentials!");
+                    signInButton.setDisable(false);
                 }
             } catch (Exception ex) {
                 showError(messageLabel, "Error: " + ex.getMessage());
+                signInButton.setDisable(false);
+                ex.printStackTrace();
             }
         });
 
@@ -200,7 +283,16 @@ public class SignInController {
 
         Button backButton = new Button("← Back");
         backButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #667eea; -fx-font-size: 14px; -fx-cursor: hand;");
-        backButton.setOnAction(e -> WelcomeController.show(stage));
+        backButton.setOnAction(e -> {
+            // Clean up threads if navigating back
+            if (clientThread != null && clientThread.isAlive()) {
+                clientThread.interrupt();
+            }
+            if (adminThread != null && adminThread.isAlive()) {
+                adminThread.interrupt();
+            }
+            WelcomeController.show(stage);
+        });
 
         header.getChildren().add(backButton);
         return header;
@@ -230,5 +322,25 @@ public class SignInController {
     private static void showSuccess(Label label, String message) {
         label.setText(message);
         label.setTextFill(Color.web("#27ae60"));
+    }
+    
+    // Get the current client thread (for monitoring/debugging)
+    public static Thread getClientThread() {
+        return clientThread;
+    }
+    
+    // Get the current admin thread (for monitoring/debugging)
+    public static Thread getAdminThread() {
+        return adminThread;
+    }
+    
+    // Check if client thread is active
+    public static boolean isClientThreadActive() {
+        return clientThread != null && clientThread.isAlive();
+    }
+    
+   // Check if admin thread is active
+    public static boolean isAdminThreadActive() {
+        return adminThread != null && adminThread.isAlive();
     }
 }
