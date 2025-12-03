@@ -1,24 +1,36 @@
 package javaproject1.BLL.Service.implementation;
+
 import javaproject1.BLL.Service.abstraction.MenuServiceAbs;
 import javaproject1.DAL.Entity.Menu;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Entity.Restaurant;
+import javaproject1.DAL.Repo.Implementation.MenuItemRepoImpl;
 import javaproject1.DAL.Repo.Implementation.MenuRepoImpl;
 import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 import javaproject1.DAL.Repo.abstraction.IMenuRepo;
 import javaproject1.DAL.Repo.abstraction.IRestaurantRepo;
+import javaproject1.DAL.Repo.abstraction.IMenuItemRepo;
+
 public class MenuServiceImpl implements MenuServiceAbs {
 
     private final IRestaurantRepo restaurantRepo;
     private final IMenuRepo menuRepo;
+    private final IMenuItemRepo menuItemRepo;
 
     public MenuServiceImpl() {
-        this(new RestaurantRepoImpl(), new MenuRepoImpl());
+        this(new RestaurantRepoImpl(), new MenuRepoImpl(), new MenuItemRepoImpl());
     }
 
     public MenuServiceImpl(IRestaurantRepo restaurantRepo, IMenuRepo menuRepo) {
         this.restaurantRepo = restaurantRepo;
         this.menuRepo = menuRepo;
+        this.menuItemRepo = new MenuItemRepoImpl();
+    }
+    
+    public MenuServiceImpl(IRestaurantRepo restaurantRepo, IMenuRepo menuRepo, IMenuItemRepo menuItemRepo) {
+        this.restaurantRepo = restaurantRepo;
+        this.menuRepo = menuRepo;
+        this.menuItemRepo = menuItemRepo;
     }
 
     @Override
@@ -63,19 +75,29 @@ public class MenuServiceImpl implements MenuServiceAbs {
         if (restaurant != null) {
             Menu menu = restaurant.getMenu();
             if (menu == null) {
+                // Create a new menu if it doesn't exist
                 menu = new Menu();
+                menu.setMenuId(String.valueOf(restaurantId));
                 menuRepo.addMenu(menu);         
                 restaurant.setMenu(menu);
             }
+            
             if (menu.getItems() == null) {
                 menu.setItems(new java.util.ArrayList<>());
             }
+            
+            // Add the item to database with menu_id link
+            if (menuItemRepo instanceof MenuItemRepoImpl) {
+                ((MenuItemRepoImpl) menuItemRepo).addMenuItemWithMenuId(item, menu.getMenuId());
+            }
+            
+            // Add to in-memory list if not already present
             if (!menu.getItems().contains(item)) {
                 menu.getItems().add(item);
             }
-            menuRepo.updateMenu(menu);           
+            
             restaurantRepo.updateRestaurant(restaurant);
-            System.out.println("Item " + item.getName() + " added to " + restaurant.getName() + "'s menu.");
+            System.out.println("Item '" + item.getName() + "' added to " + restaurant.getName() + "'s menu.");
         } else {
             System.out.println("Restaurant not found with id: " + restaurantId);
         }
@@ -88,9 +110,17 @@ public class MenuServiceImpl implements MenuServiceAbs {
             Menu menu = restaurant.getMenu();
             if (menu != null && menu.getItems() != null && menu.getItems().contains(item)) {
                 menu.getItems().remove(item);
-                menuRepo.updateMenu(menu);      
+                
+                // Also delete from database
+                try {
+                    int itemId = Integer.parseInt(item.getItemId());
+                    menuItemRepo.deleteMenuItem(itemId);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid item ID format: " + item.getItemId());
+                }
+                
                 restaurantRepo.updateRestaurant(restaurant);
-                System.out.println("Item " + item.getName() + " removed from " + restaurant.getName() + "'s menu.");
+                System.out.println("Item '" + item.getName() + "' removed from " + restaurant.getName() + "'s menu.");
             } else {
                 System.out.println("Item not found in menu or menu is empty.");
             }

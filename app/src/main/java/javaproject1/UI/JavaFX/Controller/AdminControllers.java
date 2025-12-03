@@ -24,6 +24,7 @@ public class AdminControllers {
     private static OrderServiceImpl orderService = new OrderServiceImpl();
     private static MenuServiceImpl menuService = new MenuServiceImpl();
     private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
+    private static EmployeeServiceImpl employeeService = new EmployeeServiceImpl();
 
     // ================== ORDERS CONTROLLER ==================
     public static class AdminOrdersController {
@@ -50,12 +51,10 @@ public class AdminControllers {
             actionCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("Next Status");
                 {
-                    btn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand;");
+                    btn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
                     btn.setOnAction(event -> {
                         Order order = getTableView().getItems().get(getIndex());
                         advanceOrderStatus(order);
-                        
-                        // REFRESH DATA
                         loadOrdersData(table, admin);
                     });
                 }
@@ -105,11 +104,24 @@ public class AdminControllers {
 
             HBox form = new HBox(10);
             form.setAlignment(Pos.CENTER_LEFT);
-            TextField nameField = new TextField(); nameField.setPromptText("Name");
-            TextField priceField = new TextField(); priceField.setPromptText("Price");
-            TextField catField = new TextField(); catField.setPromptText("Category");
+            TextField nameField = new TextField(); 
+            nameField.setPromptText("Name");
+            nameField.setPrefWidth(150);
+            
+            TextField priceField = new TextField(); 
+            priceField.setPromptText("Price");
+            priceField.setPrefWidth(100);
+            
+            TextField descField = new TextField(); 
+            descField.setPromptText("Description");
+            descField.setPrefWidth(200);
+            
+            TextField catField = new TextField(); 
+            catField.setPromptText("Category");
+            catField.setPrefWidth(120);
+            
             Button addBtn = new Button("Add Item");
-            addBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand;");
+            addBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 8 15;");
 
             TableView<MenuItem> table = new TableView<>();
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -118,21 +130,24 @@ public class AdminControllers {
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
 
             TableColumn<MenuItem, String> priceCol = new TableColumn<>("Price");
-            priceCol.setCellValueFactory(d -> new SimpleStringProperty("$" + d.getValue().getPrice()));
+            priceCol.setCellValueFactory(d -> new SimpleStringProperty("$" + String.format("%.2f", d.getValue().getPrice())));
 
             TableColumn<MenuItem, String> catCol = new TableColumn<>("Category");
             catCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getCategory()));
+            
+            TableColumn<MenuItem, String> descCol = new TableColumn<>("Description");
+            descCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getDescription()));
 
             TableColumn<MenuItem, Void> delCol = new TableColumn<>("Delete");
             delCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("X");
                 {
-                    btn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-cursor: hand;");
+                    btn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
                     btn.setOnAction(event -> {
                         MenuItem item = getTableView().getItems().get(getIndex());
                         if (admin.getRestaurant() != null) {
                             menuService.removeItem(Integer.parseInt(admin.getRestaurant().getRestaurantId()), item);
-                            loadMenuData(table, admin); // REFRESH
+                            loadMenuData(table, admin);
                         }
                     });
                 }
@@ -143,34 +158,52 @@ public class AdminControllers {
                 }
             });
 
-            table.getColumns().addAll(nameCol, priceCol, catCol, delCol);
+            table.getColumns().addAll(nameCol, priceCol, catCol, descCol, delCol);
             loadMenuData(table, admin);
 
             addBtn.setOnAction(e -> {
                 try {
-                    String name = nameField.getText();
-                    double price = Double.parseDouble(priceField.getText());
-                    String category = catField.getText();
+                    String name = nameField.getText().trim();
+                    String priceText = priceField.getText().trim();
+                    String description = descField.getText().trim();
+                    String category = catField.getText().trim();
                     
-                    if (name.isEmpty()) return;
+                    if (name.isEmpty() || priceText.isEmpty()) {
+                        showAlert("Name and Price are required!", Alert.AlertType.WARNING);
+                        return;
+                    }
 
-                    MenuItem newItem = new MenuItem(null, name, "Desc", price, category);
+                    double price = Double.parseDouble(priceText);
+                    
+                    MenuItem newItem = new MenuItem();
+                    newItem.setName(name);
+                    newItem.setPrice(price);
+                    newItem.setDescription(description.isEmpty() ? "No description" : description);
+                    newItem.setCategory(category.isEmpty() ? "General" : category);
+                    
                     if (admin.getRestaurant() != null) {
-                        // Ensure we have a valid int ID for restaurant logic
                         int rId = Integer.parseInt(admin.getRestaurant().getRestaurantId());
                         menuService.addItem(rId, newItem);
                         
-                        // Clear & Refresh
-                        nameField.clear(); priceField.clear(); catField.clear();
-                        loadMenuData(table, admin); 
+                        // Clear fields
+                        nameField.clear(); 
+                        priceField.clear(); 
+                        descField.clear();
+                        catField.clear();
+                        
+                        // Refresh table
+                        loadMenuData(table, admin);
+                        showAlert("Menu item added successfully!", Alert.AlertType.INFORMATION);
                     }
+                } catch (NumberFormatException ex) {
+                    showAlert("Price must be a valid number!", Alert.AlertType.ERROR);
                 } catch (Exception ex) {
-                    Alert a = new Alert(Alert.AlertType.ERROR, "Invalid Input: " + ex.getMessage()); 
-                    a.show();
+                    showAlert("Error: " + ex.getMessage(), Alert.AlertType.ERROR);
+                    ex.printStackTrace();
                 }
             });
 
-            form.getChildren().addAll(nameField, priceField, catField, addBtn);
+            form.getChildren().addAll(nameField, priceField, descField, catField, addBtn);
             VBox.setVgrow(table, Priority.ALWAYS);
             layout.getChildren().addAll(form, table);
             stage.getScene().setRoot(layout);
@@ -178,11 +211,26 @@ public class AdminControllers {
 
         private static void loadMenuData(TableView<MenuItem> table, Admin admin) {
             if (admin.getRestaurant() != null) {
-                // Must re-fetch the menu to see new items
-                Menu menu = menuService.getMenuByRestaurant(Integer.parseInt(admin.getRestaurant().getRestaurantId()));
-                if (menu != null && menu.getItems() != null) {
-                    table.setItems(FXCollections.observableArrayList(menu.getItems()));
-                    table.refresh();
+                try {
+                    // Re-fetch the restaurant to get fresh data
+                    Restaurant freshRestaurant = restaurantService.getRestaurantById(
+                        Integer.parseInt(admin.getRestaurant().getRestaurantId())
+                    );
+                    
+                    if (freshRestaurant != null) {
+                        admin.setRestaurant(freshRestaurant); // Update admin's reference
+                        Menu menu = freshRestaurant.getMenu();
+                        
+                        if (menu != null && menu.getItems() != null) {
+                            table.setItems(FXCollections.observableArrayList(menu.getItems()));
+                        } else {
+                            table.setItems(FXCollections.observableArrayList());
+                        }
+                        table.refresh();
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error loading menu data: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
         }
@@ -195,62 +243,121 @@ public class AdminControllers {
 
             HBox form = new HBox(10);
             form.setAlignment(Pos.CENTER_LEFT);
-            TextField nameField = new TextField(); nameField.setPromptText("Name");
-            TextField roleField = new TextField(); roleField.setPromptText("Role");
+            
+            TextField nameField = new TextField(); 
+            nameField.setPromptText("Name");
+            nameField.setPrefWidth(150);
+            
+            TextField roleField = new TextField(); 
+            roleField.setPromptText("Role");
+            roleField.setPrefWidth(150);
+            
+            TextField phoneField = new TextField();
+            phoneField.setPromptText("Phone");
+            phoneField.setPrefWidth(130);
+            
             Button hireBtn = new Button("Hire");
-            hireBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand;");
+            hireBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 8 15;");
 
             TableView<Employee> table = new TableView<>();
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            
+            TableColumn<Employee, String> idCol = new TableColumn<>("ID");
+            idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getId()));
             
             TableColumn<Employee, String> nameCol = new TableColumn<>("Name");
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
             
             TableColumn<Employee, String> roleCol = new TableColumn<>("Role");
             roleCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getRole()));
+            
+            TableColumn<Employee, String> phoneCol = new TableColumn<>("Phone");
+            phoneCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getPhoneNumber()));
 
             TableColumn<Employee, Void> actionCol = new TableColumn<>("Action");
             actionCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("Fire");
+            
                 {
-                    btn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-cursor: hand;");
+                    btn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
+            
                     btn.setOnAction(event -> {
                         Employee emp = getTableView().getItems().get(getIndex());
+            
                         if (admin.getRestaurant() != null) {
+                            // Fire employee in the restaurant
                             restaurantService.fireEmployee(admin.getRestaurant(), emp);
-                            loadEmployeeData(table, admin); // REFRESH
+            
+                            String empId = emp.getId(); // could be "EMP2" or a large number
+            
+                            // Extract digits only
+                            String numericPart = empId.replaceAll("\\D", ""); // removes non-digits
+            
+                            try {
+                                // Parse numeric part as int safely
+                                int intId = Integer.parseInt(numericPart);
+                                employeeService.deleteEmployee(intId);
+                            } catch (NumberFormatException ex) {
+                                // If numeric part is empty or too large, handle gracefully
+                                System.err.println("Cannot delete employee, ID numeric part invalid: " + empId);
+                                // Optionally show an alert to the user
+                            }
+            
+                            // Reload table data
+                            loadEmployeeData(table, admin);
                         }
                     });
                 }
+            
                 @Override
                 protected void updateItem(Void item, boolean empty) {
                     super.updateItem(item, empty);
                     setGraphic(empty ? null : btn);
                 }
             });
+            
 
-            table.getColumns().addAll(nameCol, roleCol, actionCol);
+            table.getColumns().addAll(idCol, nameCol, roleCol, phoneCol, actionCol);
             loadEmployeeData(table, admin);
 
             hireBtn.setOnAction(e -> {
-                String name = nameField.getText();
-                String role = roleField.getText();
-                if(name.isEmpty() || role.isEmpty()) return;
-
+                String name = nameField.getText().trim();
+                String role = roleField.getText().trim();
+                String phone = phoneField.getText().trim();
+                
+                if(name.isEmpty() || role.isEmpty()) {
+                    showAlert("Name and Role are required!", Alert.AlertType.WARNING);
+                    return;
+                }
+            
                 Employee newEmp = new Employee();
                 newEmp.setId("EMP" + System.currentTimeMillis());
                 newEmp.setName(name);
                 newEmp.setRole(role);
-                newEmp.setAge(25); newEmp.setPhoneNumber("000"); 
+                newEmp.setAge(25);
+                newEmp.setPhoneNumber(phone.isEmpty() ? "N/A" : phone); 
+                newEmp.setExperiencesYear(0);
                 
                 if (admin.getRestaurant() != null) {
+                    newEmp.setRestaurant(admin.getRestaurant());
+                    employeeService.addEmployee(newEmp);
                     restaurantService.hireEmployee(admin.getRestaurant(), newEmp);
-                    loadEmployeeData(table, admin); // REFRESH
-                    nameField.clear(); roleField.clear();
+            
+                    // Option A: Reload table from service
+                    // loadEmployeeData(table, admin);
+            
+                    // Option B (instant add without refetching):
+                    table.getItems().add(newEmp);
+            
+                    nameField.clear(); 
+                    roleField.clear();
+                    phoneField.clear();
+                    showAlert("Employee hired successfully!", Alert.AlertType.INFORMATION);
                 }
             });
+            
 
-            form.getChildren().addAll(nameField, roleField, hireBtn);
+            form.getChildren().addAll(nameField, roleField, phoneField, hireBtn);
             VBox.setVgrow(table, Priority.ALWAYS);
             layout.getChildren().addAll(form, table);
             stage.getScene().setRoot(layout);
@@ -258,14 +365,20 @@ public class AdminControllers {
 
         private static void loadEmployeeData(TableView<Employee> table, Admin admin) {
             if (admin.getRestaurant() != null) {
-                // Refresh restaurant object to get latest list from DB
-                Restaurant r = restaurantService.getRestaurantById(Integer.parseInt(admin.getRestaurant().getRestaurantId()));
-                // Update the admin's reference
-                admin.setRestaurant(r);
-                
-                if(r != null && r.getEmployees() != null) {
-                    table.setItems(FXCollections.observableArrayList(r.getEmployees()));
+                try {
+                    // Refresh restaurant data
+                    Restaurant r = restaurantService.getRestaurantById(Integer.parseInt(admin.getRestaurant().getRestaurantId()));
+                    admin.setRestaurant(r);
+                    
+                    if(r != null && r.getEmployees() != null) {
+                        table.setItems(FXCollections.observableArrayList(r.getEmployees()));
+                    } else {
+                        table.setItems(FXCollections.observableArrayList());
+                    }
                     table.refresh();
+                } catch (Exception e) {
+                    System.err.println("Error loading employee data: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
         }
@@ -276,40 +389,81 @@ public class AdminControllers {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Restaurant Reviews");
             
-            ListView<String> list = new ListView<>();
-            VBox.setVgrow(list, Priority.ALWAYS);
+            TableView<Review> table = new TableView<>();
+            table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            
+            TableColumn<Review, String> userCol = new TableColumn<>("User");
+            userCol.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().getUser() != null ? d.getValue().getUser().getName() : "Anonymous"
+            ));
+            
+            TableColumn<Review, String> ratingCol = new TableColumn<>("Rating");
+            ratingCol.setCellValueFactory(d -> new SimpleStringProperty("⭐ " + d.getValue().getRating()));
+            
+            TableColumn<Review, String> commentCol = new TableColumn<>("Comment");
+            commentCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getComment()));
+
+            table.getColumns().addAll(userCol, ratingCol, commentCol);
 
             if (admin.getRestaurant() != null) {
                 Restaurant r = restaurantService.getRestaurantById(Integer.parseInt(admin.getRestaurant().getRestaurantId()));
-                if (r != null && r.getReviews() != null) {
-                    for (Review review : r.getReviews()) {
-                        list.getItems().add(
-                            "⭐ " + review.getRating() + " | " + 
-                            (review.getUser() != null ? review.getUser().getName() : "Anonymous") + 
-                            ": " + review.getComment()
-                        );
-                    }
+                if (r != null && r.getReviews() != null && !r.getReviews().isEmpty()) {
+                    table.setItems(FXCollections.observableArrayList(r.getReviews()));
+                } else {
+                    Label noReviews = new Label("No reviews yet.");
+                    noReviews.setFont(Font.font("System", 16));
+                    noReviews.setTextFill(Color.web("#636e72"));
+                    layout.getChildren().add(noReviews);
                 }
             }
-            if(list.getItems().isEmpty()) list.getItems().add("No reviews yet.");
             
-            layout.getChildren().add(list);
+            VBox.setVgrow(table, Priority.ALWAYS);
+            if (!table.getItems().isEmpty()) {
+                layout.getChildren().add(table);
+            }
             stage.getScene().setRoot(layout);
         }
     }
 
-    // ================== USERS CONTROLLER ==================
     public static class AdminUsersController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Users Information");
-            Label label = new Label("User management is handled via Orders section.");
-            label.setFont(Font.font("System", 16));
-            label.setTextFill(Color.BLACK);
-            layout.getChildren().add(label);
+            
+            TableView<User> table = new TableView<>();
+            table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            
+            TableColumn<User, String> idCol = new TableColumn<>("ID");
+            idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getId()));
+            
+            TableColumn<User, String> nameCol = new TableColumn<>("Name");
+            nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
+            
+            TableColumn<User, String> emailCol = new TableColumn<>("Email");
+            emailCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getEmail()));
+            
+            TableColumn<User, String> phoneCol = new TableColumn<>("Phone");
+            phoneCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getPhoneNumber()));
+            
+            TableColumn<User, String> eliteCol = new TableColumn<>("Elite");
+            eliteCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().isElite() ? "Yes" : "No"));
+            
+            TableColumn<User, String> ordersCol = new TableColumn<>("Orders");
+            ordersCol.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().getOrders() != null ? String.valueOf(d.getValue().getOrders().size()) : "0"
+            ));
+
+            table.getColumns().addAll(idCol, nameCol, emailCol, phoneCol, eliteCol, ordersCol);
+            
+            // Load all users from database
+            UserServiceImpl userService = new UserServiceImpl();
+            List<User> allUsers = userService.getAllUsers();
+            table.setItems(FXCollections.observableArrayList(allUsers));
+            
+            VBox.setVgrow(table, Priority.ALWAYS);
+            layout.getChildren().add(table);
             stage.getScene().setRoot(layout);
         }
     }
-
     // ================== HELPER METHODS ==================
     private static VBox createBaseLayout(Stage stage, Admin admin, String title) {
         VBox layout = new VBox(20);
@@ -331,5 +485,10 @@ public class AdminControllers {
         layout.getChildren().add(header);
         
         return layout;
+    }
+    
+    private static void showAlert(String message, Alert.AlertType type) {
+        Alert alert = new Alert(type, message);
+        alert.showAndWait();
     }
 }

@@ -17,6 +17,7 @@ import javaproject1.DAL.Entity.*;
 public class MenuController {
     private static MenuServiceImpl menuService = new MenuServiceImpl();
     private static CartServiceImpl cartService = new CartServiceImpl();
+    private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
 
     public static void show(Stage stage, User user, Restaurant restaurant) {
         BorderPane root = new BorderPane();
@@ -62,15 +63,31 @@ public class MenuController {
         VBox itemsBox = new VBox(15);
         itemsBox.setPadding(new Insets(20));
 
+        // Refresh restaurant data to get latest menu items
+        try {
+            RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
+            Restaurant freshRestaurant = restaurantService.getRestaurantById(
+                Integer.parseInt(restaurant.getRestaurantId())
+            );
+            
+            if (freshRestaurant != null) {
+                restaurant = freshRestaurant; // Use fresh data
+            }
+        } catch (Exception e) {
+            System.err.println("Error refreshing restaurant data: " + e.getMessage());
+        }
+
         javaproject1.DAL.Entity.Menu menu = restaurant.getMenu();
         if (menu != null && menu.getItems() != null && !menu.getItems().isEmpty()) {
+            System.out.println("Loading " + menu.getItems().size() + " menu items");
             for (javaproject1.DAL.Entity.MenuItem item : menu.getItems()) {
+                System.out.println("Item: " + item.getName() + " - $" + item.getPrice());
                 itemsBox.getChildren().add(createMenuItemCard(user, item));
             }
         } else {
             Label noItems = new Label("No menu items available yet.");
             noItems.setFont(Font.font("System", 16));
-            noItems.setTextFill(Color.web("#95a5a6"));
+            noItems.setTextFill(Color.web("#636e72"));
             itemsBox.getChildren().add(noItems);
         }
 
@@ -88,11 +105,11 @@ public class MenuController {
             "-fx-background-color: white; " +
             "-fx-background-radius: 12; " +
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);" +
-            "-fx-border-color: #ecf0f1; -fx-border-radius: 12;"
+            "-fx-border-color:rgb(27, 168, 203); -fx-border-radius: 12;"
         );
         card.setMaxWidth(Double.MAX_VALUE);
 
-        // ===== IMAGE SECTION =====
+        // IMAGE SECTION
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
         imageBox.setMinWidth(100);
@@ -100,7 +117,7 @@ public class MenuController {
         imageBox.setMaxWidth(100);
         imageBox.setMaxHeight(100);
         imageBox.setStyle(
-            "-fx-background-color: #f5f7fa; " +
+            "-fx-background-color:rgb(37, 93, 177); " +
             "-fx-background-radius: 8;"
         );
 
@@ -127,24 +144,24 @@ public class MenuController {
             imageBox.getChildren().add(placeholder);
         }
 
-        // ===== INFO SECTION =====
+        // INFO SECTION - ALL TEXT BLACK/DARK
         VBox infoBox = new VBox(5);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
         infoBox.setAlignment(Pos.CENTER_LEFT);
 
         Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
-        nameLabel.setTextFill(Color.BLACK); // أسود
+        nameLabel.setTextFill(Color.web("#000000"));
         
         Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "No description available");
         descLabel.setFont(Font.font("System", 12));
-        descLabel.setTextFill(Color.web("#636e72"));
+        descLabel.setTextFill(Color.web("#2d3436"));
         descLabel.setWrapText(true);
         descLabel.setMaxWidth(400);
         
         Label categoryLabel = new Label(item.getCategory() != null && !item.getCategory().isEmpty() ? item.getCategory() : "Uncategorized");
         categoryLabel.setFont(Font.font("System", 11));
-        categoryLabel.setTextFill(Color.web("#718096"));
+        categoryLabel.setTextFill(Color.web("#636e72"));
         
         Label priceLabel = new Label("$" + String.format("%.2f", item.getPrice()));
         priceLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
@@ -152,7 +169,7 @@ public class MenuController {
 
         infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, priceLabel);
 
-        // ===== ACTION SECTION =====
+        // ACTION SECTION
         VBox actionBox = new VBox(10);
         actionBox.setAlignment(Pos.CENTER);
 
@@ -179,15 +196,11 @@ public class MenuController {
 
         actionBox.getChildren().addAll(quantitySpinner, addButton);
 
-        card.getChildren().addAll(imageBox, infoBox, spacer(true), actionBox);
-        return card;
-    }
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-    private static Region spacer(boolean horizontal) {
-        Region r = new Region();
-        if(horizontal) HBox.setHgrow(r, Priority.ALWAYS);
-        else VBox.setVgrow(r, Priority.ALWAYS);
-        return r;
+        card.getChildren().addAll(imageBox, infoBox, spacer, actionBox);
+        return card;
     }
 
     private static void showAlert(String message, Alert.AlertType type) {

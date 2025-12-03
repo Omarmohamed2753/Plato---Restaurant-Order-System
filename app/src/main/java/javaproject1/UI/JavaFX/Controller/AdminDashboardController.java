@@ -9,11 +9,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.scene.control.Alert;
-import javafx.scene.layout.HBox;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
-import javaproject1.DAL.Entity.Admin;
 import javaproject1.DAL.Enums.OrderStatus;
 
 import java.util.List;
@@ -29,15 +26,12 @@ public class AdminDashboardController {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #f5f7fa;");
 
-        // Admin Navigation Bar
         HBox navbar = createAdminNavBar(stage, admin);
         root.setTop(navbar);
 
-        // Sidebar
         VBox sidebar = createSidebar(stage, admin);
         root.setLeft(sidebar);
 
-        // Main Dashboard Content
         VBox contentBox = new VBox(25);
         contentBox.setPadding(new Insets(30));
 
@@ -50,10 +44,7 @@ public class AdminDashboardController {
         restaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 18));
         restaurantLabel.setTextFill(Color.web("#4a5568"));
 
-        // Statistics Cards
         HBox statsBox = createStatsCards(admin);
-
-        // Recent Orders
         VBox ordersSection = createOrdersSection(admin);
 
         contentBox.getChildren().addAll(titleLabel, restaurantLabel, statsBox, ordersSection);
@@ -193,11 +184,9 @@ public class AdminDashboardController {
     }
 
     private static HBox createStatsCards(Admin admin) {
-
         HBox statsBox = new HBox(20);
         statsBox.setAlignment(Pos.CENTER);
     
-        // If admin has no restaurant, return empty stats safely
         if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
             VBox ordersCard = createStatCard("📦", "Total Orders", "0", "#3498db");
             VBox usersCard = createStatCard("👥", "Total Users", "0", "#9b59b6");
@@ -208,12 +197,7 @@ public class AdminDashboardController {
             return statsBox;
         }
     
-        // Admin restaurant ID (safe)
         String adminRestId = admin.getRestaurant().getRestaurantId();
-    
-        // =======================
-        // Get All Orders
-        // =======================
         List<Order> allOrders = orderService.getAllOrders();
     
         int totalOrders = (int) allOrders.stream()
@@ -223,16 +207,10 @@ public class AdminDashboardController {
                 .count();
     
         VBox ordersCard = createStatCard("📦", "Total Orders", String.valueOf(totalOrders), "#3498db");
-    
-        // =======================
-        // Total Users
-        // =======================
+        
         int totalUsers = userService.getAllUsers().size();
         VBox usersCard = createStatCard("👥", "Total Users", String.valueOf(totalUsers), "#9b59b6");
     
-        // =======================
-        // Total Employees
-        // =======================
         int totalEmployees = (int) employeeService.getAllEmployees().stream()
                 .filter(e -> e.getRestaurant() != null &&
                              e.getRestaurant().getRestaurantId() != null &&
@@ -241,22 +219,18 @@ public class AdminDashboardController {
     
         VBox employeesCard = createStatCard("👔", "Employees", String.valueOf(totalEmployees), "#e67e22");
     
-        // =======================
-        // Pending Orders
-        // =======================
         int pendingOrders = (int) allOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.PENDING ||
-                             o.getStatus() == OrderStatus.CONFIRMED)
+                .filter(o -> o.getRestaurant() != null &&
+                             o.getRestaurant().getRestaurantId() != null &&
+                             o.getRestaurant().getRestaurantId().equals(adminRestId) &&
+                             (o.getStatus() == OrderStatus.PENDING || o.getStatus() == OrderStatus.CONFIRMED))
                 .count();
     
         VBox pendingCard = createStatCard("⏳", "Pending", String.valueOf(pendingOrders), "#e74c3c");
     
-        // Add all to UI
         statsBox.getChildren().addAll(ordersCard, usersCard, employeesCard, pendingCard);
-    
         return statsBox;
     }
-    
 
     private static VBox createStatCard(String icon, String title, String value, String color) {
         VBox card = new VBox(10);
@@ -330,9 +304,6 @@ public class AdminDashboardController {
     
         table.getColumns().addAll(idCol, userCol, totalCol, statusCol);
     
-        // ============================================================
-        // SAFETY FIX: Admin restaurant is null → return empty table
-        // ============================================================
         if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
             Label noRestaurantLabel = new Label("No restaurant assigned to this admin.");
             noRestaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 14));
@@ -344,9 +315,6 @@ public class AdminDashboardController {
     
         String adminRestId = admin.getRestaurant().getRestaurantId();
     
-        // ============================================================
-        // Load recent orders safely (null-safe filters)
-        // ============================================================
         List<Order> recentOrders = orderService.getAllOrders().stream()
                 .filter(o ->
                         o.getRestaurant() != null &&
@@ -361,5 +329,4 @@ public class AdminDashboardController {
         section.getChildren().addAll(titleLabel, table);
         return section;
     }
-    
 }

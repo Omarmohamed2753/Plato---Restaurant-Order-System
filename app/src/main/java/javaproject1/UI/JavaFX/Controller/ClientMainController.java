@@ -12,8 +12,6 @@ import javafx.stage.Stage;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -42,9 +40,7 @@ public class ClientMainController {
 
         Label welcomeLabel = new Label("Welcome, " + user.getName() + "!");
         welcomeLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        welcomeLabel.setTextFill(Color.web("#1a1a1a")); // لون داكن
-
-        // تمت إزالة Label "Available Restaurants" بناءً على طلبك
+        welcomeLabel.setTextFill(Color.web("#1a1a1a"));
 
         ScrollPane restaurantScroll = createRestaurantList(stage, user);
         VBox.setVgrow(restaurantScroll, Priority.ALWAYS);
@@ -90,7 +86,7 @@ public class ClientMainController {
         Button button = new Button(text);
         button.setStyle(
             "-fx-background-color: transparent; " +
-            "-fx-text-fill: #2d3436; " + // لون نص الأزرار داكن
+            "-fx-text-fill: #2d3436; " +
             "-fx-font-size: 14px; " +
             "-fx-cursor: hand; " +
             "-fx-padding: 8 15 8 15;"
@@ -153,7 +149,7 @@ public class ClientMainController {
         HBox contentBox = new HBox(20);
         contentBox.setAlignment(Pos.CENTER_LEFT);
 
-        // ===== IMAGE SECTION =====
+        // IMAGE SECTION
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
         imageBox.setMinWidth(150);
@@ -186,22 +182,22 @@ public class ClientMainController {
             imageBox.getChildren().add(placeholder);
         }
 
-        // ===== INFO SECTION =====
+        // INFO SECTION - ALL TEXT IS NOW BLACK/DARK
         VBox infoBox = new VBox(10);
         infoBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
 
         Label nameLabel = new Label(restaurant.getName() != null ? restaurant.getName() : "Unnamed Restaurant");
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
-        nameLabel.setTextFill(Color.BLACK); // أسود صريح
+        nameLabel.setTextFill(Color.BLACK);
 
         Label addressLabel = new Label("📍 " + (restaurant.getAddress() != null && !restaurant.getAddress().isEmpty() ? restaurant.getAddress() : "Address not available"));
         addressLabel.setFont(Font.font("System", 14));
-        addressLabel.setTextFill(Color.web("#555555"));
+        addressLabel.setTextFill(Color.web("#2d3436"));
         
         Label hoursLabel = new Label("🕐 " + (restaurant.getOpeningHours() != null && !restaurant.getOpeningHours().isEmpty() ? restaurant.getOpeningHours() : "Hours not available"));
         hoursLabel.setFont(Font.font("System", 14));
-        hoursLabel.setTextFill(Color.web("#555555"));
+        hoursLabel.setTextFill(Color.web("#2d3436"));
         
         Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()));
         ratingLabel.setStyle("-fx-background-color: #fff3cd; -fx-text-fill: #856404; -fx-padding: 5 10; -fx-background-radius: 15;");
@@ -209,7 +205,7 @@ public class ClientMainController {
 
         infoBox.getChildren().addAll(nameLabel, addressLabel, hoursLabel, ratingLabel);
 
-        // ===== BUTTON SECTION =====
+        // BUTTON SECTION
         Button viewMenuButton = new Button("View Menu");
         viewMenuButton.setPrefWidth(120);
         viewMenuButton.setStyle(
