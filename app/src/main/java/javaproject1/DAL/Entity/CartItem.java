@@ -17,7 +17,9 @@ public class CartItem {
 
     // Calculate subtotal and store it
     public double calculateSubtotal() {
-        this.subPrice = this.menuItem.getPrice() * this.quantity;
+        if (this.menuItem != null) {
+            this.subPrice = this.menuItem.getPrice() * this.quantity;
+        }
         return this.subPrice;
     }
 

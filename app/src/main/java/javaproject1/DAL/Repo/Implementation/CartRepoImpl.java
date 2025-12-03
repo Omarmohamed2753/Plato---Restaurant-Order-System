@@ -62,10 +62,8 @@ public class CartRepoImpl implements ICartRepo {
                 while (rs.next()) {
                     CartItem item = new CartItem();
                     item.setCartItemID(rs.getInt("cart_item_id"));
-                    item.setQuantity(rs.getInt("quantity"));
-                    item.setSubPrice(rs.getDouble("sub_price"));
-
-                    // Load full MenuItem details
+                    
+                    // Load full MenuItem details FIRST (before setting quantity)
                     MenuItem menuItem = new MenuItem();
                     menuItem.setItemId(rs.getString("menu_item_id"));
                     menuItem.setName(rs.getString("name"));
@@ -74,6 +72,11 @@ public class CartRepoImpl implements ICartRepo {
                     menuItem.setCategory(rs.getString("category"));
                     menuItem.setImagePath(rs.getString("image_path"));
                     item.setMenuItem(menuItem);
+                    
+                    // Now set quantity (this will recalculate subtotal, but we'll override with DB value)
+                    item.setQuantity(rs.getInt("quantity"));
+                    // Override with the actual sub_price from database
+                    item.setSubPrice(rs.getDouble("sub_price"));
 
                     items.add(item);
                 }
