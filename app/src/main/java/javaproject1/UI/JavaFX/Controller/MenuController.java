@@ -49,6 +49,7 @@ public class MenuController {
 
         Label titleLabel = new Label(restaurant.getName() + " Menu");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         headerBox.getChildren().addAll(backButton, titleLabel);
 
@@ -149,16 +150,17 @@ public class MenuController {
 
         Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
+        nameLabel.setTextFill(Color.web("#1a1a1a"));
         
         Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "No description available");
         descLabel.setFont(Font.font("System", 12));
-        descLabel.setTextFill(Color.web("#7f8c8d"));
+        descLabel.setTextFill(Color.web("#4a5568"));
         descLabel.setWrapText(true);
         descLabel.setMaxWidth(400);
         
         Label categoryLabel = new Label(item.getCategory() != null && !item.getCategory().isEmpty() ? item.getCategory() : "Uncategorized");
         categoryLabel.setFont(Font.font("System", 11));
-        categoryLabel.setTextFill(Color.web("#95a5a6"));
+        categoryLabel.setTextFill(Color.web("#718096"));
         
         Label priceLabel = new Label("$" + String.format("%.2f", item.getPrice()));
         priceLabel.setFont(Font.font("System", FontWeight.BOLD, 18));

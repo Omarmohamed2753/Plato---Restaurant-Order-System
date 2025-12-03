@@ -31,6 +31,7 @@ public class CartController {
 
         Label titleLabel = new Label("Shopping Cart");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         VBox cartItems = new VBox(10);
         Cart cart = user.getCart();
@@ -43,6 +44,7 @@ public class CartController {
             double total = cartService.calculateTotal(cart);
             Label totalLabel = new Label("Total: $" + String.format("%.2f", total));
             totalLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+            totalLabel.setTextFill(Color.web("#1a1a1a"));
             
             Button checkoutButton = new Button("Checkout");
             checkoutButton.setStyle(
@@ -60,6 +62,7 @@ public class CartController {
         } else {
             Label emptyLabel = new Label("Your cart is empty");
             emptyLabel.setFont(Font.font("System", 18));
+            emptyLabel.setTextFill(Color.web("#636e72"));
             contentBox.getChildren().addAll(titleLabel, emptyLabel);
         }
 
@@ -76,13 +79,16 @@ public class CartController {
 
         Label nameLabel = new Label(item.getMenuItem().getName());
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        nameLabel.setTextFill(Color.web("#1a1a1a"));
         nameLabel.setPrefWidth(200);
 
         Label qtyLabel = new Label("Qty: " + item.getQuantity());
+        qtyLabel.setTextFill(Color.web("#4a5568"));
         qtyLabel.setPrefWidth(100);
 
         Label priceLabel = new Label("$" + String.format("%.2f", item.getSubPrice()));
         priceLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        priceLabel.setTextFill(Color.web("#1a1a1a"));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);

@@ -8,6 +8,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Enums.OrderStatus;
@@ -44,7 +45,7 @@ public class CheckoutController {
 
         Label titleLabel = new Label("Checkout");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#2d3436"));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         // Order Summary
         VBox summaryBox = new VBox(15);
@@ -57,6 +58,7 @@ public class CheckoutController {
 
         Label summaryTitle = new Label("Order Summary");
         summaryTitle.setFont(Font.font("System", FontWeight.BOLD, 20));
+        summaryTitle.setTextFill(Color.web("#1a1a1a"));
 
         VBox itemsBox = new VBox(10);
         double subtotal = 0.0;
@@ -64,10 +66,12 @@ public class CheckoutController {
             HBox itemRow = new HBox(10);
             Label itemName = new Label(item.getMenuItem().getName() + " x" + item.getQuantity());
             itemName.setFont(Font.font("System", 14));
+            itemName.setTextFill(Color.web("#1a1a1a"));
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
             Label itemPrice = new Label("$" + String.format("%.2f", item.getSubPrice()));
             itemPrice.setFont(Font.font("System", FontWeight.BOLD, 14));
+            itemPrice.setTextFill(Color.web("#1a1a1a"));
             itemRow.getChildren().addAll(itemName, spacer, itemPrice);
             itemsBox.getChildren().add(itemRow);
             subtotal += item.getSubPrice();
@@ -106,6 +110,7 @@ public class CheckoutController {
 
         Label addressTitle = new Label("Delivery Address");
         addressTitle.setFont(Font.font("System", FontWeight.BOLD, 20));
+        addressTitle.setTextFill(Color.web("#1a1a1a"));
 
         ComboBox<Address> addressCombo = new ComboBox<>();
         if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
@@ -134,13 +139,16 @@ public class CheckoutController {
 
         Label paymentTitle = new Label("Payment Method");
         paymentTitle.setFont(Font.font("System", FontWeight.BOLD, 20));
+        paymentTitle.setTextFill(Color.web("#1a1a1a"));
 
         ToggleGroup paymentGroup = new ToggleGroup();
         RadioButton cashRadio = new RadioButton("Cash on Delivery");
         cashRadio.setToggleGroup(paymentGroup);
         cashRadio.setSelected(true);
+        cashRadio.setTextFill(Color.web("#1a1a1a"));
         RadioButton cardRadio = new RadioButton("Credit Card");
         cardRadio.setToggleGroup(paymentGroup);
+        cardRadio.setTextFill(Color.web("#1a1a1a"));
 
         paymentBox.getChildren().addAll(paymentTitle, cashRadio, cardRadio);
 
@@ -251,10 +259,12 @@ public class CheckoutController {
         HBox row = new HBox(10);
         Label labelLbl = new Label(label);
         labelLbl.setFont(Font.font("System", 14));
+        labelLbl.setTextFill(Color.web("#4a5568"));
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Label valueLbl = new Label(value);
         valueLbl.setFont(Font.font("System", 14));
+        valueLbl.setTextFill(Color.web("#1a1a1a"));
         row.getChildren().addAll(labelLbl, spacer, valueLbl);
         
         Label result = new Label();

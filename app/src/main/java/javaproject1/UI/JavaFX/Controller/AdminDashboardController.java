@@ -48,7 +48,7 @@ public class AdminDashboardController {
         Label restaurantLabel = new Label("Restaurant: " + 
             (admin.getRestaurant() != null ? admin.getRestaurant().getName() : "N/A"));
         restaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 18));
-        restaurantLabel.setTextFill(Color.web("#636e72"));
+        restaurantLabel.setTextFill(Color.web("#4a5568"));
 
         // Statistics Cards
         HBox statsBox = createStatsCards(admin);
@@ -115,7 +115,7 @@ public class AdminDashboardController {
 
         Label menuLabel = new Label("MENU");
         menuLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
-        menuLabel.setTextFill(Color.web("#95a5a6"));
+        menuLabel.setTextFill(Color.web("#718096"));
 
         Button dashboardBtn = createSidebarButton("📊 Dashboard", true);
         dashboardBtn.setOnAction(e -> show(stage, admin));
@@ -274,7 +274,7 @@ public class AdminDashboardController {
 
         Label titleLabel = new Label(title);
         titleLabel.setFont(Font.font("System", 14));
-        titleLabel.setTextFill(Color.web("#7f8c8d"));
+        titleLabel.setTextFill(Color.web("#4a5568"));
 
         Label valueLabel = new Label(value);
         valueLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
@@ -295,6 +295,7 @@ public class AdminDashboardController {
     
         Label titleLabel = new Label("Recent Orders");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
     
         TableView<Order> table = new TableView<>();
         table.setPrefHeight(300);
@@ -335,6 +336,7 @@ public class AdminDashboardController {
         if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
             Label noRestaurantLabel = new Label("No restaurant assigned to this admin.");
             noRestaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 14));
+            noRestaurantLabel.setTextFill(Color.web("#4a5568"));
     
             section.getChildren().addAll(titleLabel, noRestaurantLabel, table);
             return section;

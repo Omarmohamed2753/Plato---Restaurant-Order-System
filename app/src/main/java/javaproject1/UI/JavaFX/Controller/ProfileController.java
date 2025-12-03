@@ -34,7 +34,7 @@ public class ProfileController {
 
         Label titleLabel = new Label("My Profile");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#2d3436"));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         // Profile Card
         VBox profileCard = new VBox(20);
@@ -160,6 +160,7 @@ public class ProfileController {
 
         Label titleLabel = new Label("My Addresses");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         VBox addressList = new VBox(10);
         
@@ -167,12 +168,13 @@ public class ProfileController {
             for (var address : user.getAddresses()) {
                 Label addressLabel = new Label("📍 " + address.toString());
                 addressLabel.setFont(Font.font("System", 14));
+                addressLabel.setTextFill(Color.web("#1a1a1a"));
                 addressList.getChildren().add(addressLabel);
             }
         } else {
             Label noAddress = new Label("No addresses added yet.");
             noAddress.setFont(Font.font("System", 14));
-            noAddress.setTextFill(Color.web("#95a5a6"));
+            noAddress.setTextFill(Color.web("#718096"));
             addressList.getChildren().add(noAddress);
         }
 
@@ -190,6 +192,7 @@ public class ProfileController {
     private static void addFormRow(GridPane grid, int row, String labelText, TextField field) {
         Label label = new Label(labelText);
         label.setFont(Font.font("System", FontWeight.BOLD, 14));
+        label.setTextFill(Color.web("#1a1a1a"));
         grid.add(label, 0, row);
         grid.add(field, 1, row);
     }

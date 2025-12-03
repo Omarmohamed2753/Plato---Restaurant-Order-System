@@ -39,7 +39,7 @@ public class SignInController {
 
         Label titleLabel = new Label("Sign In");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 36));
-        titleLabel.setTextFill(Color.web("#2d3436"));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         // Tab pane for Client/Admin
         TabPane tabPane = new TabPane();
@@ -165,6 +165,7 @@ public class SignInController {
         });
 
         Hyperlink signUpLink = new Hyperlink("Don't have an account? Sign up");
+        signUpLink.setStyle("-fx-text-fill: #667eea; -fx-font-size: 14px;");
         signUpLink.setOnAction(e -> SignUpController.show(stage));
 
         box.getChildren().addAll(emailField, passwordField, signInButton, messageLabel, signUpLink);
