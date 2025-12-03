@@ -168,29 +168,43 @@ public class OrderRepoImpl implements IOrderRepo {
     private Order mapToOrder(ResultSet rs) throws SQLException {
         int orderId = rs.getInt("order_id");
         int userId = rs.getInt("user_id");
-        String restaurantId = rs.getString("restaurant_id");
+        int restaurantIdInt = rs.getInt("restaurant_id");
+        String restaurantId = rs.wasNull() ? null : String.valueOf(restaurantIdInt);
         double totalAmount = rs.getDouble("total_amount");
         String status = rs.getString("status");
         Timestamp orderDate = rs.getTimestamp("order_date");
-        String addressId = rs.getString("address_id");
+        int addressIdInt = rs.getInt("address_id");
+        String addressId = rs.wasNull() ? null : String.valueOf(addressIdInt);
         String paymentId = rs.getString("payment_id");
         String deliveryId = rs.getString("delivery_id");
 
         User user = (userId > 0) ? userRepo.getUserById(userId) : null;
 
-        Restaurant restaurant = new Restaurant();
-        restaurant.setRestaurantId(restaurantId);
+        Restaurant restaurant = null;
+        if (restaurantId != null) {
+            restaurant = new Restaurant();
+            restaurant.setRestaurantId(restaurantId);
+        }
 
-        Address address = new Address();
-        address.setId(addressId);
+        Address address = null;
+        if (addressId != null) {
+            address = new Address();
+            address.setId(addressId);
+        }
 
-        Payment payment = new Payment();
-        payment.setPaymentId(paymentId);
+        Payment payment = null;
+        if (paymentId != null) {
+            payment = new Payment();
+            payment.setPaymentId(paymentId);
+        }
 
-        Delivery delivery = new Delivery();
-        delivery.setDeliveryId(deliveryId);
+        Delivery delivery = null;
+        if (deliveryId != null) {
+            delivery = new Delivery();
+            delivery.setDeliveryId(deliveryId);
+        }
 
-        OrderStatus orderStatus = OrderStatus.valueOf(status);
+        OrderStatus orderStatus = (status != null) ? OrderStatus.valueOf(status.toUpperCase()) : OrderStatus.PENDING;
         Date date = (orderDate != null) ? new Date(orderDate.getTime()) : null;
 
         Order order = new Order();

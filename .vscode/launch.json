@@ -6,6 +6,13 @@
       "name": "App",
       "request": "launch",
       "mainClass": "javaproject1.App",
+      "projectName": ""
+    },
+    {
+      "type": "java",
+      "name": "App",
+      "request": "launch",
+      "mainClass": "javaproject1.App",
       "projectName": "app"
     },
     {

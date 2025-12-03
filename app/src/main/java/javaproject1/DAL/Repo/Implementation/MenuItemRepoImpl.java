@@ -43,6 +43,8 @@ public class MenuItemRepoImpl implements IMenuItemRepo {
                 item.setName(rs.getString("name"));
                 item.setPrice(rs.getDouble("price"));
                 item.setDescription(rs.getString("description"));
+                item.setCategory(rs.getString("category"));
+                item.setImagePath(rs.getString("image_path"));
                 return item;
             }
 
@@ -108,6 +110,8 @@ public class MenuItemRepoImpl implements IMenuItemRepo {
                 item.setName(rs.getString("name"));
                 item.setPrice(rs.getDouble("price"));
                 item.setDescription(rs.getString("description"));
+                item.setCategory(rs.getString("category"));
+                item.setImagePath(rs.getString("image_path"));
                 items.add(item);
             }
 

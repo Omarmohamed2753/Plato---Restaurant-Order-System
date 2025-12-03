@@ -3,6 +3,7 @@ package javaproject1.DAL.Repo.Implementation;
 import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Employee;
 import javaproject1.DAL.Entity.Menu;
+import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Entity.Order;
 import javaproject1.DAL.Entity.Restaurant;
 import javaproject1.DAL.Entity.Review;
@@ -149,12 +150,36 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     Menu m = new Menu();
-                    m.setMenuId(rs.getString("menu_id"));
+                    String menuId = rs.getString("menu_id");
+                    m.setMenuId(menuId);
+                    // Load menu items for this menu
+                    m.setItems(loadMenuItems(conn, menuId));
                     return m;
                 }
             }
         }
         return new Menu();
+    }
+    
+    private List<MenuItem> loadMenuItems(Connection conn, String menuId) throws SQLException {
+        List<MenuItem> items = new ArrayList<>();
+        String sql = "SELECT * FROM menu_items WHERE menu_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, menuId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    MenuItem item = new MenuItem();
+                    item.setItemId(rs.getString("id"));
+                    item.setName(rs.getString("name"));
+                    item.setPrice(rs.getDouble("price"));
+                    item.setDescription(rs.getString("description"));
+                    item.setCategory(rs.getString("category"));
+                    item.setImagePath(rs.getString("image_path"));
+                    items.add(item);
+                }
+            }
+        }
+        return items;
     }
 
     private List<Employee> loadEmployees(Connection conn, int restaurantId) throws SQLException {

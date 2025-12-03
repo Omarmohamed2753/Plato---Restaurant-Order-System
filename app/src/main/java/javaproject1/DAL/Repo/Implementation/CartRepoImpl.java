@@ -48,7 +48,10 @@ public class CartRepoImpl implements ICartRepo {
     public Cart getCartById(int id) {
         Cart cart = new Cart();
         cart.setCartId(id);
-        String sql = "SELECT * FROM cart_item WHERE cart_id = ?";
+        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
+                     "FROM cart_item ci " +
+                     "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
+                     "WHERE ci.cart_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -62,8 +65,14 @@ public class CartRepoImpl implements ICartRepo {
                     item.setQuantity(rs.getInt("quantity"));
                     item.setSubPrice(rs.getDouble("sub_price"));
 
+                    // Load full MenuItem details
                     MenuItem menuItem = new MenuItem();
                     menuItem.setItemId(rs.getString("menu_item_id"));
+                    menuItem.setName(rs.getString("name"));
+                    menuItem.setPrice(rs.getDouble("price"));
+                    menuItem.setDescription(rs.getString("description"));
+                    menuItem.setCategory(rs.getString("category"));
+                    menuItem.setImagePath(rs.getString("image_path"));
                     item.setMenuItem(menuItem);
 
                     items.add(item);
