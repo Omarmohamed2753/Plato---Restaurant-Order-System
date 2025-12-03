@@ -43,7 +43,7 @@ public class AdminDashboardController {
 
         Label titleLabel = new Label("Admin Dashboard");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#2d3436"));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         Label restaurantLabel = new Label("Restaurant: " + 
             (admin.getRestaurant() != null ? admin.getRestaurant().getName() : "N/A"));

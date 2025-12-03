@@ -23,40 +23,46 @@ public class OrderRepoImpl implements IOrderRepo {
     public void addOrder(Order order) {
         String sql = """
             INSERT INTO orders 
-            (order_id, user_id, restaurant_id, total_amount, status, order_date, address_id, payment_id, delivery_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, restaurant_id, total_amount, status, order_date, address_id, payment_id, delivery_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, order.getOrderId());
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             if (order.getUser() != null)
-                stmt.setString(2, order.getUser().getId());
-            else stmt.setNull(2, Types.INTEGER);
+                stmt.setInt(1, Integer.parseInt(order.getUser().getId()));
+            else stmt.setNull(1, Types.INTEGER);
 
             if (order.getRestaurant() != null)
-                stmt.setString(3, order.getRestaurant().getRestaurantId());
-            else stmt.setNull(3, Types.INTEGER);
+                stmt.setInt(2, Integer.parseInt(order.getRestaurant().getRestaurantId()));
+            else stmt.setNull(2, Types.INTEGER);
 
-            stmt.setDouble(4, order.getTotalAmount());
-            stmt.setString(5, order.getStatus().name());
-            stmt.setTimestamp(6, new Timestamp(order.getOrderDate().getTime()));
+            stmt.setDouble(3, order.getTotalAmount());
+            stmt.setString(4, order.getStatus().name());
+            stmt.setTimestamp(5, new Timestamp(order.getOrderDate().getTime()));
 
             if (order.getDeliveryAddress() != null)
-                stmt.setString(7, order.getDeliveryAddress().getId());
-            else stmt.setNull(7, Types.INTEGER);
+                stmt.setInt(6, Integer.parseInt(order.getDeliveryAddress().getId()));
+            else stmt.setNull(6, Types.INTEGER);
 
             if (order.getPayment() != null)
-                stmt.setString(8, order.getPayment().getPaymentId());
-            else stmt.setNull(8, Types.INTEGER);
+                stmt.setString(7, order.getPayment().getPaymentId());
+            else stmt.setNull(7, Types.VARCHAR);
 
             if (order.getDelivery() != null)
-                stmt.setString(9, order.getDelivery().getDeliveryId());
-            else stmt.setNull(9, Types.INTEGER);
+                stmt.setString(8, order.getDelivery().getDeliveryId());
+            else stmt.setNull(8, Types.VARCHAR);
 
             stmt.executeUpdate();
+            
+            // Get the generated order_id
+            try (ResultSet rs = stmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int generatedId = rs.getInt(1);
+                    order.setOrderId(String.valueOf(generatedId));
+                }
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();

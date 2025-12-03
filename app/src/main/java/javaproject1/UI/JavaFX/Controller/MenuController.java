@@ -147,16 +147,16 @@ public class MenuController {
         VBox infoBox = new VBox(5);
         VBox.setVgrow(infoBox, Priority.ALWAYS);
 
-        Label nameLabel = new Label(item.getName());
+        Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
         
-        Label descLabel = new Label(item.getDescription());
+        Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "No description available");
         descLabel.setFont(Font.font("System", 12));
         descLabel.setTextFill(Color.web("#7f8c8d"));
         descLabel.setWrapText(true);
         descLabel.setMaxWidth(400);
         
-        Label categoryLabel = new Label(item.getCategory());
+        Label categoryLabel = new Label(item.getCategory() != null && !item.getCategory().isEmpty() ? item.getCategory() : "Uncategorized");
         categoryLabel.setFont(Font.font("System", 11));
         categoryLabel.setTextFill(Color.web("#95a5a6"));
         

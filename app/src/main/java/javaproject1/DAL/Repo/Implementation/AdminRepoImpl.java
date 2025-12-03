@@ -3,6 +3,7 @@ package javaproject1.DAL.Repo.Implementation;
 import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Admin;
 import javaproject1.DAL.Entity.Restaurant;
+import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 import javaproject1.DAL.Repo.abstraction.IAdminRepo;
 
 import java.sql.*;
@@ -129,10 +130,11 @@ public class AdminRepoImpl implements IAdminRepo {
     //  Helper method
     private Admin extractAdminFromResultSet(ResultSet rs) throws SQLException {
         Restaurant restaurant = null;
-        String restaurantId = rs.getString("restaurant_id");
-        if (restaurantId != null) {
-            restaurant = new Restaurant();
-            restaurant.setRestaurantId(restaurantId);
+        int restaurantIdInt = rs.getInt("restaurant_id");
+        if (!rs.wasNull() && restaurantIdInt > 0) {
+            // Load full restaurant details
+            RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
+            restaurant = restaurantRepo.getRestaurantById(restaurantIdInt);
         }
 
         return new Admin(
