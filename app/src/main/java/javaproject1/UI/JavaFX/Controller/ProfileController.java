@@ -9,7 +9,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.scene.control.Alert;
 import javafx.scene.layout.HBox;
 import javaproject1.BLL.Service.implementation.UserServiceImpl;
 import javaproject1.DAL.Entity.User;

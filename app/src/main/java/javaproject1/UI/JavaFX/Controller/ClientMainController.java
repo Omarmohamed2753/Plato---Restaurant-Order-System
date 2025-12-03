@@ -42,17 +42,14 @@ public class ClientMainController {
 
         Label welcomeLabel = new Label("Welcome, " + user.getName() + "!");
         welcomeLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        welcomeLabel.setTextFill(Color.web("#1a1a1a"));
+        welcomeLabel.setTextFill(Color.web("#1a1a1a")); // لون داكن
 
-        // Restaurant List
-        Label restaurantLabel = new Label("Available Restaurants");
-        restaurantLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
-        restaurantLabel.setTextFill(Color.web("#1a1a1a"));
+        // تمت إزالة Label "Available Restaurants" بناءً على طلبك
 
         ScrollPane restaurantScroll = createRestaurantList(stage, user);
         VBox.setVgrow(restaurantScroll, Priority.ALWAYS);
 
-        contentBox.getChildren().addAll(welcomeLabel, restaurantLabel, restaurantScroll);
+        contentBox.getChildren().addAll(welcomeLabel, restaurantScroll);
         root.setCenter(contentBox);
 
         Scene scene = new Scene(root, 1000, 700);
@@ -93,7 +90,7 @@ public class ClientMainController {
         Button button = new Button(text);
         button.setStyle(
             "-fx-background-color: transparent; " +
-            "-fx-text-fill: #2d3436; " +
+            "-fx-text-fill: #2d3436; " + // لون نص الأزرار داكن
             "-fx-font-size: 14px; " +
             "-fx-cursor: hand; " +
             "-fx-padding: 8 15 8 15;"
@@ -121,7 +118,6 @@ public class ClientMainController {
         VBox restaurantBox = new VBox(15);
         restaurantBox.setPadding(new Insets(20));
         
-        // Get all restaurants
         RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
         List<Restaurant> restaurants = restaurantRepo.getAllRestaurants();
 
@@ -147,96 +143,73 @@ public class ClientMainController {
         card.setPadding(new Insets(20));
         card.setStyle(
             "-fx-background-color: white; " +
-            "-fx-background-radius: 10; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 5);" +
+            "-fx-border-color: #e0e0e0; -fx-border-radius: 15;"
         );
         card.setPrefWidth(800);
+        card.setMaxWidth(Double.MAX_VALUE); 
 
         HBox contentBox = new HBox(20);
         contentBox.setAlignment(Pos.CENTER_LEFT);
 
-        // ===== IMAGE SECTION - NEW! =====
+        // ===== IMAGE SECTION =====
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
-        imageBox.setPrefWidth(150);
-        imageBox.setPrefHeight(150);
-        imageBox.setStyle(
-            "-fx-background-color: #f5f7fa; " +
-            "-fx-background-radius: 8;"
-        );
+        imageBox.setMinWidth(150);
+        imageBox.setMinHeight(150);
+        imageBox.setMaxWidth(150);
+        imageBox.setMaxHeight(150);
+        imageBox.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 10;");
 
         try {
             if (restaurant.getImagePath() != null && !restaurant.getImagePath().isEmpty()) {
-                ImageView imageView = new ImageView();
-                Image image = new Image(
-                    restaurant.getImagePath(), 
-                    150, 150, 
-                    true, true, 
-                    true  // Load in background
-                );
-                
-                imageView.setImage(image);
+                ImageView imageView = new ImageView(new Image(restaurant.getImagePath(), 150, 150, true, true));
                 imageView.setFitWidth(150);
                 imageView.setFitHeight(150);
-                imageView.setPreserveRatio(false);
                 
-                // Clip to rounded rectangle
                 javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(150, 150);
-                clip.setArcWidth(16);
-                clip.setArcHeight(16);
+                clip.setArcWidth(20);
+                clip.setArcHeight(20);
                 imageView.setClip(clip);
                 
-                // Add placeholder while loading or on error
-                if (image.isError()) {
-                    Label placeholder = new Label("🍽️");
-                    placeholder.setFont(Font.font("System", 48));
-                    imageBox.getChildren().add(placeholder);
-                } else {
-                    imageBox.getChildren().add(imageView);
-                }
+                imageBox.getChildren().add(imageView);
             } else {
-                // No image path - show placeholder
                 Label placeholder = new Label("🍽️");
-                placeholder.setFont(Font.font("System", 48));
+                placeholder.setFont(Font.font(50));
+                placeholder.setTextFill(Color.GRAY);
                 imageBox.getChildren().add(placeholder);
             }
         } catch (Exception e) {
-            // If image fails to load, show placeholder
             Label placeholder = new Label("🍽️");
-            placeholder.setFont(Font.font("System", 48));
+            placeholder.setFont(Font.font(50));
             imageBox.getChildren().add(placeholder);
-            System.err.println("Error loading image for " + restaurant.getName() + ": " + e.getMessage());
         }
 
         // ===== INFO SECTION =====
-        VBox infoBox = new VBox(8);
-        VBox.setVgrow(infoBox, Priority.ALWAYS);
+        VBox infoBox = new VBox(10);
+        infoBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
 
         Label nameLabel = new Label(restaurant.getName() != null ? restaurant.getName() : "Unnamed Restaurant");
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 22));
-        nameLabel.setTextFill(Color.web("#1a1a1a"));
-        
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        nameLabel.setTextFill(Color.BLACK); // أسود صريح
+
         Label addressLabel = new Label("📍 " + (restaurant.getAddress() != null && !restaurant.getAddress().isEmpty() ? restaurant.getAddress() : "Address not available"));
         addressLabel.setFont(Font.font("System", 14));
-        addressLabel.setTextFill(Color.web("#4a5568"));
+        addressLabel.setTextFill(Color.web("#555555"));
         
         Label hoursLabel = new Label("🕐 " + (restaurant.getOpeningHours() != null && !restaurant.getOpeningHours().isEmpty() ? restaurant.getOpeningHours() : "Hours not available"));
         hoursLabel.setFont(Font.font("System", 14));
-        hoursLabel.setTextFill(Color.web("#4a5568"));
+        hoursLabel.setTextFill(Color.web("#555555"));
         
         Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()));
-        ratingLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
-        ratingLabel.setTextFill(Color.web("#f39c12"));
+        ratingLabel.setStyle("-fx-background-color: #fff3cd; -fx-text-fill: #856404; -fx-padding: 5 10; -fx-background-radius: 15;");
+        ratingLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
 
         infoBox.getChildren().addAll(nameLabel, addressLabel, hoursLabel, ratingLabel);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
         // ===== BUTTON SECTION =====
-        VBox buttonBox = new VBox(10);
-        buttonBox.setAlignment(Pos.CENTER);
-
         Button viewMenuButton = new Button("View Menu");
         viewMenuButton.setPrefWidth(120);
         viewMenuButton.setStyle(
@@ -248,29 +221,9 @@ public class ClientMainController {
             "-fx-background-radius: 20; " +
             "-fx-cursor: hand;"
         );
-        viewMenuButton.setOnMouseEntered(e -> viewMenuButton.setStyle(
-            "-fx-background-color: #5568d3; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 14px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 10 20 10 20; " +
-            "-fx-background-radius: 20; " +
-            "-fx-cursor: hand;"
-        ));
-        viewMenuButton.setOnMouseExited(e -> viewMenuButton.setStyle(
-            "-fx-background-color: #667eea; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 14px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 10 20 10 20; " +
-            "-fx-background-radius: 20; " +
-            "-fx-cursor: hand;"
-        ));
         viewMenuButton.setOnAction(e -> MenuController.show(stage, user, restaurant));
 
-        buttonBox.getChildren().add(viewMenuButton);
-
-        contentBox.getChildren().addAll(imageBox, infoBox, spacer, buttonBox);
+        contentBox.getChildren().addAll(imageBox, infoBox, viewMenuButton);
         card.getChildren().add(contentBox);
 
         return card;

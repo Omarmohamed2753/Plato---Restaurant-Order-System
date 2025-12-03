@@ -1,7 +1,5 @@
 package javaproject1.UI.JavaFX.Controller;
 
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuItem;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -11,13 +9,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
-
-import java.util.List;
 
 public class MenuController {
     private static MenuServiceImpl menuService = new MenuServiceImpl();
@@ -91,15 +86,19 @@ public class MenuController {
         card.setAlignment(Pos.CENTER_LEFT);
         card.setStyle(
             "-fx-background-color: white; " +
-            "-fx-background-radius: 10; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 8, 0, 0, 2);"
+            "-fx-background-radius: 12; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);" +
+            "-fx-border-color: #ecf0f1; -fx-border-radius: 12;"
         );
+        card.setMaxWidth(Double.MAX_VALUE);
 
-        // ===== IMAGE SECTION - NEW! =====
+        // ===== IMAGE SECTION =====
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
-        imageBox.setPrefWidth(100);
-        imageBox.setPrefHeight(100);
+        imageBox.setMinWidth(100);
+        imageBox.setMinHeight(100);
+        imageBox.setMaxWidth(100);
+        imageBox.setMaxHeight(100);
         imageBox.setStyle(
             "-fx-background-color: #f5f7fa; " +
             "-fx-background-radius: 8;"
@@ -107,54 +106,39 @@ public class MenuController {
 
         try {
             if (item.getImagePath() != null && !item.getImagePath().isEmpty()) {
-                ImageView imageView = new ImageView();
-                Image image = new Image(
-                    item.getImagePath(), 
-                    100, 100, 
-                    true, true, 
-                    true
-                );
-                
-                imageView.setImage(image);
+                ImageView imageView = new ImageView(new Image(item.getImagePath(), 100, 100, true, true));
                 imageView.setFitWidth(100);
                 imageView.setFitHeight(100);
-                imageView.setPreserveRatio(false);
                 
-                // Clip to rounded rectangle
                 javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(100, 100);
                 clip.setArcWidth(16);
                 clip.setArcHeight(16);
                 imageView.setClip(clip);
                 
-                if (image.isError()) {
-                    Label placeholder = new Label("🍽️");
-                    placeholder.setFont(Font.font("System", 36));
-                    imageBox.getChildren().add(placeholder);
-                } else {
-                    imageBox.getChildren().add(imageView);
-                }
+                imageBox.getChildren().add(imageView);
             } else {
-                Label placeholder = new Label("🍽️");
+                Label placeholder = new Label("🍔");
                 placeholder.setFont(Font.font("System", 36));
                 imageBox.getChildren().add(placeholder);
             }
         } catch (Exception e) {
-            Label placeholder = new Label("🍽️");
+            Label placeholder = new Label("🍔");
             placeholder.setFont(Font.font("System", 36));
             imageBox.getChildren().add(placeholder);
         }
 
         // ===== INFO SECTION =====
         VBox infoBox = new VBox(5);
-        VBox.setVgrow(infoBox, Priority.ALWAYS);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
+        infoBox.setAlignment(Pos.CENTER_LEFT);
 
         Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
-        nameLabel.setTextFill(Color.web("#1a1a1a"));
+        nameLabel.setTextFill(Color.BLACK); // أسود
         
         Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "No description available");
         descLabel.setFont(Font.font("System", 12));
-        descLabel.setTextFill(Color.web("#4a5568"));
+        descLabel.setTextFill(Color.web("#636e72"));
         descLabel.setWrapText(true);
         descLabel.setMaxWidth(400);
         
@@ -167,9 +151,6 @@ public class MenuController {
         priceLabel.setTextFill(Color.web("#27ae60"));
 
         infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, priceLabel);
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
 
         // ===== ACTION SECTION =====
         VBox actionBox = new VBox(10);
@@ -189,22 +170,6 @@ public class MenuController {
             "-fx-background-radius: 15; " +
             "-fx-cursor: hand;"
         );
-        addButton.setOnMouseEntered(e -> addButton.setStyle(
-            "-fx-background-color: #5568d3; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 8 16 8 16; " +
-            "-fx-background-radius: 15; " +
-            "-fx-cursor: hand;"
-        ));
-        addButton.setOnMouseExited(e -> addButton.setStyle(
-            "-fx-background-color: #667eea; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 8 16 8 16; " +
-            "-fx-background-radius: 15; " +
-            "-fx-cursor: hand;"
-        ));
         
         addButton.setOnAction(e -> {
             CartItem cartItem = new CartItem(item, quantitySpinner.getValue());
@@ -214,8 +179,15 @@ public class MenuController {
 
         actionBox.getChildren().addAll(quantitySpinner, addButton);
 
-        card.getChildren().addAll(imageBox, infoBox, spacer, actionBox);
+        card.getChildren().addAll(imageBox, infoBox, spacer(true), actionBox);
         return card;
+    }
+
+    private static Region spacer(boolean horizontal) {
+        Region r = new Region();
+        if(horizontal) HBox.setHgrow(r, Priority.ALWAYS);
+        else VBox.setVgrow(r, Priority.ALWAYS);
+        return r;
     }
 
     private static void showAlert(String message, Alert.AlertType type) {
