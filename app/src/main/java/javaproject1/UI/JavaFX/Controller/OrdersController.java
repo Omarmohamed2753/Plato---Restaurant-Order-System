@@ -30,6 +30,7 @@ public class OrdersController {
 
         Label titleLabel = new Label("My Orders");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         VBox ordersBox = new VBox(15);
         
@@ -40,6 +41,7 @@ public class OrdersController {
         } else {
             Label emptyLabel = new Label("No orders yet");
             emptyLabel.setFont(Font.font("System", 18));
+            emptyLabel.setTextFill(Color.web("#636e72"));
             ordersBox.getChildren().add(emptyLabel);
         }
 
@@ -65,12 +67,15 @@ public class OrdersController {
 
         Label idLabel = new Label("Order #" + order.getOrderId());
         idLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
+        idLabel.setTextFill(Color.web("#1a1a1a"));
 
         Label statusLabel = new Label("Status: " + order.getStatus());
         statusLabel.setFont(Font.font("System", 14));
+        statusLabel.setTextFill(Color.web("#4a5568"));
 
         Label totalLabel = new Label("Total: $" + String.format("%.2f", order.getTotalAmount()));
         totalLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        totalLabel.setTextFill(Color.web("#1a1a1a"));
 
         card.getChildren().addAll(idLabel, statusLabel, totalLabel);
         return card;

@@ -35,7 +35,7 @@ public class SignUpController {
 
         Label titleLabel = new Label("Create Account");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#2d3436"));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
 
         // Form fields
         GridPane grid = new GridPane();
@@ -56,31 +56,31 @@ public class SignUpController {
         TextField buildingField = createTextField("Building Number");
 
         int row = 0;
-        grid.add(new Label("Name:"), 0, row);
+        grid.add(createFormLabel("Name:"), 0, row);
         grid.add(nameField, 1, row++);
         
-        grid.add(new Label("Email:"), 0, row);
+        grid.add(createFormLabel("Email:"), 0, row);
         grid.add(emailField, 1, row++);
         
-        grid.add(new Label("Password:"), 0, row);
+        grid.add(createFormLabel("Password:"), 0, row);
         grid.add(passwordField, 1, row++);
         
-        grid.add(new Label("Confirm:"), 0, row);
+        grid.add(createFormLabel("Confirm:"), 0, row);
         grid.add(confirmPasswordField, 1, row++);
         
-        grid.add(new Label("Phone:"), 0, row);
+        grid.add(createFormLabel("Phone:"), 0, row);
         grid.add(phoneField, 1, row++);
         
-        grid.add(new Label("Age:"), 0, row);
+        grid.add(createFormLabel("Age:"), 0, row);
         grid.add(ageField, 1, row++);
         
-        grid.add(new Label("Street:"), 0, row);
+        grid.add(createFormLabel("Street:"), 0, row);
         grid.add(streetField, 1, row++);
         
-        grid.add(new Label("City:"), 0, row);
+        grid.add(createFormLabel("City:"), 0, row);
         grid.add(cityField, 1, row++);
         
-        grid.add(new Label("Building:"), 0, row);
+        grid.add(createFormLabel("Building:"), 0, row);
         grid.add(buildingField, 1, row++);
 
         Button signUpButton = new Button("Sign Up");
@@ -195,6 +195,13 @@ public class SignUpController {
         field.setPrefWidth(300);
         field.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
         return field;
+    }
+    
+    private static Label createFormLabel(String text) {
+        Label label = new Label(text);
+        label.setFont(Font.font("System", FontWeight.BOLD, 14));
+        label.setTextFill(Color.web("#1a1a1a"));
+        return label;
     }
 
     private static void showError(Label label, String message) {

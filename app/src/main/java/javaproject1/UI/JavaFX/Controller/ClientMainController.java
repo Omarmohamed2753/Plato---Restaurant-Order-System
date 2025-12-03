@@ -42,11 +42,12 @@ public class ClientMainController {
 
         Label welcomeLabel = new Label("Welcome, " + user.getName() + "!");
         welcomeLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        welcomeLabel.setTextFill(Color.web("#2d3436"));
+        welcomeLabel.setTextFill(Color.web("#1a1a1a"));
 
         // Restaurant List
         Label restaurantLabel = new Label("Available Restaurants");
         restaurantLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        restaurantLabel.setTextFill(Color.web("#1a1a1a"));
 
         ScrollPane restaurantScroll = createRestaurantList(stage, user);
         VBox.setVgrow(restaurantScroll, Priority.ALWAYS);
@@ -127,6 +128,7 @@ public class ClientMainController {
         if (restaurants.isEmpty()) {
             Label noRestaurants = new Label("No restaurants available at the moment.");
             noRestaurants.setFont(Font.font("System", 16));
+            noRestaurants.setTextFill(Color.web("#636e72"));
             restaurantBox.getChildren().add(noRestaurants);
         } else {
             for (Restaurant restaurant : restaurants) {
@@ -212,15 +214,15 @@ public class ClientMainController {
 
         Label nameLabel = new Label(restaurant.getName() != null ? restaurant.getName() : "Unnamed Restaurant");
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 22));
-        nameLabel.setTextFill(Color.web("#2d3436"));
+        nameLabel.setTextFill(Color.web("#1a1a1a"));
         
         Label addressLabel = new Label("📍 " + (restaurant.getAddress() != null && !restaurant.getAddress().isEmpty() ? restaurant.getAddress() : "Address not available"));
         addressLabel.setFont(Font.font("System", 14));
-        addressLabel.setTextFill(Color.web("#636e72"));
+        addressLabel.setTextFill(Color.web("#4a5568"));
         
         Label hoursLabel = new Label("🕐 " + (restaurant.getOpeningHours() != null && !restaurant.getOpeningHours().isEmpty() ? restaurant.getOpeningHours() : "Hours not available"));
         hoursLabel.setFont(Font.font("System", 14));
-        hoursLabel.setTextFill(Color.web("#636e72"));
+        hoursLabel.setTextFill(Color.web("#4a5568"));
         
         Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()));
         ratingLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
