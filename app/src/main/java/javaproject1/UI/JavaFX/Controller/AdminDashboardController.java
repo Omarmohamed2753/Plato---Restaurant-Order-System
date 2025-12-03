@@ -193,40 +193,70 @@ public class AdminDashboardController {
     }
 
     private static HBox createStatsCards(Admin admin) {
+
         HBox statsBox = new HBox(20);
         statsBox.setAlignment(Pos.CENTER);
-
-        // Total Orders Card
+    
+        // If admin has no restaurant, return empty stats safely
+        if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
+            VBox ordersCard = createStatCard("📦", "Total Orders", "0", "#3498db");
+            VBox usersCard = createStatCard("👥", "Total Users", "0", "#9b59b6");
+            VBox employeesCard = createStatCard("👔", "Employees", "0", "#e67e22");
+            VBox pendingCard = createStatCard("⏳", "Pending", "0", "#e74c3c");
+    
+            statsBox.getChildren().addAll(ordersCard, usersCard, employeesCard, pendingCard);
+            return statsBox;
+        }
+    
+        // Admin restaurant ID (safe)
+        String adminRestId = admin.getRestaurant().getRestaurantId();
+    
+        // =======================
+        // Get All Orders
+        // =======================
         List<Order> allOrders = orderService.getAllOrders();
+    
         int totalOrders = (int) allOrders.stream()
-            .filter(o -> admin.getRestaurant() != null && 
-                        o.getRestaurant() != null &&
-                        o.getRestaurant().getRestaurantId().equals(admin.getRestaurant().getRestaurantId()))
-            .count();
-
+                .filter(o -> o.getRestaurant() != null &&
+                             o.getRestaurant().getRestaurantId() != null &&
+                             o.getRestaurant().getRestaurantId().equals(adminRestId))
+                .count();
+    
         VBox ordersCard = createStatCard("📦", "Total Orders", String.valueOf(totalOrders), "#3498db");
-
-        // Total Users Card
+    
+        // =======================
+        // Total Users
+        // =======================
         int totalUsers = userService.getAllUsers().size();
         VBox usersCard = createStatCard("👥", "Total Users", String.valueOf(totalUsers), "#9b59b6");
-
-        // Total Employees Card
+    
+        // =======================
+        // Total Employees
+        // =======================
         int totalEmployees = (int) employeeService.getAllEmployees().stream()
-            .filter(e -> admin.getRestaurant() != null &&
-                        e.getRestaurant() != null &&
-                        e.getRestaurant().getRestaurantId().equals(admin.getRestaurant().getRestaurantId()))
-            .count();
+                .filter(e -> e.getRestaurant() != null &&
+                             e.getRestaurant().getRestaurantId() != null &&
+                             e.getRestaurant().getRestaurantId().equals(adminRestId))
+                .count();
+    
         VBox employeesCard = createStatCard("👔", "Employees", String.valueOf(totalEmployees), "#e67e22");
-
-        // Pending Orders Card
+    
+        // =======================
+        // Pending Orders
+        // =======================
         int pendingOrders = (int) allOrders.stream()
-            .filter(o -> o.getStatus() == OrderStatus.PENDING || o.getStatus() == OrderStatus.CONFIRMED)
-            .count();
+                .filter(o -> o.getStatus() == OrderStatus.PENDING ||
+                             o.getStatus() == OrderStatus.CONFIRMED)
+                .count();
+    
         VBox pendingCard = createStatCard("⏳", "Pending", String.valueOf(pendingOrders), "#e74c3c");
-
+    
+        // Add all to UI
         statsBox.getChildren().addAll(ordersCard, usersCard, employeesCard, pendingCard);
+    
         return statsBox;
     }
+    
 
     private static VBox createStatCard(String icon, String title, String value, String color) {
         VBox card = new VBox(10);
@@ -262,48 +292,72 @@ public class AdminDashboardController {
             "-fx-background-radius: 15; " +
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
         );
-
+    
         Label titleLabel = new Label("Recent Orders");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-
+    
         TableView<Order> table = new TableView<>();
         table.setPrefHeight(300);
-
+    
         TableColumn<Order, String> idCol = new TableColumn<>("Order ID");
         idCol.setPrefWidth(100);
-        idCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getOrderId()));
-
+        idCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(data.getValue().getOrderId()));
+    
         TableColumn<Order, String> userCol = new TableColumn<>("User");
         userCol.setPrefWidth(150);
-        userCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
-            data.getValue().getUser() != null ? data.getValue().getUser().getName() : "N/A"
-        ));
-
+        userCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        data.getValue().getUser() != null
+                                ? data.getValue().getUser().getName()
+                                : "N/A"
+                ));
+    
         TableColumn<Order, String> totalCol = new TableColumn<>("Total");
         totalCol.setPrefWidth(100);
-        totalCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
-            "$" + String.format("%.2f", data.getValue().getTotalAmount())
-        ));
-
+        totalCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        "$" + String.format("%.2f", data.getValue().getTotalAmount())
+                ));
+    
         TableColumn<Order, String> statusCol = new TableColumn<>("Status");
         statusCol.setPrefWidth(150);
-        statusCol.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
-            data.getValue().getStatus().toString()
-        ));
-
+        statusCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        data.getValue().getStatus().toString()
+                ));
+    
         table.getColumns().addAll(idCol, userCol, totalCol, statusCol);
-
-        // Load recent orders
+    
+        // ============================================================
+        // SAFETY FIX: Admin restaurant is null → return empty table
+        // ============================================================
+        if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
+            Label noRestaurantLabel = new Label("No restaurant assigned to this admin.");
+            noRestaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 14));
+    
+            section.getChildren().addAll(titleLabel, noRestaurantLabel, table);
+            return section;
+        }
+    
+        String adminRestId = admin.getRestaurant().getRestaurantId();
+    
+        // ============================================================
+        // Load recent orders safely (null-safe filters)
+        // ============================================================
         List<Order> recentOrders = orderService.getAllOrders().stream()
-            .filter(o -> admin.getRestaurant() != null && 
+                .filter(o ->
                         o.getRestaurant() != null &&
-                        o.getRestaurant().getRestaurantId().equals(admin.getRestaurant().getRestaurantId()))
-            .limit(10)
-            .toList();
-
+                        o.getRestaurant().getRestaurantId() != null &&
+                        o.getRestaurant().getRestaurantId().equals(adminRestId)
+                )
+                .limit(10)
+                .toList();
+    
         table.getItems().addAll(recentOrders);
-
+    
         section.getChildren().addAll(titleLabel, table);
         return section;
     }
+    
 }

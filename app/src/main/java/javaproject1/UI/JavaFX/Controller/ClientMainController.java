@@ -1,4 +1,5 @@
 package javaproject1.UI.JavaFX.Controller;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -13,7 +14,8 @@ import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.layout.HBox;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 import java.util.List;
 
@@ -139,7 +141,7 @@ public class ClientMainController {
     }
 
     private static VBox createRestaurantCard(Stage stage, User user, Restaurant restaurant) {
-        VBox card = new VBox(10);
+        VBox card = new VBox(15);
         card.setPadding(new Insets(20));
         card.setStyle(
             "-fx-background-color: white; " +
@@ -148,12 +150,69 @@ public class ClientMainController {
         );
         card.setPrefWidth(800);
 
-        HBox headerBox = new HBox(20);
-        headerBox.setAlignment(Pos.CENTER_LEFT);
+        HBox contentBox = new HBox(20);
+        contentBox.setAlignment(Pos.CENTER_LEFT);
 
-        VBox infoBox = new VBox(5);
+        // ===== IMAGE SECTION - NEW! =====
+        VBox imageBox = new VBox();
+        imageBox.setAlignment(Pos.CENTER);
+        imageBox.setPrefWidth(150);
+        imageBox.setPrefHeight(150);
+        imageBox.setStyle(
+            "-fx-background-color: #f5f7fa; " +
+            "-fx-background-radius: 8;"
+        );
+
+        try {
+            if (restaurant.getImagePath() != null && !restaurant.getImagePath().isEmpty()) {
+                ImageView imageView = new ImageView();
+                Image image = new Image(
+                    restaurant.getImagePath(), 
+                    150, 150, 
+                    true, true, 
+                    true  // Load in background
+                );
+                
+                imageView.setImage(image);
+                imageView.setFitWidth(150);
+                imageView.setFitHeight(150);
+                imageView.setPreserveRatio(false);
+                
+                // Clip to rounded rectangle
+                javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(150, 150);
+                clip.setArcWidth(16);
+                clip.setArcHeight(16);
+                imageView.setClip(clip);
+                
+                // Add placeholder while loading or on error
+                if (image.isError()) {
+                    Label placeholder = new Label("🍽️");
+                    placeholder.setFont(Font.font("System", 48));
+                    imageBox.getChildren().add(placeholder);
+                } else {
+                    imageBox.getChildren().add(imageView);
+                }
+            } else {
+                // No image path - show placeholder
+                Label placeholder = new Label("🍽️");
+                placeholder.setFont(Font.font("System", 48));
+                imageBox.getChildren().add(placeholder);
+            }
+        } catch (Exception e) {
+            // If image fails to load, show placeholder
+            Label placeholder = new Label("🍽️");
+            placeholder.setFont(Font.font("System", 48));
+            imageBox.getChildren().add(placeholder);
+            System.err.println("Error loading image for " + restaurant.getName() + ": " + e.getMessage());
+        }
+
+        // ===== INFO SECTION =====
+        VBox infoBox = new VBox(8);
+        VBox.setVgrow(infoBox, Priority.ALWAYS);
+
         Label nameLabel = new Label(restaurant.getName());
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 22));
+        nameLabel.setTextFill(Color.web("#2d3436"));
         
         Label addressLabel = new Label("📍 " + restaurant.getAddress());
         addressLabel.setFont(Font.font("System", 14));
@@ -163,7 +222,7 @@ public class ClientMainController {
         hoursLabel.setFont(Font.font("System", 14));
         hoursLabel.setTextFill(Color.web("#636e72"));
         
-        Label ratingLabel = new Label("⭐ " + restaurant.getRating());
+        Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()));
         ratingLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
         ratingLabel.setTextFill(Color.web("#f39c12"));
 
@@ -172,7 +231,12 @@ public class ClientMainController {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // ===== BUTTON SECTION =====
+        VBox buttonBox = new VBox(10);
+        buttonBox.setAlignment(Pos.CENTER);
+
         Button viewMenuButton = new Button("View Menu");
+        viewMenuButton.setPrefWidth(120);
         viewMenuButton.setStyle(
             "-fx-background-color: #667eea; " +
             "-fx-text-fill: white; " +
@@ -182,10 +246,30 @@ public class ClientMainController {
             "-fx-background-radius: 20; " +
             "-fx-cursor: hand;"
         );
+        viewMenuButton.setOnMouseEntered(e -> viewMenuButton.setStyle(
+            "-fx-background-color: #5568d3; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 10 20 10 20; " +
+            "-fx-background-radius: 20; " +
+            "-fx-cursor: hand;"
+        ));
+        viewMenuButton.setOnMouseExited(e -> viewMenuButton.setStyle(
+            "-fx-background-color: #667eea; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 10 20 10 20; " +
+            "-fx-background-radius: 20; " +
+            "-fx-cursor: hand;"
+        ));
         viewMenuButton.setOnAction(e -> MenuController.show(stage, user, restaurant));
 
-        headerBox.getChildren().addAll(infoBox, spacer, viewMenuButton);
-        card.getChildren().add(headerBox);
+        buttonBox.getChildren().add(viewMenuButton);
+
+        contentBox.getChildren().addAll(imageBox, infoBox, spacer, buttonBox);
+        card.getChildren().add(contentBox);
 
         return card;
     }
