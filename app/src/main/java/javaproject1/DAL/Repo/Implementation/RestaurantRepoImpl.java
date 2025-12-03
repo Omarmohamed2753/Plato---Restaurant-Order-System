@@ -165,7 +165,8 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Employee e = new Employee();
-                    e.setId(rs.getString("employee_id"));
+                    // FIXED: Changed from "employee_id" to "id"
+                    e.setId(rs.getString("id"));
                     e.setName(rs.getString("name"));
                     e.setRole(rs.getString("role"));
                     e.setPhoneNumber(rs.getString("phone_number"));

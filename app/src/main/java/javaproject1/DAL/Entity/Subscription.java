@@ -1,6 +1,7 @@
 package javaproject1.DAL.Entity;
 import java.util.Date;
 public class Subscription {
+    private int id;
     private final int cost=100;
     private final double discountRate=10.0;
     private Date startDate;
@@ -48,6 +49,12 @@ public class Subscription {
     }
     public void setActive(boolean active) {
         this.active = active;
+    }
+    public int getId() {
+        return id;
+    }
+    public void setId(int id) {
+        this.id = id;
     }
     @Override
     public String toString() {
