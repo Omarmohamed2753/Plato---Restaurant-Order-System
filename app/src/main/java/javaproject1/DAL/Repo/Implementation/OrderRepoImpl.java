@@ -56,7 +56,6 @@ public class OrderRepoImpl implements IOrderRepo {
 
             stmt.executeUpdate();
             
-            // Get the generated order_id
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
                     int generatedId = rs.getInt(1);
@@ -83,7 +82,7 @@ public class OrderRepoImpl implements IOrderRepo {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                order = mapToOrder(rs);
+                order = mapToOrder(rs, conn);
             }
 
         } catch (SQLException e) {
@@ -173,7 +172,7 @@ public class OrderRepoImpl implements IOrderRepo {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                orders.add(mapToOrder(rs));
+                orders.add(mapToOrder(rs, conn));
             }
 
         } catch (SQLException e) {
@@ -185,7 +184,7 @@ public class OrderRepoImpl implements IOrderRepo {
         return orders;
     }
 
-    private Order mapToOrder(ResultSet rs) throws SQLException {
+    private Order mapToOrder(ResultSet rs, Connection conn) throws SQLException {
         int orderId = rs.getInt("order_id");
         int userId = rs.getInt("user_id");
         int restaurantIdInt = rs.getInt("restaurant_id");
@@ -198,35 +197,43 @@ public class OrderRepoImpl implements IOrderRepo {
         String paymentId = rs.getString("payment_id");
         String deliveryId = rs.getString("delivery_id");
 
-        // Load user
+        // Load user with full details
         User user = (userId > 0) ? userRepo.getUserById(userId) : null;
 
-        // Create restaurant reference
+        // Load restaurant with full details
         Restaurant restaurant = null;
         if (restaurantId != null) {
-            restaurant = new Restaurant();
-            restaurant.setRestaurantId(restaurantId);
+            RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
+            restaurant = restaurantRepo.getRestaurantById(restaurantIdInt);
         }
 
-        // Create address reference
+        // Load address with full details
         Address address = null;
         if (addressId != null) {
-            address = new Address();
-            address.setId(addressId);
+            AddressRepoImpl addressRepo = new AddressRepoImpl();
+            address = addressRepo.getAddressById(addressIdInt);
         }
 
-        // Create payment reference
+        // Load payment with full details
         Payment payment = null;
         if (paymentId != null) {
-            payment = new Payment();
-            payment.setPaymentId(paymentId);
+            PaymentRepoImpl paymentRepo = new PaymentRepoImpl();
+            try {
+                payment = paymentRepo.getPaymentById(Integer.parseInt(paymentId));
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid payment ID: " + paymentId);
+            }
         }
 
-        // Create delivery reference
+        // Load delivery with full details
         Delivery delivery = null;
         if (deliveryId != null) {
-            delivery = new Delivery();
-            delivery.setDeliveryId(deliveryId);
+            DeliveryRepoImpl deliveryRepo = new DeliveryRepoImpl();
+            try {
+                delivery = deliveryRepo.getDeliveryById(Integer.parseInt(deliveryId));
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid delivery ID: " + deliveryId);
+            }
         }
 
         // Parse order status
@@ -253,8 +260,57 @@ public class OrderRepoImpl implements IOrderRepo {
         order.setPayment(payment);
         order.setDelivery(delivery);
 
-        System.out.println("DEBUG OrderRepo - Mapped order ID: " + orderId + ", Status: " + orderStatus);
+        // CRITICAL FIX: Load cart items for this order
+        order.setItems(loadOrderItems(conn, orderId));
+
+        System.out.println("DEBUG OrderRepo - Mapped order ID: " + orderId + ", Status: " + orderStatus + ", Items: " + (order.getItems() != null ? order.getItems().size() : 0));
         
         return order;
+    }
+
+    /**
+     * Load cart items for a specific order by joining order_items and cart_item tables
+     */
+    private List<CartItem> loadOrderItems(Connection conn, int orderId) throws SQLException {
+        List<CartItem> items = new ArrayList<>();
+        
+        String sql = """
+            SELECT ci.cart_item_id, ci.menu_item_id, ci.quantity, ci.sub_price,
+                   mi.id, mi.name, mi.price, mi.description, mi.category, mi.image_path
+            FROM order_items oi
+            JOIN cart_item ci ON oi.cart_item_id = ci.cart_item_id
+            JOIN menu_items mi ON ci.menu_item_id = mi.id
+            WHERE oi.order_id = ?
+            """;
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, orderId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    // Create MenuItem
+                    MenuItem menuItem = new MenuItem();
+                    menuItem.setItemId(rs.getString("id"));
+                    menuItem.setName(rs.getString("name"));
+                    menuItem.setPrice(rs.getDouble("price"));
+                    menuItem.setDescription(rs.getString("description"));
+                    menuItem.setCategory(rs.getString("category"));
+                    menuItem.setImagePath(rs.getString("image_path"));
+                    
+                    // Create CartItem
+                    CartItem cartItem = new CartItem();
+                    cartItem.setCartItemID(rs.getInt("cart_item_id"));
+                    cartItem.setMenuItem(menuItem);
+                    cartItem.setQuantity(rs.getInt("quantity"));
+                    cartItem.setSubPrice(rs.getDouble("sub_price"));
+                    
+                    items.add(cartItem);
+                    
+                    System.out.println("  - Loaded item: " + menuItem.getName() + " x" + cartItem.getQuantity());
+                }
+            }
+        }
+        
+        return items;
     }
 }
