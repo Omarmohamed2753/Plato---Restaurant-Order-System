@@ -37,15 +37,10 @@ public class ProfileController {
 
         Label titleLabel = new Label("My Profile");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setTextFill(Color.web("#667eea"));
 
-        // Profile Info Card
         VBox profileCard = createProfileCard(stage, user);
-        
-        // Subscription Card
         VBox subscriptionCard = createSubscriptionCard(stage, user);
-        
-        // Addresses Card
         VBox addressesCard = createAddressesCard(stage, user);
 
         contentBox.getChildren().addAll(titleLabel, profileCard, subscriptionCard, addressesCard);
@@ -121,7 +116,6 @@ public class ProfileController {
                 
                 showSuccess(messageLabel, "Profile updated successfully!");
                 
-                // Refresh user data
                 User refreshedUser = userService.getUserById(Integer.parseInt(user.getId()));
                 if (refreshedUser != null) {
                     user.setName(refreshedUser.getName());
@@ -154,26 +148,53 @@ public class ProfileController {
 
         Label titleLabel = new Label("Elite Subscription");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setTextFill(Color.web("#667eea"));
 
         VBox statusBox = new VBox(15);
         statusBox.setAlignment(Pos.CENTER_LEFT);
 
         if (user.getSubscription() != null && user.getSubscription().isActive()) {
-            // Active subscription
+            // ACTIVE SUBSCRIPTION - Display subscription data
             Label statusLabel = new Label("✓ Active Elite Member");
             statusLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
             statusLabel.setTextFill(Color.web("#27ae60"));
 
+            // Subscription Details Box
+            VBox detailsBox = new VBox(8);
+            detailsBox.setPadding(new Insets(15));
+            detailsBox.setStyle(
+                "-fx-background-color: #f8f9fa; " +
+                "-fx-background-radius: 10; " +
+                "-fx-border-color: #27ae60; " +
+                "-fx-border-width: 2; " +
+                "-fx-border-radius: 10;"
+            );
+
+            Label costLabel = new Label("Cost: $100/month");
+            costLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+            costLabel.setTextFill(Color.web("#000000"));
+
+            Label discountLabel = new Label("Discount Rate: 10%");
+            discountLabel.setFont(Font.font("System", 14));
+            discountLabel.setTextFill(Color.web("#000000"));
+
+            Label startLabel = new Label("Start Date: " + 
+                (user.getSubscription().getStartDate() != null ? 
+                    new java.text.SimpleDateFormat("MMM dd, yyyy").format(user.getSubscription().getStartDate()) : "N/A"));
+            startLabel.setFont(Font.font("System", 14));
+            startLabel.setTextFill(Color.web("#000000"));
+
+            Label endLabel = new Label("Expires: " + 
+                (user.getSubscription().getEndDate() != null ? 
+                    new java.text.SimpleDateFormat("MMM dd, yyyy").format(user.getSubscription().getEndDate()) : "N/A"));
+            endLabel.setFont(Font.font("System", 14));
+            endLabel.setTextFill(Color.web("#000000"));
+
+            detailsBox.getChildren().addAll(costLabel, discountLabel, startLabel, endLabel);
+
             Label benefitsLabel = new Label("Benefits: 10% discount on all orders • Priority delivery");
             benefitsLabel.setFont(Font.font("System", 14));
             benefitsLabel.setTextFill(Color.web("#4a5568"));
-
-            Label dateLabel = new Label("Expires: " + 
-                (user.getSubscription().getEndDate() != null ? 
-                    new java.text.SimpleDateFormat("MMM dd, yyyy").format(user.getSubscription().getEndDate()) : "N/A"));
-            dateLabel.setFont(Font.font("System", 12));
-            dateLabel.setTextFill(Color.web("#718096"));
 
             Button cancelButton = new Button("Cancel Subscription");
             cancelButton.setStyle(
@@ -203,7 +224,6 @@ public class ProfileController {
                             
                             showSuccess(messageLabel, "Subscription cancelled successfully!");
                             
-                            // Refresh the page
                             new Thread(() -> {
                                 try {
                                     Thread.sleep(1500);
@@ -219,9 +239,9 @@ public class ProfileController {
                 });
             });
 
-            statusBox.getChildren().addAll(statusLabel, benefitsLabel, dateLabel, cancelButton, messageLabel);
+            statusBox.getChildren().addAll(statusLabel, detailsBox, benefitsLabel, cancelButton, messageLabel);
         } else {
-            // No active subscription
+            // NO ACTIVE SUBSCRIPTION - Show subscribe option
             Label statusLabel = new Label("No Active Subscription");
             statusLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
             statusLabel.setTextFill(Color.web("#718096"));
@@ -249,51 +269,7 @@ public class ProfileController {
             messageLabel.setFont(Font.font("System", 14));
 
             subscribeButton.setOnAction(e -> {
-                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, 
-                    "Subscribe to Elite for $100/month?\n\nYou will get:\n" +
-                    "• 10% discount on all orders\n• Priority delivery\n• Exclusive offers");
-                confirmAlert.showAndWait().ifPresent(response -> {
-                    if (response == ButtonType.OK) {
-                        try {
-                            Calendar cal = Calendar.getInstance();
-                            Date startDate = cal.getTime();
-                            cal.add(Calendar.MONTH, 1);
-                            Date endDate = cal.getTime();
-                            
-                            Subscription newSub = new Subscription(startDate, endDate);
-                            newSub.setActive(true);
-                            subscriptionRepo.addSubscription(newSub);
-                            
-                            user.setElite(true);
-                            user.setSubscription(newSub);
-                            userService.updateUser(user);
-                            
-                            // Update subscription with user_id
-                            try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection();
-                                 java.sql.PreparedStatement stmt = conn.prepareStatement(
-                                     "UPDATE subscriptions SET user_id = ? WHERE subscription_id = ?")) {
-                                stmt.setInt(1, Integer.parseInt(user.getId()));
-                                stmt.setInt(2, newSub.getId());
-                                stmt.executeUpdate();
-                            }
-                            
-                            showSuccess(messageLabel, "Subscription activated successfully!");
-                            
-                            // Refresh the page
-                            new Thread(() -> {
-                                try {
-                                    Thread.sleep(1500);
-                                    javafx.application.Platform.runLater(() -> show(stage, user));
-                                } catch (InterruptedException ex) {
-                                    ex.printStackTrace();
-                                }
-                            }).start();
-                        } catch (Exception ex) {
-                            showError(messageLabel, "Error activating subscription: " + ex.getMessage());
-                            ex.printStackTrace();
-                        }
-                    }
-                });
+                showCreditCardDialog(stage, user, messageLabel);
             });
 
             statusBox.getChildren().addAll(statusLabel, benefitsLabel, priceLabel, subscribeButton, messageLabel);
@@ -301,6 +277,101 @@ public class ProfileController {
 
         card.getChildren().addAll(titleLabel, statusBox);
         return card;
+    }
+
+    private static void showCreditCardDialog(Stage stage, User user, Label messageLabel) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Elite Subscription Payment");
+        dialog.setHeaderText("Enter your credit card information\nSubscription Cost: $100/month");
+
+        ButtonType subscribeButtonType = new ButtonType("Subscribe", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(subscribeButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+
+        TextField cardNumberField = new TextField();
+        cardNumberField.setPromptText("1234 5678 9012 3456");
+        TextField cardHolderField = new TextField();
+        cardHolderField.setPromptText("John Doe");
+        TextField expiryField = new TextField();
+        expiryField.setPromptText("MM/YY");
+        TextField cvvField = new TextField();
+        cvvField.setPromptText("123");
+
+        grid.add(new Label("Card Number:"), 0, 0);
+        grid.add(cardNumberField, 1, 0);
+        grid.add(new Label("Card Holder:"), 0, 1);
+        grid.add(cardHolderField, 1, 1);
+        grid.add(new Label("Expiry Date:"), 0, 2);
+        grid.add(expiryField, 1, 2);
+        grid.add(new Label("CVV:"), 0, 3);
+        grid.add(cvvField, 1, 3);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.showAndWait().ifPresent(response -> {
+            if (response == subscribeButtonType) {
+                String cardNumber = cardNumberField.getText().trim().replaceAll("\\s+", "");
+                String cardHolder = cardHolderField.getText().trim();
+                String expiry = expiryField.getText().trim();
+                String cvv = cvvField.getText().trim();
+
+                if (cardNumber.isEmpty() || cardHolder.isEmpty() || expiry.isEmpty() || cvv.isEmpty()) {
+                    showError(messageLabel, "All credit card fields are required!");
+                    return;
+                }
+
+                if (!cardNumber.matches("\\d{16}")) {
+                    showError(messageLabel, "Card number must be 16 digits!");
+                    return;
+                }
+
+                if (!cvv.matches("\\d{3,4}")) {
+                    showError(messageLabel, "CVV must be 3 or 4 digits!");
+                    return;
+                }
+
+                try {
+                    Calendar cal = Calendar.getInstance();
+                    Date startDate = cal.getTime();
+                    cal.add(Calendar.MONTH, 1);
+                    Date endDate = cal.getTime();
+                    
+                    Subscription newSub = new Subscription(startDate, endDate);
+                    newSub.setActive(true);
+                    subscriptionRepo.addSubscription(newSub);
+                    
+                    user.setElite(true);
+                    user.setSubscription(newSub);
+                    userService.updateUser(user);
+                    
+                    try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection();
+                         java.sql.PreparedStatement stmt = conn.prepareStatement(
+                             "UPDATE subscriptions SET user_id = ? WHERE subscription_id = ?")) {
+                        stmt.setInt(1, Integer.parseInt(user.getId()));
+                        stmt.setInt(2, newSub.getId());
+                        stmt.executeUpdate();
+                    }
+                    
+                    showSuccess(messageLabel, "Subscription activated successfully! Payment processed.");
+                    
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(1500);
+                            javafx.application.Platform.runLater(() -> show(stage, user));
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
+                    }).start();
+                } catch (Exception ex) {
+                    showError(messageLabel, "Error activating subscription: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+        });
     }
 
     private static VBox createAddressesCard(Stage stage, User user) {
@@ -314,7 +385,7 @@ public class ProfileController {
 
         Label titleLabel = new Label("My Addresses");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setTextFill(Color.web("#667eea"));
 
         VBox addressList = new VBox(10);
         
@@ -330,7 +401,7 @@ public class ProfileController {
 
                 Label addressLabel = new Label("📍 " + address.toString());
                 addressLabel.setFont(Font.font("System", 14));
-                addressLabel.setTextFill(Color.web("#1a1a1a"));
+                addressLabel.setTextFill(Color.web("#000000")); // FIXED: Changed to black
                 HBox.setHgrow(addressLabel, Priority.ALWAYS);
 
                 Button deleteButton = new Button("Remove");
@@ -371,7 +442,6 @@ public class ProfileController {
             addressList.getChildren().add(noAddress);
         }
 
-        // Add new address section
         VBox addAddressBox = new VBox(10);
         addAddressBox.setPadding(new Insets(15, 0, 0, 0));
         addAddressBox.setStyle("-fx-border-color: #e2e8f0; -fx-border-width: 1 0 0 0;");
@@ -423,7 +493,6 @@ public class ProfileController {
                 Address newAddress = new Address(street, city, building);
                 addressService.addAddress(newAddress);
                 
-                // Link address to user
                 try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection();
                      java.sql.PreparedStatement stmt = conn.prepareStatement(
                          "INSERT INTO user_addresses (user_id, address_id) VALUES (?, ?)")) {
@@ -440,7 +509,6 @@ public class ProfileController {
                 
                 showSuccess(messageLabel, "Address added successfully!");
                 
-                // Refresh the page
                 new Thread(() -> {
                     try {
                         Thread.sleep(1000);
