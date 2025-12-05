@@ -51,7 +51,7 @@ public class ClientMainController {
         welcomeLabel.setFont(Font.font("Arial", FontWeight.BOLD, 38));
         welcomeLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
         
-        Label restaurantsTitle = new Label("Explore Our Plato Restaurant 🍽️");
+        Label restaurantsTitle = new Label("Explore Our Plato Restaurant ");
         restaurantsTitle.setFont(Font.font("Arial", FontWeight.SEMI_BOLD, 24));
         restaurantsTitle.setTextFill(Color.web(ACCENT_GOLD));
 
@@ -71,7 +71,7 @@ public class ClientMainController {
         navbar.setAlignment(Pos.CENTER_LEFT);
         navbar.setStyle("-fx-background-color: " + CARD_BACKGROUND + "; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 5);");
 
-        Label brandLabel = new Label("🍽️ Elite Platter");
+        Label brandLabel = new Label("Plato Restaurant");
         brandLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 24));
         brandLabel.setTextFill(Color.web(ACCENT_GOLD));
 
@@ -81,6 +81,7 @@ public class ClientMainController {
         Button homeButton = createNavButton("Home", () -> show(stage, user));
         Button ordersButton = createNavButton("My Orders", () -> OrdersController.show(stage, user));
         Button cartButton = createNavButton("Cart", () -> CartController.show(stage, user));
+        Button  reviewsButton = createNavButton("Reviews", () -> ReviewController.show(stage, user));
         Button profileButton = createNavButton("Profile", () -> ProfileController.show(stage, user));
         Button logoutButton = createNavButton("Logout", () -> {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to logout?");
@@ -100,7 +101,7 @@ public class ClientMainController {
         logoutButton.setOnMouseExited(e -> logoutButton.setStyle(logoutButton.getStyle().replace("-fx-background-color: #dc2626;", "-fx-background-color: #ef4444;")));
 
 
-        navbar.getChildren().addAll(brandLabel, spacer, homeButton, ordersButton, cartButton, profileButton, logoutButton);
+        navbar.getChildren().addAll(brandLabel, spacer, homeButton, ordersButton, cartButton,reviewsButton, profileButton, logoutButton);
         return navbar;
     }
 
