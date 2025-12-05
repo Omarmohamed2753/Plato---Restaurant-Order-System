@@ -198,7 +198,9 @@ public class OrdersController {
         );
         leftFooter.getChildren().add(totalLabel);
 
-        VBox rightFooter = new VBox(5);
+        VBox rightFooter = new VBox(8);
+        
+        // Delivery Address
         String addressStr = "Not specified";
         if (order.getDeliveryAddress() != null) {
             Address addr = order.getDeliveryAddress();
@@ -219,6 +221,27 @@ public class OrdersController {
         addressLabel.setWrapText(true);
         addressLabel.setMaxWidth(400);
         rightFooter.getChildren().add(addressLabel);
+        
+        // Delivery Person Info
+        String deliveryPersonInfo = "Not assigned yet";
+        if (order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null) {
+            Employee deliveryPerson = order.getDelivery().getDeliveryPerson();
+            String name = deliveryPerson.getName() != null ? deliveryPerson.getName() : "Unknown";
+            String phone = deliveryPerson.getPhoneNumber() != null ? deliveryPerson.getPhoneNumber() : "N/A";
+            deliveryPersonInfo = String.format("%s - %s", name, phone);
+            System.out.println("  Delivery person found: " + deliveryPersonInfo);
+        } else {
+            System.out.println("  WARNING: No delivery person assigned for order #" + order.getOrderId());
+        }
+        
+        Label deliveryPersonLabel = new Label("🚴 Delivery Person: " + deliveryPersonInfo);
+        deliveryPersonLabel.setStyle(
+            "-fx-font-size: 12px; " +
+            "-fx-text-fill: #636e72;"
+        );
+        deliveryPersonLabel.setWrapText(true);
+        deliveryPersonLabel.setMaxWidth(400);
+        rightFooter.getChildren().add(deliveryPersonLabel);
 
         footer.getChildren().addAll(leftFooter, rightFooter);
 
