@@ -21,6 +21,7 @@ import java.util.*;
 public class CheckoutController {
     private static OrderServiceImpl orderService = new OrderServiceImpl();
     private static CartServiceImpl cartService = new CartServiceImpl();
+    private static PaymentServiceImpl paymentService = new PaymentServiceImpl();
     private static RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
 
     public static void show(Stage stage, User user) {
@@ -43,7 +44,6 @@ public class CheckoutController {
         contentBox.setPadding(new Insets(30));
         contentBox.setMaxWidth(800);
 
-        // TITLE
         Label titleLabel = new Label("Checkout");
         titleLabel.setStyle(
             "-fx-font-size: 32px; " +
@@ -64,18 +64,14 @@ public class CheckoutController {
         }
         double total = subtotal + tax + deliveryFee - discount;
 
-        // ORDER SUMMARY BOX
         VBox summaryBox = createSummaryBox(cart, subtotal, tax, deliveryFee, discount, total);
-
-        // ADDRESS SELECTION BOX
         VBox addressBox = createAddressBox(user);
         ComboBox<Address> addressCombo = (ComboBox<Address>) addressBox.lookup(".combo-box");
 
-        // PAYMENT METHOD BOX
         VBox paymentBox = createPaymentBox();
         ToggleGroup paymentGroup = (ToggleGroup) paymentBox.getUserData();
+        VBox cardDetailsBox = (VBox) paymentBox.getChildren().get(paymentBox.getChildren().size() - 1);
 
-        // PLACE ORDER BUTTON
         Button placeOrderButton = new Button("Place Order");
         placeOrderButton.setPrefWidth(300);
         placeOrderButton.setStyle(
@@ -88,9 +84,14 @@ public class CheckoutController {
             "-fx-cursor: hand;"
         );
 
+        Label orderMessageLabel = new Label();
+        orderMessageLabel.setFont(Font.font("System", 14));
+        orderMessageLabel.setWrapText(true);
+
         placeOrderButton.setOnAction(e -> {
             if (user.getAddresses() == null || user.getAddresses().isEmpty()) {
-                Alert alert = new Alert(Alert.AlertType.ERROR, "Please add a delivery address first!");
+                Alert alert = new Alert(Alert.AlertType.ERROR, 
+                    "Please add a delivery address in your profile first!");
                 alert.showAndWait();
                 return;
             }
@@ -100,6 +101,51 @@ public class CheckoutController {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Please select a delivery address!");
                 alert.showAndWait();
                 return;
+            }
+
+            // Get payment method
+            RadioButton selectedPayment = (RadioButton) paymentGroup.getSelectedToggle();
+            if (selectedPayment == null) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Please select a payment method!");
+                alert.showAndWait();
+                return;
+            }
+
+            boolean isCreditCard = selectedPayment.getText().contains("Credit Card");
+            
+            // Validate card details if credit card is selected
+            if (isCreditCard) {
+                TextField cardNumberField = (TextField) cardDetailsBox.lookup("#cardNumber");
+                TextField cardHolderField = (TextField) cardDetailsBox.lookup("#cardHolder");
+                TextField expiryField = (TextField) cardDetailsBox.lookup("#expiry");
+                TextField cvvField = (TextField) cardDetailsBox.lookup("#cvv");
+
+                if (cardNumberField.getText().trim().isEmpty() || 
+                    cardHolderField.getText().trim().isEmpty() ||
+                    expiryField.getText().trim().isEmpty() || 
+                    cvvField.getText().trim().isEmpty()) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, 
+                        "Please fill in all credit card details!");
+                    alert.showAndWait();
+                    return;
+                }
+
+                String cardNumber = cardNumberField.getText().trim().replaceAll("\\s+", "");
+                String cvv = cvvField.getText().trim();
+
+                if (!cardNumber.matches("\\d{16}")) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, 
+                        "Card number must be 16 digits!");
+                    alert.showAndWait();
+                    return;
+                }
+
+                if (!cvv.matches("\\d{3,4}")) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, 
+                        "CVV must be 3 or 4 digits!");
+                    alert.showAndWait();
+                    return;
+                }
             }
 
             // Get restaurant
@@ -121,51 +167,101 @@ public class CheckoutController {
             }
 
             if (restaurant == null) {
-                Alert alert = new Alert(Alert.AlertType.ERROR, "Could not determine restaurant. Please try again.");
+                Alert alert = new Alert(Alert.AlertType.ERROR, 
+                    "Could not determine restaurant. Please try again.");
                 alert.showAndWait();
                 return;
             }
 
-            // Create order
-            Order order = new Order();
-            order.setUser(user);
-            order.setRestaurant(restaurant);
-            order.setItems(new ArrayList<>(cart.getItems()));
-            order.setDeliveryAddress(selectedAddress);
-            order.setTotalAmount(total);
-            order.setStatus(OrderStatus.PENDING);
-            order.setOrderDate(new Date());
-
-            // Create payment
-            RadioButton cashRadio = (RadioButton) paymentGroup.getSelectedToggle();
-            Payment payment = new Payment();
-            payment.setPaymentId("PAY" + System.currentTimeMillis());
-            payment.setAmount(total);
-            payment.setPaymentMethod(cashRadio != null && cashRadio.getText().contains("Cash") 
-                ? PaymentM.Cash : PaymentM.CreditCard);
-            payment.setStatus("Pending");
-            order.setPayment(payment);
+            // Disable button during processing
+            placeOrderButton.setDisable(true);
+            orderMessageLabel.setText("Processing your order...");
+            orderMessageLabel.setTextFill(Color.web("#3498db"));
 
             try {
+                // Create payment
+                Payment payment = new Payment();
+                payment.setPaymentId("PAY" + System.currentTimeMillis());
+                payment.setAmount(total);
+                payment.setPaymentMethod(isCreditCard ? PaymentM.CreditCard : PaymentM.Cash);
+                payment.setStatus("Pending");
+                payment.setTransactionDate(new Date());
+
+                // Process payment
+                boolean paymentSuccess = paymentService.processPayment(payment);
+                
+                if (!paymentSuccess) {
+                    throw new Exception("Payment processing failed!");
+                }
+
+                // Create order
+                Order order = new Order();
+                order.setUser(user);
+                order.setRestaurant(restaurant);
+                order.setItems(new ArrayList<>(cart.getItems()));
+                order.setDeliveryAddress(selectedAddress);
+                order.setTotalAmount(total);
+                order.setStatus(OrderStatus.PENDING);
+                order.setOrderDate(new Date());
+                order.setPayment(payment);
+
+                // Save order to database
                 orderService.addOrder(order);
+                
                 if (order.getOrderId() != null) {
                     payment.setOrderId(order.getOrderId());
+                    paymentService.updatePayment(payment);
+                    
+                    // Link order items to order in database
+                    try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
+                        String sql = "INSERT INTO order_items (order_id, cart_item_id) VALUES (?, ?)";
+                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            for (CartItem item : cart.getItems()) {
+                                stmt.setString(1, order.getOrderId());
+                                stmt.setInt(2, item.getCartItemID());
+                                stmt.addBatch();
+                            }
+                            stmt.executeBatch();
+                        }
+                    }
                 }
+
+                // Clear cart
                 cartService.clearCart(cart);
                 
+                // Delete cart items from database
+                try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
+                    String deleteSql = "DELETE FROM cart_item WHERE cart_id = ?";
+                    try (java.sql.PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
+                        deleteStmt.setInt(1, cart.getCartId());
+                        deleteStmt.executeUpdate();
+                    }
+                }
+
                 Alert success = new Alert(Alert.AlertType.INFORMATION, 
-                    "Order placed successfully!\nOrder ID: " + order.getOrderId() + 
-                    "\nTotal: $" + String.format("%.2f", total));
+                    "Order placed successfully!\n\n" +
+                    "Order ID: " + order.getOrderId() + "\n" +
+                    "Total: $" + String.format("%.2f", total) + "\n" +
+                    "Payment: " + (isCreditCard ? "Credit Card" : "Cash on Delivery") + "\n\n" +
+                    "You can track your order in 'My Orders'.");
+                success.setTitle("Order Confirmed");
                 success.showAndWait();
                 
                 ClientMainController.show(stage, user);
             } catch (Exception ex) {
-                Alert error = new Alert(Alert.AlertType.ERROR, "Error placing order: " + ex.getMessage());
+                placeOrderButton.setDisable(false);
+                orderMessageLabel.setText("Error: " + ex.getMessage());
+                orderMessageLabel.setTextFill(Color.web("#e74c3c"));
+                
+                Alert error = new Alert(Alert.AlertType.ERROR, 
+                    "Error placing order: " + ex.getMessage());
                 error.showAndWait();
+                ex.printStackTrace();
             }
         });
 
-        contentBox.getChildren().addAll(titleLabel, summaryBox, addressBox, paymentBox, placeOrderButton);
+        contentBox.getChildren().addAll(titleLabel, summaryBox, addressBox, paymentBox, 
+            placeOrderButton, orderMessageLabel);
         contentBox.setAlignment(Pos.TOP_CENTER);
 
         ScrollPane scrollPane = new ScrollPane(contentBox);
@@ -212,27 +308,20 @@ public class CheckoutController {
             itemsBox.getChildren().add(itemRow);
         }
 
-        // Subtotal row
         HBox subtotalRow = createSummaryRow("Subtotal:", "$" + String.format("%.2f", subtotal));
-        
-        // Tax row
         HBox taxRow = createSummaryRow("Tax (10%):", "$" + String.format("%.2f", tax));
-        
-        // Delivery row
         HBox deliveryRow = createSummaryRow("Delivery Fee:", "$" + String.format("%.2f", deliveryFee));
         
         VBox allRows = new VBox(5);
         allRows.getChildren().addAll(subtotalRow, taxRow, deliveryRow);
         
-        // Discount row (if applicable)
         if (discount > 0) {
-            HBox discountRow = createSummaryRow("Discount (10%):", "-$" + String.format("%.2f", discount));
+            HBox discountRow = createSummaryRow("Elite Discount (10%):", "-$" + String.format("%.2f", discount));
             Label discountLabel = (Label) discountRow.getChildren().get(2);
-            discountLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #27ae60;");
+            discountLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #27ae60; -fx-font-weight: bold;");
             allRows.getChildren().add(discountRow);
         }
         
-        // Total
         Label totalLabel = new Label("Total: $" + String.format("%.2f", total));
         totalLabel.setStyle(
             "-fx-font-size: 24px; " +
@@ -283,7 +372,7 @@ public class CheckoutController {
         if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
             addressCombo.getItems().addAll(user.getAddresses());
             addressCombo.setValue(user.getAddresses().get(0));
-            addressCombo.setPrefWidth(400);
+            addressCombo.setPrefWidth(500);
             addressCombo.setStyle("-fx-font-size: 14px;");
             addressBox.getChildren().addAll(addressTitle, addressCombo);
         } else {
@@ -322,8 +411,84 @@ public class CheckoutController {
         cardRadio.setToggleGroup(paymentGroup);
         cardRadio.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
 
+        // Credit card details form (hidden by default)
+        VBox cardDetailsBox = new VBox(10);
+        cardDetailsBox.setPadding(new Insets(15, 0, 0, 30));
+        cardDetailsBox.setVisible(false);
+        cardDetailsBox.setManaged(false);
+        cardDetailsBox.setStyle(
+            "-fx-background-color: #f8f9fa; " +
+            "-fx-padding: 15; " +
+            "-fx-background-radius: 8;"
+        );
+
+        GridPane cardGrid = new GridPane();
+        cardGrid.setHgap(10);
+        cardGrid.setVgap(10);
+
+        TextField cardNumberField = new TextField();
+        cardNumberField.setId("cardNumber");
+        cardNumberField.setPromptText("1234 5678 9012 3456");
+        cardNumberField.setPrefWidth(300);
+        cardNumberField.textProperty().addListener((obs, old, newVal) -> {
+            if (newVal.length() > 19) {
+                cardNumberField.setText(old);
+            }
+        });
+
+        TextField cardHolderField = new TextField();
+        cardHolderField.setId("cardHolder");
+        cardHolderField.setPromptText("John Doe");
+        cardHolderField.setPrefWidth(300);
+
+        TextField expiryField = new TextField();
+        expiryField.setId("expiry");
+        expiryField.setPromptText("MM/YY");
+        expiryField.setPrefWidth(100);
+        expiryField.textProperty().addListener((obs, old, newVal) -> {
+            if (newVal.length() > 5) {
+                expiryField.setText(old);
+            }
+        });
+
+        TextField cvvField = new TextField();
+        cvvField.setId("cvv");
+        cvvField.setPromptText("123");
+        cvvField.setPrefWidth(80);
+        cvvField.textProperty().addListener((obs, old, newVal) -> {
+            if (!newVal.matches("\\d*") || newVal.length() > 4) {
+                cvvField.setText(old);
+            }
+        });
+
+        cardGrid.add(new Label("Card Number:"), 0, 0);
+        cardGrid.add(cardNumberField, 1, 0);
+        cardGrid.add(new Label("Card Holder:"), 0, 1);
+        cardGrid.add(cardHolderField, 1, 1);
+        
+        HBox expiryRow = new HBox(10);
+        expiryRow.getChildren().addAll(new Label("Expiry:"), expiryField, 
+            new Label("CVV:"), cvvField);
+        cardGrid.add(expiryRow, 1, 2);
+
+        Label secureLabel = new Label("🔒 Your payment information is secure and encrypted");
+        secureLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #27ae60;");
+
+        cardDetailsBox.getChildren().addAll(cardGrid, secureLabel);
+
+        // Toggle card details visibility
+        paymentGroup.selectedToggleProperty().addListener((obs, old, newVal) -> {
+            if (newVal == cardRadio) {
+                cardDetailsBox.setVisible(true);
+                cardDetailsBox.setManaged(true);
+            } else {
+                cardDetailsBox.setVisible(false);
+                cardDetailsBox.setManaged(false);
+            }
+        });
+
         paymentBox.setUserData(paymentGroup);
-        paymentBox.getChildren().addAll(paymentTitle, cashRadio, cardRadio);
+        paymentBox.getChildren().addAll(paymentTitle, cashRadio, cardRadio, cardDetailsBox);
         return paymentBox;
     }
 }

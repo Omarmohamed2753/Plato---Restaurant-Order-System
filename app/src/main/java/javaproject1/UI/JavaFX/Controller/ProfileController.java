@@ -9,42 +9,70 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.scene.layout.HBox;
-import javaproject1.BLL.Service.implementation.UserServiceImpl;
-import javaproject1.DAL.Entity.User;
+import javaproject1.BLL.Service.implementation.*;
+import javaproject1.DAL.Entity.*;
+import javaproject1.DAL.Repo.Implementation.AddressRepoImpl;
+import javaproject1.DAL.Repo.Implementation.SubscriptionRepoImpl;
+
+import java.util.Date;
+import java.util.Calendar;
 
 public class ProfileController {
 
     private static UserServiceImpl userService = new UserServiceImpl();
+    private static SubscriptionRepoImpl subscriptionRepo = new SubscriptionRepoImpl();
+    private static AddressServiceImpl addressService = new AddressServiceImpl();
 
     public static void show(Stage stage, User user) {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #f5f7fa;");
 
-        // Navigation Bar
         HBox navbar = ClientMainController.createNavBar(stage, user);
         root.setTop(navbar);
 
-        // Profile Content
         VBox contentBox = new VBox(30);
         contentBox.setPadding(new Insets(40));
         contentBox.setAlignment(Pos.TOP_CENTER);
-        contentBox.setMaxWidth(700);
+        contentBox.setMaxWidth(800);
 
         Label titleLabel = new Label("My Profile");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
         titleLabel.setTextFill(Color.web("#1a1a1a"));
 
-        // Profile Card
-        VBox profileCard = new VBox(20);
-        profileCard.setPadding(new Insets(30));
-        profileCard.setStyle(
+        // Profile Info Card
+        VBox profileCard = createProfileCard(stage, user);
+        
+        // Subscription Card
+        VBox subscriptionCard = createSubscriptionCard(stage, user);
+        
+        // Addresses Card
+        VBox addressesCard = createAddressesCard(stage, user);
+
+        contentBox.getChildren().addAll(titleLabel, profileCard, subscriptionCard, addressesCard);
+
+        ScrollPane scrollPane = new ScrollPane(contentBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        
+        root.setCenter(scrollPane);
+
+        Scene scene = new Scene(root, 1000, 700);
+        stage.setScene(scene);
+    }
+
+    private static VBox createProfileCard(Stage stage, User user) {
+        VBox card = new VBox(20);
+        card.setPadding(new Insets(30));
+        card.setStyle(
             "-fx-background-color: white; " +
             "-fx-background-radius: 15; " +
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
         );
 
-        // Profile Info
+        Label titleLabel = new Label("Personal Information");
+        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
+
         GridPane grid = new GridPane();
         grid.setHgap(20);
         grid.setVgap(15);
@@ -53,59 +81,29 @@ public class ProfileController {
         TextField nameField = createTextField(user.getName());
         TextField emailField = createTextField(user.getEmail());
         emailField.setDisable(true);
+        emailField.setStyle("-fx-opacity: 0.7; -fx-padding: 10; -fx-font-size: 14px;");
         TextField phoneField = createTextField(user.getPhoneNumber());
         TextField ageField = createTextField(String.valueOf(user.getAge()));
-
-        CheckBox eliteCheckBox = new CheckBox("Elite Member");
-        eliteCheckBox.setSelected(user.isElite());
-        eliteCheckBox.setDisable(true);
 
         int row = 0;
         addFormRow(grid, row++, "Name:", nameField);
         addFormRow(grid, row++, "Email:", emailField);
         addFormRow(grid, row++, "Phone:", phoneField);
         addFormRow(grid, row++, "Age:", ageField);
-        
-        grid.add(eliteCheckBox, 1, row++);
 
-        // Subscription Info
-        if (user.getSubscription() != null && user.getSubscription().isActive()) {
-            Label subLabel = new Label("✓ Active Elite Subscription");
-            subLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
-            subLabel.setTextFill(Color.web("#27ae60"));
-            grid.add(subLabel, 1, row++);
-        } else {
-            Button subscribeButton = new Button("Subscribe to Elite");
-            subscribeButton.setStyle(
-                "-fx-background-color: #f39c12; " +
-                "-fx-text-fill: white; " +
-                "-fx-font-weight: bold; " +
-                "-fx-padding: 8 16 8 16; " +
-                "-fx-background-radius: 15; " +
-                "-fx-cursor: hand;"
-            );
-            subscribeButton.setOnAction(e -> SubscriptionController.show(stage, user));
-            grid.add(subscribeButton, 1, row++);
-        }
-
-        // Buttons
-        HBox buttonBox = new HBox(15);
-        buttonBox.setAlignment(Pos.CENTER);
+        Label messageLabel = new Label();
+        messageLabel.setFont(Font.font("System", 14));
 
         Button updateButton = new Button("Update Profile");
-        updateButton.setPrefWidth(150);
         updateButton.setStyle(
             "-fx-background-color: #667eea; " +
             "-fx-text-fill: white; " +
             "-fx-font-size: 14px; " +
             "-fx-font-weight: bold; " +
-            "-fx-padding: 10 20 10 20; " +
+            "-fx-padding: 10 20; " +
             "-fx-background-radius: 20; " +
             "-fx-cursor: hand;"
         );
-
-        Label messageLabel = new Label();
-        messageLabel.setFont(Font.font("System", 14));
 
         updateButton.setOnAction(e -> {
             try {
@@ -122,6 +120,14 @@ public class ProfileController {
                     user.getEmail(), user.getPassword(), user.isElite(), user.getSubscription());
                 
                 showSuccess(messageLabel, "Profile updated successfully!");
+                
+                // Refresh user data
+                User refreshedUser = userService.getUserById(Integer.parseInt(user.getId()));
+                if (refreshedUser != null) {
+                    user.setName(refreshedUser.getName());
+                    user.setAge(refreshedUser.getAge());
+                    user.setPhoneNumber(refreshedUser.getPhoneNumber());
+                }
             } catch (NumberFormatException ex) {
                 showError(messageLabel, "Age must be a number!");
             } catch (Exception ex) {
@@ -129,29 +135,178 @@ public class ProfileController {
             }
         });
 
+        HBox buttonBox = new HBox(15);
+        buttonBox.setAlignment(Pos.CENTER);
         buttonBox.getChildren().add(updateButton);
 
-        profileCard.getChildren().addAll(grid, buttonBox, messageLabel);
-
-        // Addresses Section
-        VBox addressSection = createAddressSection(user);
-
-        contentBox.getChildren().addAll(titleLabel, profileCard, addressSection);
-
-        ScrollPane scrollPane = new ScrollPane(contentBox);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
-        
-        root.setCenter(scrollPane);
-
-        Scene scene = new Scene(root, 1000, 700);
-        stage.setScene(scene);
+        card.getChildren().addAll(titleLabel, grid, buttonBox, messageLabel);
+        return card;
     }
 
-    private static VBox createAddressSection(User user) {
-        VBox section = new VBox(15);
-        section.setPadding(new Insets(30));
-        section.setStyle(
+    private static VBox createSubscriptionCard(Stage stage, User user) {
+        VBox card = new VBox(20);
+        card.setPadding(new Insets(30));
+        card.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+
+        Label titleLabel = new Label("Elite Subscription");
+        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        titleLabel.setTextFill(Color.web("#1a1a1a"));
+
+        VBox statusBox = new VBox(15);
+        statusBox.setAlignment(Pos.CENTER_LEFT);
+
+        if (user.getSubscription() != null && user.getSubscription().isActive()) {
+            // Active subscription
+            Label statusLabel = new Label("✓ Active Elite Member");
+            statusLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
+            statusLabel.setTextFill(Color.web("#27ae60"));
+
+            Label benefitsLabel = new Label("Benefits: 10% discount on all orders • Priority delivery");
+            benefitsLabel.setFont(Font.font("System", 14));
+            benefitsLabel.setTextFill(Color.web("#4a5568"));
+
+            Label dateLabel = new Label("Expires: " + 
+                (user.getSubscription().getEndDate() != null ? 
+                    new java.text.SimpleDateFormat("MMM dd, yyyy").format(user.getSubscription().getEndDate()) : "N/A"));
+            dateLabel.setFont(Font.font("System", 12));
+            dateLabel.setTextFill(Color.web("#718096"));
+
+            Button cancelButton = new Button("Cancel Subscription");
+            cancelButton.setStyle(
+                "-fx-background-color: #e74c3c; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 8 16; " +
+                "-fx-background-radius: 15; " +
+                "-fx-cursor: hand;"
+            );
+
+            Label messageLabel = new Label();
+            messageLabel.setFont(Font.font("System", 14));
+
+            cancelButton.setOnAction(e -> {
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, 
+                    "Are you sure you want to cancel your Elite subscription?\n\nYou will lose:\n" +
+                    "• 10% discount on all orders\n• Priority delivery\n• Exclusive offers");
+                confirmAlert.showAndWait().ifPresent(response -> {
+                    if (response == ButtonType.OK) {
+                        try {
+                            Subscription sub = user.getSubscription();
+                            sub.setActive(false);
+                            subscriptionRepo.updateSubscription(sub);
+                            user.setElite(false);
+                            userService.updateUser(user);
+                            
+                            showSuccess(messageLabel, "Subscription cancelled successfully!");
+                            
+                            // Refresh the page
+                            new Thread(() -> {
+                                try {
+                                    Thread.sleep(1500);
+                                    javafx.application.Platform.runLater(() -> show(stage, user));
+                                } catch (InterruptedException ex) {
+                                    ex.printStackTrace();
+                                }
+                            }).start();
+                        } catch (Exception ex) {
+                            showError(messageLabel, "Error cancelling subscription: " + ex.getMessage());
+                        }
+                    }
+                });
+            });
+
+            statusBox.getChildren().addAll(statusLabel, benefitsLabel, dateLabel, cancelButton, messageLabel);
+        } else {
+            // No active subscription
+            Label statusLabel = new Label("No Active Subscription");
+            statusLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+            statusLabel.setTextFill(Color.web("#718096"));
+
+            Label benefitsLabel = new Label("Subscribe to Elite and get:\n" +
+                "• 10% discount on all orders\n• Priority delivery\n• Exclusive offers");
+            benefitsLabel.setFont(Font.font("System", 14));
+            benefitsLabel.setTextFill(Color.web("#4a5568"));
+
+            Label priceLabel = new Label("Only $100/month");
+            priceLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+            priceLabel.setTextFill(Color.web("#f39c12"));
+
+            Button subscribeButton = new Button("Subscribe to Elite");
+            subscribeButton.setStyle(
+                "-fx-background-color: #f39c12; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 10 20; " +
+                "-fx-background-radius: 20; " +
+                "-fx-cursor: hand;"
+            );
+
+            Label messageLabel = new Label();
+            messageLabel.setFont(Font.font("System", 14));
+
+            subscribeButton.setOnAction(e -> {
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, 
+                    "Subscribe to Elite for $100/month?\n\nYou will get:\n" +
+                    "• 10% discount on all orders\n• Priority delivery\n• Exclusive offers");
+                confirmAlert.showAndWait().ifPresent(response -> {
+                    if (response == ButtonType.OK) {
+                        try {
+                            Calendar cal = Calendar.getInstance();
+                            Date startDate = cal.getTime();
+                            cal.add(Calendar.MONTH, 1);
+                            Date endDate = cal.getTime();
+                            
+                            Subscription newSub = new Subscription(startDate, endDate);
+                            newSub.setActive(true);
+                            subscriptionRepo.addSubscription(newSub);
+                            
+                            user.setElite(true);
+                            user.setSubscription(newSub);
+                            userService.updateUser(user);
+                            
+                            // Update subscription with user_id
+                            try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection();
+                                 java.sql.PreparedStatement stmt = conn.prepareStatement(
+                                     "UPDATE subscriptions SET user_id = ? WHERE subscription_id = ?")) {
+                                stmt.setInt(1, Integer.parseInt(user.getId()));
+                                stmt.setInt(2, newSub.getId());
+                                stmt.executeUpdate();
+                            }
+                            
+                            showSuccess(messageLabel, "Subscription activated successfully!");
+                            
+                            // Refresh the page
+                            new Thread(() -> {
+                                try {
+                                    Thread.sleep(1500);
+                                    javafx.application.Platform.runLater(() -> show(stage, user));
+                                } catch (InterruptedException ex) {
+                                    ex.printStackTrace();
+                                }
+                            }).start();
+                        } catch (Exception ex) {
+                            showError(messageLabel, "Error activating subscription: " + ex.getMessage());
+                            ex.printStackTrace();
+                        }
+                    }
+                });
+            });
+
+            statusBox.getChildren().addAll(statusLabel, benefitsLabel, priceLabel, subscribeButton, messageLabel);
+        }
+
+        card.getChildren().addAll(titleLabel, statusBox);
+        return card;
+    }
+
+    private static VBox createAddressesCard(Stage stage, User user) {
+        VBox card = new VBox(20);
+        card.setPadding(new Insets(30));
+        card.setStyle(
             "-fx-background-color: white; " +
             "-fx-background-radius: 15; " +
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
@@ -164,11 +319,50 @@ public class ProfileController {
         VBox addressList = new VBox(10);
         
         if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
-            for (var address : user.getAddresses()) {
+            for (Address address : user.getAddresses()) {
+                HBox addressRow = new HBox(15);
+                addressRow.setAlignment(Pos.CENTER_LEFT);
+                addressRow.setPadding(new Insets(10));
+                addressRow.setStyle(
+                    "-fx-background-color: #f8f9fa; " +
+                    "-fx-background-radius: 8;"
+                );
+
                 Label addressLabel = new Label("📍 " + address.toString());
                 addressLabel.setFont(Font.font("System", 14));
                 addressLabel.setTextFill(Color.web("#1a1a1a"));
-                addressList.getChildren().add(addressLabel);
+                HBox.setHgrow(addressLabel, Priority.ALWAYS);
+
+                Button deleteButton = new Button("Remove");
+                deleteButton.setStyle(
+                    "-fx-background-color: #e74c3c; " +
+                    "-fx-text-fill: white; " +
+                    "-fx-padding: 5 10; " +
+                    "-fx-background-radius: 12; " +
+                    "-fx-cursor: hand; " +
+                    "-fx-font-size: 12px;"
+                );
+
+                deleteButton.setOnAction(e -> {
+                    Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, 
+                        "Remove this address?");
+                    confirmAlert.showAndWait().ifPresent(response -> {
+                        if (response == ButtonType.OK) {
+                            try {
+                                userService.removeAddress(user, address);
+                                addressService.deleteAddress(Integer.parseInt(address.getId()));
+                                show(stage, user);
+                            } catch (Exception ex) {
+                                Alert errorAlert = new Alert(Alert.AlertType.ERROR, 
+                                    "Error removing address: " + ex.getMessage());
+                                errorAlert.showAndWait();
+                            }
+                        }
+                    });
+                });
+
+                addressRow.getChildren().addAll(addressLabel, deleteButton);
+                addressList.getChildren().add(addressRow);
             }
         } else {
             Label noAddress = new Label("No addresses added yet.");
@@ -177,12 +371,101 @@ public class ProfileController {
             addressList.getChildren().add(noAddress);
         }
 
-        section.getChildren().addAll(titleLabel, addressList);
-        return section;
+        // Add new address section
+        VBox addAddressBox = new VBox(10);
+        addAddressBox.setPadding(new Insets(15, 0, 0, 0));
+        addAddressBox.setStyle("-fx-border-color: #e2e8f0; -fx-border-width: 1 0 0 0;");
+
+        Label addTitle = new Label("Add New Address");
+        addTitle.setFont(Font.font("System", FontWeight.BOLD, 16));
+        addTitle.setTextFill(Color.web("#1a1a1a"));
+
+        GridPane addGrid = new GridPane();
+        addGrid.setHgap(10);
+        addGrid.setVgap(10);
+
+        TextField streetField = createTextField("Street");
+        TextField cityField = createTextField("City");
+        TextField buildingField = createTextField("Building Number");
+
+        addGrid.add(new Label("Street:"), 0, 0);
+        addGrid.add(streetField, 1, 0);
+        addGrid.add(new Label("City:"), 0, 1);
+        addGrid.add(cityField, 1, 1);
+        addGrid.add(new Label("Building:"), 0, 2);
+        addGrid.add(buildingField, 1, 2);
+
+        Button addButton = new Button("Add Address");
+        addButton.setStyle(
+            "-fx-background-color: #27ae60; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 8 16; " +
+            "-fx-background-radius: 15; " +
+            "-fx-cursor: hand;"
+        );
+
+        Label messageLabel = new Label();
+        messageLabel.setFont(Font.font("System", 14));
+
+        addButton.setOnAction(e -> {
+            try {
+                String street = streetField.getText().trim();
+                String city = cityField.getText().trim();
+                String buildingText = buildingField.getText().trim();
+
+                if (street.isEmpty() || city.isEmpty() || buildingText.isEmpty()) {
+                    showError(messageLabel, "All fields are required!");
+                    return;
+                }
+
+                int building = Integer.parseInt(buildingText);
+                Address newAddress = new Address(street, city, building);
+                addressService.addAddress(newAddress);
+                
+                // Link address to user
+                try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection();
+                     java.sql.PreparedStatement stmt = conn.prepareStatement(
+                         "INSERT INTO user_addresses (user_id, address_id) VALUES (?, ?)")) {
+                    stmt.setInt(1, Integer.parseInt(user.getId()));
+                    stmt.setString(2, newAddress.getId());
+                    stmt.executeUpdate();
+                }
+                
+                userService.addAddress(user, newAddress);
+                
+                streetField.clear();
+                cityField.clear();
+                buildingField.clear();
+                
+                showSuccess(messageLabel, "Address added successfully!");
+                
+                // Refresh the page
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(1000);
+                        javafx.application.Platform.runLater(() -> show(stage, user));
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                }).start();
+            } catch (NumberFormatException ex) {
+                showError(messageLabel, "Building number must be a number!");
+            } catch (Exception ex) {
+                showError(messageLabel, "Error: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        addAddressBox.getChildren().addAll(addTitle, addGrid, addButton, messageLabel);
+
+        card.getChildren().addAll(titleLabel, addressList, addAddressBox);
+        return card;
     }
 
-    private static TextField createTextField(String text) {
-        TextField field = new TextField(text);
+    private static TextField createTextField(String prompt) {
+        TextField field = new TextField();
+        field.setPromptText(prompt);
         field.setPrefWidth(300);
         field.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
         return field;
