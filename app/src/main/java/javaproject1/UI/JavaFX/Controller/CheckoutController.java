@@ -1,4 +1,5 @@
 package javaproject1.UI.JavaFX.Controller;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -8,16 +9,14 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Enums.OrderStatus;
 import javaproject1.DAL.Enums.PaymentM;
+import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 
 import java.util.*;
-import javafx.scene.control.Alert;
-import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 
 public class CheckoutController {
     private static OrderServiceImpl orderService = new OrderServiceImpl();
@@ -44,40 +43,19 @@ public class CheckoutController {
         contentBox.setPadding(new Insets(30));
         contentBox.setMaxWidth(800);
 
+        // TITLE
         Label titleLabel = new Label("Checkout");
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
-
-        // Order Summary
-        VBox summaryBox = new VBox(15);
-        summaryBox.setPadding(new Insets(20));
-        summaryBox.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        titleLabel.setStyle(
+            "-fx-font-size: 32px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #000000;"
         );
 
-        Label summaryTitle = new Label("Order Summary");
-        summaryTitle.setFont(Font.font("System", FontWeight.BOLD, 20));
-        summaryTitle.setTextFill(Color.web("#1a1a1a"));
-
-        VBox itemsBox = new VBox(10);
+        // Calculate totals
         double subtotal = 0.0;
         for (CartItem item : cart.getItems()) {
-            HBox itemRow = new HBox(10);
-            Label itemName = new Label(item.getMenuItem().getName() + " x" + item.getQuantity());
-            itemName.setFont(Font.font("System", 14));
-            itemName.setTextFill(Color.web("#1a1a1a"));
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-            Label itemPrice = new Label("$" + String.format("%.2f", item.getSubPrice()));
-            itemPrice.setFont(Font.font("System", FontWeight.BOLD, 14));
-            itemPrice.setTextFill(Color.web("#1a1a1a"));
-            itemRow.getChildren().addAll(itemName, spacer, itemPrice);
-            itemsBox.getChildren().add(itemRow);
             subtotal += item.getSubPrice();
         }
-
         double tax = subtotal * 0.1;
         double deliveryFee = 30.0;
         double discount = 0.0;
@@ -86,74 +64,18 @@ public class CheckoutController {
         }
         double total = subtotal + tax + deliveryFee - discount;
 
-        Label subtotalLabel = createSummaryRow("Subtotal:", "$" + String.format("%.2f", subtotal));
-        Label taxLabel = createSummaryRow("Tax (10%):", "$" + String.format("%.2f", tax));
-        Label deliveryLabel = createSummaryRow("Delivery Fee:", "$" + String.format("%.2f", deliveryFee));
-        if (discount > 0) {
-            Label discountLabel = createSummaryRow("Discount (10%):", "-$" + String.format("%.2f", discount));
-            discountLabel.setTextFill(Color.web("#27ae60"));
-            summaryBox.getChildren().add(discountLabel);
-        }
-        Label totalLabel = new Label("Total: $" + String.format("%.2f", total));
-        totalLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
-        totalLabel.setTextFill(Color.web("#667eea"));
+        // ORDER SUMMARY BOX
+        VBox summaryBox = createSummaryBox(cart, subtotal, tax, deliveryFee, discount, total);
 
-        summaryBox.getChildren().addAll(summaryTitle, itemsBox, subtotalLabel, taxLabel, deliveryLabel, totalLabel);
+        // ADDRESS SELECTION BOX
+        VBox addressBox = createAddressBox(user);
+        ComboBox<Address> addressCombo = (ComboBox<Address>) addressBox.lookup(".combo-box");
 
-        // Address Selection
-        VBox addressBox = new VBox(15);
-        addressBox.setPadding(new Insets(20));
-        addressBox.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
-        );
+        // PAYMENT METHOD BOX
+        VBox paymentBox = createPaymentBox();
+        ToggleGroup paymentGroup = (ToggleGroup) paymentBox.getUserData();
 
-        Label addressTitle = new Label("Delivery Address");
-        addressTitle.setFont(Font.font("System", FontWeight.BOLD, 20));
-        addressTitle.setTextFill(Color.web("#1a1a1a"));
-
-        ComboBox<Address> addressCombo = new ComboBox<>();
-        if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
-            addressCombo.getItems().addAll(user.getAddresses());
-            addressCombo.setValue(user.getAddresses().get(0));
-        } else {
-            Label noAddress = new Label("No addresses available. Please add an address in your profile.");
-            noAddress.setFont(Font.font("System", 14));
-            noAddress.setTextFill(Color.web("#e74c3c"));
-            addressBox.getChildren().addAll(addressTitle, noAddress);
-        }
-
-        if (!addressCombo.getItems().isEmpty()) {
-            addressCombo.setPrefWidth(400);
-            addressBox.getChildren().addAll(addressTitle, addressCombo);
-        }
-
-        // Payment Method
-        VBox paymentBox = new VBox(15);
-        paymentBox.setPadding(new Insets(20));
-        paymentBox.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
-        );
-
-        Label paymentTitle = new Label("Payment Method");
-        paymentTitle.setFont(Font.font("System", FontWeight.BOLD, 20));
-        paymentTitle.setTextFill(Color.web("#1a1a1a"));
-
-        ToggleGroup paymentGroup = new ToggleGroup();
-        RadioButton cashRadio = new RadioButton("Cash on Delivery");
-        cashRadio.setToggleGroup(paymentGroup);
-        cashRadio.setSelected(true);
-        cashRadio.setTextFill(Color.web("#1a1a1a"));
-        RadioButton cardRadio = new RadioButton("Credit Card");
-        cardRadio.setToggleGroup(paymentGroup);
-        cardRadio.setTextFill(Color.web("#1a1a1a"));
-
-        paymentBox.getChildren().addAll(paymentTitle, cashRadio, cardRadio);
-
-        // Place Order Button
+        // PLACE ORDER BUTTON
         Button placeOrderButton = new Button("Place Order");
         placeOrderButton.setPrefWidth(300);
         placeOrderButton.setStyle(
@@ -161,7 +83,7 @@ public class CheckoutController {
             "-fx-text-fill: white; " +
             "-fx-font-size: 18px; " +
             "-fx-font-weight: bold; " +
-            "-fx-padding: 15 30 15 30; " +
+            "-fx-padding: 15 30; " +
             "-fx-background-radius: 25; " +
             "-fx-cursor: hand;"
         );
@@ -173,20 +95,17 @@ public class CheckoutController {
                 return;
             }
 
-            Address selectedAddress = addressCombo.getValue();
+            Address selectedAddress = addressCombo != null ? addressCombo.getValue() : null;
             if (selectedAddress == null) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Please select a delivery address!");
                 alert.showAndWait();
                 return;
             }
 
-            // Get restaurant from first menu item (simplified - assumes all items from same restaurant)
+            // Get restaurant
             Restaurant restaurant = null;
             if (!cart.getItems().isEmpty()) {
-                // For now, get first restaurant - in real app, you'd need to group by restaurant
                 MenuItem firstItem = cart.getItems().get(0).getMenuItem();
-                // We need to find which restaurant this menu item belongs to
-                // This is simplified - you'd need to query menu_items -> menu -> restaurant
                 List<Restaurant> restaurants = restaurantRepo.getAllRestaurants();
                 for (Restaurant r : restaurants) {
                     if (r.getMenu() != null && r.getMenu().getItems() != null) {
@@ -207,7 +126,7 @@ public class CheckoutController {
                 return;
             }
 
-            // Create order (order_id will be auto-generated by database)
+            // Create order
             Order order = new Order();
             order.setUser(user);
             order.setRestaurant(restaurant);
@@ -218,23 +137,25 @@ public class CheckoutController {
             order.setOrderDate(new Date());
 
             // Create payment
+            RadioButton cashRadio = (RadioButton) paymentGroup.getSelectedToggle();
             Payment payment = new Payment();
             payment.setPaymentId("PAY" + System.currentTimeMillis());
             payment.setAmount(total);
-            payment.setPaymentMethod(cashRadio.isSelected() ? PaymentM.Cash : PaymentM.CreditCard);
+            payment.setPaymentMethod(cashRadio != null && cashRadio.getText().contains("Cash") 
+                ? PaymentM.Cash : PaymentM.CreditCard);
             payment.setStatus("Pending");
             order.setPayment(payment);
 
             try {
                 orderService.addOrder(order);
-                // Update payment with order ID after order is created
                 if (order.getOrderId() != null) {
                     payment.setOrderId(order.getOrderId());
                 }
                 cartService.clearCart(cart);
                 
                 Alert success = new Alert(Alert.AlertType.INFORMATION, 
-                    "Order placed successfully!\nOrder ID: " + order.getOrderId() + "\nTotal: $" + String.format("%.2f", total));
+                    "Order placed successfully!\nOrder ID: " + order.getOrderId() + 
+                    "\nTotal: $" + String.format("%.2f", total));
                 success.showAndWait();
                 
                 ClientMainController.show(stage, user);
@@ -256,20 +177,153 @@ public class CheckoutController {
         stage.setScene(scene);
     }
 
-    private static Label createSummaryRow(String label, String value) {
+    private static VBox createSummaryBox(Cart cart, double subtotal, double tax, 
+                                         double deliveryFee, double discount, double total) {
+        VBox summaryBox = new VBox(15);
+        summaryBox.setPadding(new Insets(20));
+        summaryBox.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+
+        Label summaryTitle = new Label("Order Summary");
+        summaryTitle.setStyle(
+            "-fx-font-size: 20px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #000000;"
+        );
+
+        VBox itemsBox = new VBox(10);
+        for (CartItem item : cart.getItems()) {
+            HBox itemRow = new HBox(10);
+            itemRow.setAlignment(Pos.CENTER_LEFT);
+            
+            Label itemName = new Label(item.getMenuItem().getName() + " x" + item.getQuantity());
+            itemName.setStyle("-fx-font-size: 14px; -fx-text-fill: #000000;");
+            
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            
+            Label itemPrice = new Label("$" + String.format("%.2f", item.getSubPrice()));
+            itemPrice.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+            
+            itemRow.getChildren().addAll(itemName, spacer, itemPrice);
+            itemsBox.getChildren().add(itemRow);
+        }
+
+        // Subtotal row
+        HBox subtotalRow = createSummaryRow("Subtotal:", "$" + String.format("%.2f", subtotal));
+        
+        // Tax row
+        HBox taxRow = createSummaryRow("Tax (10%):", "$" + String.format("%.2f", tax));
+        
+        // Delivery row
+        HBox deliveryRow = createSummaryRow("Delivery Fee:", "$" + String.format("%.2f", deliveryFee));
+        
+        VBox allRows = new VBox(5);
+        allRows.getChildren().addAll(subtotalRow, taxRow, deliveryRow);
+        
+        // Discount row (if applicable)
+        if (discount > 0) {
+            HBox discountRow = createSummaryRow("Discount (10%):", "-$" + String.format("%.2f", discount));
+            Label discountLabel = (Label) discountRow.getChildren().get(2);
+            discountLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #27ae60;");
+            allRows.getChildren().add(discountRow);
+        }
+        
+        // Total
+        Label totalLabel = new Label("Total: $" + String.format("%.2f", total));
+        totalLabel.setStyle(
+            "-fx-font-size: 24px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #667eea;"
+        );
+
+        summaryBox.getChildren().addAll(summaryTitle, itemsBox, allRows, totalLabel);
+        return summaryBox;
+    }
+
+    private static HBox createSummaryRow(String label, String value) {
         HBox row = new HBox(10);
+        row.setAlignment(Pos.CENTER_LEFT);
+        
         Label labelLbl = new Label(label);
-        labelLbl.setFont(Font.font("System", 14));
-        labelLbl.setTextFill(Color.web("#4a5568"));
+        labelLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #4a5568;");
+        
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        Label valueLbl = new Label(value);
-        valueLbl.setFont(Font.font("System", 14));
-        valueLbl.setTextFill(Color.web("#1a1a1a"));
-        row.getChildren().addAll(labelLbl, spacer, valueLbl);
         
-        Label result = new Label();
-        result.setGraphic(row);
-        return result;
+        Label valueLbl = new Label(value);
+        valueLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #000000;");
+        
+        row.getChildren().addAll(labelLbl, spacer, valueLbl);
+        return row;
+    }
+
+    private static VBox createAddressBox(User user) {
+        VBox addressBox = new VBox(15);
+        addressBox.setPadding(new Insets(20));
+        addressBox.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+
+        Label addressTitle = new Label("Delivery Address");
+        addressTitle.setStyle(
+            "-fx-font-size: 20px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #000000;"
+        );
+
+        ComboBox<Address> addressCombo = new ComboBox<>();
+        addressCombo.getStyleClass().add("combo-box");
+        
+        if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
+            addressCombo.getItems().addAll(user.getAddresses());
+            addressCombo.setValue(user.getAddresses().get(0));
+            addressCombo.setPrefWidth(400);
+            addressCombo.setStyle("-fx-font-size: 14px;");
+            addressBox.getChildren().addAll(addressTitle, addressCombo);
+        } else {
+            Label noAddress = new Label("No addresses available. Please add an address in your profile.");
+            noAddress.setStyle("-fx-font-size: 14px; -fx-text-fill: #e74c3c;");
+            addressBox.getChildren().addAll(addressTitle, noAddress);
+        }
+
+        return addressBox;
+    }
+
+    private static VBox createPaymentBox() {
+        VBox paymentBox = new VBox(15);
+        paymentBox.setPadding(new Insets(20));
+        paymentBox.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+
+        Label paymentTitle = new Label("Payment Method");
+        paymentTitle.setStyle(
+            "-fx-font-size: 20px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #000000;"
+        );
+
+        ToggleGroup paymentGroup = new ToggleGroup();
+        
+        RadioButton cashRadio = new RadioButton("Cash on Delivery");
+        cashRadio.setToggleGroup(paymentGroup);
+        cashRadio.setSelected(true);
+        cashRadio.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
+        
+        RadioButton cardRadio = new RadioButton("Credit Card");
+        cardRadio.setToggleGroup(paymentGroup);
+        cardRadio.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
+
+        paymentBox.setUserData(paymentGroup);
+        paymentBox.getChildren().addAll(paymentTitle, cashRadio, cardRadio);
+        return paymentBox;
     }
 }

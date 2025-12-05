@@ -9,13 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserRepoImpl implements IUserRepo {
+    
     public UserRepoImpl() {
     }
+    
     @Override
     public void addUser(User user) {
         String sql = "INSERT INTO users (name, age, phone, email, password, is_elite) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, user.getName());
             stmt.setInt(2, user.getAge());
@@ -24,9 +26,16 @@ public class UserRepoImpl implements IUserRepo {
             stmt.setString(5, user.getPassword());
             stmt.setBoolean(6, user.isElite());
             stmt.executeUpdate();
+            
+            try (ResultSet rs = stmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    user.setId(String.valueOf(rs.getInt(1)));
+                }
+            }
 
         } catch (SQLException e) {
             System.out.println("Add User Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -47,6 +56,7 @@ public class UserRepoImpl implements IUserRepo {
 
         } catch (SQLException e) {
             System.out.println("Get User Error: " + e.getMessage());
+            e.printStackTrace();
         }
         return user;
     }
@@ -68,6 +78,7 @@ public class UserRepoImpl implements IUserRepo {
 
         } catch (SQLException e) {
             System.out.println("Update User Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -82,6 +93,7 @@ public class UserRepoImpl implements IUserRepo {
 
         } catch (SQLException e) {
             System.out.println("Delete User Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -100,6 +112,7 @@ public class UserRepoImpl implements IUserRepo {
 
         } catch (SQLException e) {
             System.out.println("Get All Users Error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return users;
@@ -122,6 +135,7 @@ public class UserRepoImpl implements IUserRepo {
 
         } catch (SQLException e) {
             System.out.println("Get User By Email Error: " + e.getMessage());
+            e.printStackTrace();
         }
         return user;
     }
@@ -129,14 +143,22 @@ public class UserRepoImpl implements IUserRepo {
     private User mapToUser(ResultSet rs, Connection conn) throws SQLException {
         User user = new User();
         int userId = rs.getInt("user_id");
+        
+        // FIXED: Explicitly set all user properties
         user.setId(String.valueOf(userId));
-        user.setName(rs.getString("name"));
+        user.setName(rs.getString("name") != null ? rs.getString("name") : "");
         user.setAge(rs.getInt("age"));
-        user.setPhoneNumber(rs.getString("phone"));
-        user.setEmail(rs.getString("email"));
-        user.setPassword(rs.getString("password"));
+        user.setPhoneNumber(rs.getString("phone") != null ? rs.getString("phone") : "");
+        user.setEmail(rs.getString("email") != null ? rs.getString("email") : "");
+        user.setPassword(rs.getString("password") != null ? rs.getString("password") : "");
         user.setElite(rs.getBoolean("is_elite"));
 
+        System.out.println("DEBUG UserRepo - Mapping user ID: " + userId);
+        System.out.println("  Name: " + user.getName());
+        System.out.println("  Email: " + user.getEmail());
+        System.out.println("  Elite: " + user.isElite());
+
+        // Load related data
         user.setAddresses(loadAddresses(conn, userId));
         user.setOrders(loadOrders(conn, userId));
         user.setSubscription(loadSubscription(conn, userId));
@@ -148,6 +170,7 @@ public class UserRepoImpl implements IUserRepo {
     private List<Order> loadOrders(Connection conn, int userId) throws SQLException {
         List<Order> orders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE user_id = ?";
+        
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -155,10 +178,16 @@ public class UserRepoImpl implements IUserRepo {
                     Order order = new Order();
                     order.setOrderId(rs.getString("order_id"));
                     order.setTotalAmount(rs.getDouble("total_amount"));
+                    
                     String statusStr = rs.getString("status");
                     if (statusStr != null) {
-                        order.setStatus(javaproject1.DAL.Enums.OrderStatus.valueOf(statusStr.toUpperCase()));
+                        try {
+                            order.setStatus(javaproject1.DAL.Enums.OrderStatus.valueOf(statusStr.toUpperCase()));
+                        } catch (IllegalArgumentException e) {
+                            order.setStatus(javaproject1.DAL.Enums.OrderStatus.PENDING);
+                        }
                     }
+                    
                     Timestamp orderDate = rs.getTimestamp("order_date");
                     if (orderDate != null) {
                         order.setOrderDate(new java.util.Date(orderDate.getTime()));
@@ -167,6 +196,8 @@ public class UserRepoImpl implements IUserRepo {
                 }
             }
         }
+        
+        System.out.println("DEBUG UserRepo - Loaded " + orders.size() + " orders for user " + userId);
         return orders;
     }
     
@@ -182,16 +213,22 @@ public class UserRepoImpl implements IUserRepo {
                 }
             }
         }
-        return new Cart();
+        
+        // If no cart exists, create an empty one
+        Cart cart = new Cart();
+        System.out.println("DEBUG UserRepo - No cart found for user " + userId + ", returning empty cart");
+        return cart;
     }
     
     private Cart loadCartItems(Connection conn, int cartId) throws SQLException {
         Cart cart = new Cart();
         cart.setCartId(cartId);
+        
         String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
                      "FROM cart_item ci " +
                      "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
                      "WHERE ci.cart_id = ?";
+                     
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, cartId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -200,19 +237,18 @@ public class UserRepoImpl implements IUserRepo {
                     CartItem item = new CartItem();
                     item.setCartItemID(rs.getInt("cart_item_id"));
                     
-                    // Load full MenuItem details FIRST (before setting quantity)
+                    // Load full MenuItem details
                     MenuItem menuItem = new MenuItem();
                     menuItem.setItemId(rs.getString("menu_item_id"));
-                    menuItem.setName(rs.getString("name"));
+                    menuItem.setName(rs.getString("name") != null ? rs.getString("name") : "");
                     menuItem.setPrice(rs.getDouble("price"));
-                    menuItem.setDescription(rs.getString("description"));
-                    menuItem.setCategory(rs.getString("category"));
-                    menuItem.setImagePath(rs.getString("image_path"));
+                    menuItem.setDescription(rs.getString("description") != null ? rs.getString("description") : "");
+                    menuItem.setCategory(rs.getString("category") != null ? rs.getString("category") : "");
+                    menuItem.setImagePath(rs.getString("image_path") != null ? rs.getString("image_path") : "");
                     item.setMenuItem(menuItem);
                     
-                    // Now set quantity (this will recalculate subtotal, but we'll override with DB value)
+                    // Set quantity and price
                     item.setQuantity(rs.getInt("quantity"));
-                    // Override with the actual sub_price from database
                     item.setSubPrice(rs.getDouble("sub_price"));
                     
                     items.add(item);
@@ -220,6 +256,8 @@ public class UserRepoImpl implements IUserRepo {
                 cart.setItems(items);
             }
         }
+        
+        System.out.println("DEBUG UserRepo - Loaded " + cart.getItems().size() + " items in cart " + cartId);
         return cart;
     }
     
@@ -228,24 +266,28 @@ public class UserRepoImpl implements IUserRepo {
         String sql = "SELECT a.* FROM address a " +
                      "INNER JOIN user_addresses ua ON a.id = ua.address_id " +
                      "WHERE ua.user_id = ?";
+                     
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Address address = new Address();
                     address.setId(rs.getString("id"));
-                    address.setStreet(rs.getString("street"));
-                    address.setCity(rs.getString("city"));
+                    address.setStreet(rs.getString("street") != null ? rs.getString("street") : "");
+                    address.setCity(rs.getString("city") != null ? rs.getString("city") : "");
                     address.setBuildingNumber(rs.getInt("building_number"));
                     addresses.add(address);
                 }
             }
         }
+        
+        System.out.println("DEBUG UserRepo - Loaded " + addresses.size() + " addresses for user " + userId);
         return addresses;
     }
     
     private Subscription loadSubscription(Connection conn, int userId) throws SQLException {
         String sql = "SELECT * FROM subscriptions WHERE user_id = ? AND active = TRUE ORDER BY subscription_id DESC LIMIT 1";
+        
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -259,10 +301,14 @@ public class UserRepoImpl implements IUserRepo {
                     Subscription subscription = new Subscription(startDate, endDate);
                     subscription.setId(rs.getInt("subscription_id"));
                     subscription.setActive(rs.getBoolean("active"));
+                    
+                    System.out.println("DEBUG UserRepo - Loaded subscription for user " + userId + ", active: " + subscription.isActive());
                     return subscription;
                 }
             }
         }
+        
+        System.out.println("DEBUG UserRepo - No active subscription for user " + userId);
         return null;
     }
 }

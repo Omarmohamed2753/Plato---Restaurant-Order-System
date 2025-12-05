@@ -13,6 +13,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
+import javaproject1.DAL.Entity.Menu;
+import javaproject1.DAL.Entity.MenuItem;
 
 public class MenuController {
     private static MenuServiceImpl menuService = new MenuServiceImpl();
@@ -20,6 +22,10 @@ public class MenuController {
     private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
 
     public static void show(Stage stage, User user, Restaurant restaurant) {
+        System.out.println("=== MENU CONTROLLER DEBUG ===");
+        System.out.println("Restaurant ID: " + restaurant.getRestaurantId());
+        System.out.println("Restaurant Name: " + restaurant.getName());
+        
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #f5f7fa;");
 
@@ -63,28 +69,39 @@ public class MenuController {
         VBox itemsBox = new VBox(15);
         itemsBox.setPadding(new Insets(20));
 
-        // Refresh restaurant data to get latest menu items
+        // Refresh restaurant data
         try {
-            RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
+            System.out.println("Refreshing restaurant data...");
             Restaurant freshRestaurant = restaurantService.getRestaurantById(
                 Integer.parseInt(restaurant.getRestaurantId())
             );
             
             if (freshRestaurant != null) {
-                restaurant = freshRestaurant; // Use fresh data
+                restaurant = freshRestaurant;
+                System.out.println("Fresh restaurant loaded: " + restaurant.getName());
             }
         } catch (Exception e) {
-            System.err.println("Error refreshing restaurant data: " + e.getMessage());
+            System.err.println("Error refreshing: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        javaproject1.DAL.Entity.Menu menu = restaurant.getMenu();
+        Menu menu = restaurant.getMenu();
+        
         if (menu != null && menu.getItems() != null && !menu.getItems().isEmpty()) {
-            System.out.println("Loading " + menu.getItems().size() + " menu items");
-            for (javaproject1.DAL.Entity.MenuItem item : menu.getItems()) {
-                System.out.println("Item: " + item.getName() + " - $" + item.getPrice());
+            System.out.println("=== LOADING " + menu.getItems().size() + " MENU ITEMS ===");
+            
+            for (MenuItem item : menu.getItems()) {
+                System.out.println("\n--- Menu Item ---");
+                System.out.println("ID: " + item.getItemId());
+                System.out.println("Name: " + item.getName());
+                System.out.println("Price: $" + item.getPrice());
+                System.out.println("Category: " + item.getCategory());
+                System.out.println("Description: " + item.getDescription());
+                
                 itemsBox.getChildren().add(createMenuItemCard(user, item));
             }
         } else {
+            System.out.println("=== NO MENU ITEMS FOUND ===");
             Label noItems = new Label("No menu items available yet.");
             noItems.setFont(Font.font("System", 16));
             noItems.setTextFill(Color.web("#636e72"));
@@ -97,7 +114,7 @@ public class MenuController {
         return scrollPane;
     }
 
-    private static HBox createMenuItemCard(User user, javaproject1.DAL.Entity.MenuItem item) {
+    private static HBox createMenuItemCard(User user, MenuItem item) {
         HBox card = new HBox(20);
         card.setPadding(new Insets(15));
         card.setAlignment(Pos.CENTER_LEFT);
@@ -105,77 +122,72 @@ public class MenuController {
             "-fx-background-color: white; " +
             "-fx-background-radius: 12; " +
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);" +
-            "-fx-border-color:rgb(27, 168, 203); -fx-border-radius: 12;"
+            "-fx-border-color: rgb(27, 168, 203); " +
+            "-fx-border-width: 2; " +
+            "-fx-border-radius: 12;"
         );
-        card.setMaxWidth(Double.MAX_VALUE);
 
-        // IMAGE SECTION
+        // IMAGE
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
-        imageBox.setMinWidth(100);
-        imageBox.setMinHeight(100);
-        imageBox.setMaxWidth(100);
-        imageBox.setMaxHeight(100);
-        imageBox.setStyle(
-            "-fx-background-color:rgb(37, 93, 177); " +
-            "-fx-background-radius: 8;"
-        );
+        imageBox.setPrefSize(100, 100);
+        imageBox.setStyle("-fx-background-color: rgb(37, 93, 177); -fx-background-radius: 8;");
 
-        try {
-            if (item.getImagePath() != null && !item.getImagePath().isEmpty()) {
-                ImageView imageView = new ImageView(new Image(item.getImagePath(), 100, 100, true, true));
-                imageView.setFitWidth(100);
-                imageView.setFitHeight(100);
-                
-                javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(100, 100);
-                clip.setArcWidth(16);
-                clip.setArcHeight(16);
-                imageView.setClip(clip);
-                
-                imageBox.getChildren().add(imageView);
-            } else {
-                Label placeholder = new Label("🍔");
-                placeholder.setFont(Font.font("System", 36));
-                imageBox.getChildren().add(placeholder);
-            }
-        } catch (Exception e) {
-            Label placeholder = new Label("🍔");
-            placeholder.setFont(Font.font("System", 36));
-            imageBox.getChildren().add(placeholder);
-        }
+        Label placeholder = new Label("🍔");
+        placeholder.setFont(Font.font("System", 36));
+        placeholder.setStyle("-fx-text-fill: white;");
+        imageBox.getChildren().add(placeholder);
 
-        // INFO SECTION - ALL TEXT BLACK/DARK
-        VBox infoBox = new VBox(5);
-        HBox.setHgrow(infoBox, Priority.ALWAYS);
+        // INFO BOX - SIMPLIFIED with explicit inline styles
+        VBox infoBox = new VBox(8);
         infoBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
+        infoBox.setPrefWidth(400);
 
+        // Name Label - LARGE and BOLD
         Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
-        nameLabel.setTextFill(Color.web("#000000"));
+        nameLabel.setStyle(
+            "-fx-font-size: 20px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #000000;"
+        );
+        nameLabel.setWrapText(true);
+        nameLabel.setMaxWidth(400);
         
-        Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "No description available");
-        descLabel.setFont(Font.font("System", 12));
-        descLabel.setTextFill(Color.web("#2d3436"));
+        // Category Label
+        Label categoryLabel = new Label(item.getCategory() != null ? item.getCategory() : "General");
+        categoryLabel.setStyle(
+            "-fx-font-size: 12px; " +
+            "-fx-text-fill: #666666; " +
+            "-fx-font-style: italic;"
+        );
+        
+        // Description Label
+        Label descLabel = new Label(item.getDescription() != null ? item.getDescription() : "No description");
+        descLabel.setStyle(
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: #333333;"
+        );
         descLabel.setWrapText(true);
         descLabel.setMaxWidth(400);
         
-        Label categoryLabel = new Label(item.getCategory() != null && !item.getCategory().isEmpty() ? item.getCategory() : "Uncategorized");
-        categoryLabel.setFont(Font.font("System", 11));
-        categoryLabel.setTextFill(Color.web("#636e72"));
-        
+        // Price Label - GREEN
         Label priceLabel = new Label("$" + String.format("%.2f", item.getPrice()));
-        priceLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
-        priceLabel.setTextFill(Color.web("#27ae60"));
+        priceLabel.setStyle(
+            "-fx-font-size: 20px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #27ae60;"
+        );
 
         infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, priceLabel);
 
-        // ACTION SECTION
+        // ACTION BOX
         VBox actionBox = new VBox(10);
         actionBox.setAlignment(Pos.CENTER);
+        actionBox.setPrefWidth(150);
 
         Spinner<Integer> quantitySpinner = new Spinner<>(1, 10, 1);
         quantitySpinner.setPrefWidth(80);
-        quantitySpinner.setStyle("-fx-font-size: 14px;");
 
         Button addButton = new Button("Add to Cart");
         addButton.setPrefWidth(120);
@@ -183,7 +195,7 @@ public class MenuController {
             "-fx-background-color: #667eea; " +
             "-fx-text-fill: white; " +
             "-fx-font-weight: bold; " +
-            "-fx-padding: 8 16 8 16; " +
+            "-fx-padding: 8 16; " +
             "-fx-background-radius: 15; " +
             "-fx-cursor: hand;"
         );
@@ -191,20 +203,13 @@ public class MenuController {
         addButton.setOnAction(e -> {
             CartItem cartItem = new CartItem(item, quantitySpinner.getValue());
             cartService.addItem(user.getCart(), cartItem);
-            showAlert("Added to cart!", Alert.AlertType.INFORMATION);
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Added " + item.getName() + " to cart!");
+            alert.showAndWait();
         });
 
         actionBox.getChildren().addAll(quantitySpinner, addButton);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        card.getChildren().addAll(imageBox, infoBox, spacer, actionBox);
+        card.getChildren().addAll(imageBox, infoBox, actionBox);
         return card;
-    }
-
-    private static void showAlert(String message, Alert.AlertType type) {
-        Alert alert = new Alert(type, message);
-        alert.showAndWait();
     }
 }

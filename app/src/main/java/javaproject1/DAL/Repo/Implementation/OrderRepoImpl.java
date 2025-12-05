@@ -61,10 +61,12 @@ public class OrderRepoImpl implements IOrderRepo {
                 if (rs.next()) {
                     int generatedId = rs.getInt(1);
                     order.setOrderId(String.valueOf(generatedId));
+                    System.out.println("DEBUG OrderRepo - Order added with ID: " + generatedId);
                 }
             }
 
         } catch (SQLException e) {
+            System.err.println("Error adding order: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -85,6 +87,7 @@ public class OrderRepoImpl implements IOrderRepo {
             }
 
         } catch (SQLException e) {
+            System.err.println("Error getting order: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -129,9 +132,13 @@ public class OrderRepoImpl implements IOrderRepo {
 
             stmt.setString(9, order.getOrderId());
 
-            stmt.executeUpdate();
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("DEBUG OrderRepo - Order updated: " + order.getOrderId());
+            }
 
         } catch (SQLException e) {
+            System.err.println("Error updating order: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -144,9 +151,14 @@ public class OrderRepoImpl implements IOrderRepo {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
-            stmt.executeUpdate();
+            int rows = stmt.executeUpdate();
+            
+            if (rows > 0) {
+                System.out.println("DEBUG OrderRepo - Order deleted: " + id);
+            }
 
         } catch (SQLException e) {
+            System.err.println("Error deleting order: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -165,9 +177,11 @@ public class OrderRepoImpl implements IOrderRepo {
             }
 
         } catch (SQLException e) {
+            System.err.println("Error getting all orders: " + e.getMessage());
             e.printStackTrace();
         }
 
+        System.out.println("DEBUG OrderRepo - Total orders retrieved: " + orders.size());
         return orders;
     }
 
@@ -184,35 +198,50 @@ public class OrderRepoImpl implements IOrderRepo {
         String paymentId = rs.getString("payment_id");
         String deliveryId = rs.getString("delivery_id");
 
+        // Load user
         User user = (userId > 0) ? userRepo.getUserById(userId) : null;
 
+        // Create restaurant reference
         Restaurant restaurant = null;
         if (restaurantId != null) {
             restaurant = new Restaurant();
             restaurant.setRestaurantId(restaurantId);
         }
 
+        // Create address reference
         Address address = null;
         if (addressId != null) {
             address = new Address();
             address.setId(addressId);
         }
 
+        // Create payment reference
         Payment payment = null;
         if (paymentId != null) {
             payment = new Payment();
             payment.setPaymentId(paymentId);
         }
 
+        // Create delivery reference
         Delivery delivery = null;
         if (deliveryId != null) {
             delivery = new Delivery();
             delivery.setDeliveryId(deliveryId);
         }
 
-        OrderStatus orderStatus = (status != null) ? OrderStatus.valueOf(status.toUpperCase()) : OrderStatus.PENDING;
+        // Parse order status
+        OrderStatus orderStatus = OrderStatus.PENDING;
+        if (status != null) {
+            try {
+                orderStatus = OrderStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                System.err.println("Invalid order status: " + status);
+            }
+        }
+        
         Date date = (orderDate != null) ? new Date(orderDate.getTime()) : null;
 
+        // Create order
         Order order = new Order();
         order.setOrderId(String.valueOf(orderId));
         order.setUser(user);
@@ -224,6 +253,8 @@ public class OrderRepoImpl implements IOrderRepo {
         order.setPayment(payment);
         order.setDelivery(delivery);
 
+        System.out.println("DEBUG OrderRepo - Mapped order ID: " + orderId + ", Status: " + orderStatus);
+        
         return order;
     }
 }

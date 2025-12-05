@@ -41,6 +41,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
         } catch (SQLException e) {
             System.out.println("Add Restaurant Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -61,6 +62,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
         } catch (SQLException e) {
             System.out.println("Get Restaurant Error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return restaurant;
@@ -87,6 +89,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
         } catch (SQLException e) {
             System.out.println("Update Restaurant Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -103,6 +106,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
         } catch (SQLException e) {
             System.out.println("Delete Restaurant Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -120,6 +124,7 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
 
         } catch (SQLException e) {
             System.out.println("Get All Restaurants Error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return list;
@@ -129,56 +134,115 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
         Restaurant restaurant = new Restaurant();
         int id = rs.getInt("restaurant_id");
         restaurant.setRestaurantId(String.valueOf(id));
-        restaurant.setName(rs.getString("name"));
-        restaurant.setAddress(rs.getString("address"));
-        restaurant.setPhoneNumber(rs.getString("phone_number"));
-        restaurant.setEmail(rs.getString("email"));
-        restaurant.setOpeningHours(rs.getString("opening_hours"));
-        restaurant.setRating(rs.getDouble("rating"));
-        restaurant.setImagePath(rs.getString("image_path"));
+        
+        // FIXED: Get all restaurant data from result set
+        String name = rs.getString("name");
+        String address = rs.getString("address");
+        String phoneNumber = rs.getString("phone_number");
+        String email = rs.getString("email");
+        String openingHours = rs.getString("opening_hours");
+        double rating = rs.getDouble("rating");
+        String imagePath = rs.getString("image_path");
+        
+        // Set all the data
+        restaurant.setName(name != null ? name : "Unnamed Restaurant");
+        restaurant.setAddress(address != null ? address : "");
+        restaurant.setPhoneNumber(phoneNumber != null ? phoneNumber : "");
+        restaurant.setEmail(email != null ? email : "");
+        restaurant.setOpeningHours(openingHours != null ? openingHours : "");
+        restaurant.setRating(rating);
+        restaurant.setImagePath(imagePath != null ? imagePath : "");
+        
+        // Debug logging
+        System.out.println("DEBUG RestaurantRepo - Mapping restaurant ID: " + id);
+        System.out.println("  Name: " + restaurant.getName());
+        System.out.println("  Address: " + restaurant.getAddress());
+        System.out.println("  Hours: " + restaurant.getOpeningHours());
+        System.out.println("  Rating: " + restaurant.getRating());
+        
+        // Load related data
         restaurant.setMenu(loadMenu(conn, id));
         restaurant.setEmployees(loadEmployees(conn, id));
         restaurant.setReviews(loadReviews(conn, String.valueOf(id)));
         restaurant.setOrders(loadOrders(conn, String.valueOf(id)));
+        
         return restaurant;
     }
     
     private Menu loadMenu(Connection conn, int restaurantId) throws SQLException {
-        String sql = "SELECT menu_id FROM menu WHERE restaurant_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        // FIXED: First check if menu exists for this restaurant
+        String menuSql = "SELECT menu_id FROM menu WHERE restaurant_id = ?";
+        Menu menu = new Menu();
+        String menuId = null;
+        
+        try (PreparedStatement stmt = conn.prepareStatement(menuSql)) {
             stmt.setInt(1, restaurantId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Menu m = new Menu();
-                    String menuId = rs.getString("menu_id");
-                    m.setMenuId(menuId);
-                    // Load menu items for this menu
-                    m.setItems(loadMenuItems(conn, menuId));
-                    return m;
+                    menuId = rs.getString("menu_id");
+                    menu.setMenuId(menuId);
+                    System.out.println("DEBUG RestaurantRepo - Found menu ID: " + menuId + " for restaurant: " + restaurantId);
+                } else {
+                    // No menu exists yet, create one with restaurant_id as menu_id
+                    menuId = String.valueOf(restaurantId);
+                    menu.setMenuId(menuId);
+                    System.out.println("DEBUG RestaurantRepo - No menu found, using restaurant ID as menu ID: " + menuId);
                 }
             }
         }
-        return new Menu();
+        
+        // Load menu items for this menu
+        if (menuId != null) {
+            menu.setItems(loadMenuItems(conn, menuId));
+        } else {
+            menu.setItems(new ArrayList<>());
+        }
+        
+        return menu;
     }
     
     private List<MenuItem> loadMenuItems(Connection conn, String menuId) throws SQLException {
         List<MenuItem> items = new ArrayList<>();
+        
+        // FIXED: Use proper join and filtering
         String sql = "SELECT * FROM menu_items WHERE menu_id = ?";
+        
+        System.out.println("DEBUG RestaurantRepo - Loading menu items for menu_id: " + menuId);
+        
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, menuId);
+            
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     MenuItem item = new MenuItem();
-                    item.setItemId(rs.getString("id"));
-                    item.setName(rs.getString("name"));
-                    item.setPrice(rs.getDouble("price"));
-                    item.setDescription(rs.getString("description"));
-                    item.setCategory(rs.getString("category"));
-                    item.setImagePath(rs.getString("image_path"));
+                    
+                    String itemId = rs.getString("id");
+                    String name = rs.getString("name");
+                    double price = rs.getDouble("price");
+                    String description = rs.getString("description");
+                    String category = rs.getString("category");
+                    String imagePath = rs.getString("image_path");
+                    
+                    item.setItemId(itemId);
+                    item.setName(name != null ? name : "Unnamed Item");
+                    item.setPrice(price);
+                    item.setDescription(description != null ? description : "");
+                    item.setCategory(category != null ? category : "");
+                    item.setImagePath(imagePath != null ? imagePath : "");
+                    
                     items.add(item);
+                    
+                    System.out.println("DEBUG RestaurantRepo - Loaded menu item:");
+                    System.out.println("  ID: " + itemId);
+                    System.out.println("  Name: " + name);
+                    System.out.println("  Price: $" + price);
+                    System.out.println("  Category: " + category);
+                    System.out.println("  Description: " + description);
                 }
             }
         }
+        
+        System.out.println("DEBUG RestaurantRepo - Total menu items loaded: " + items.size());
         return items;
     }
 
@@ -190,7 +254,6 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Employee e = new Employee();
-                    // FIXED: Changed from "employee_id" to "id"
                     e.setId(rs.getString("id"));
                     e.setName(rs.getString("name"));
                     e.setRole(rs.getString("role"));

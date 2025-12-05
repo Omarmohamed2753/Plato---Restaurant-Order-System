@@ -29,11 +29,9 @@ public class ClientMainController {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #f5f7fa;");
 
-        // Navigation Bar
         HBox navbar = createNavBar(stage, user);
         root.setTop(navbar);
 
-        // Main Content
         VBox contentBox = new VBox(20);
         contentBox.setPadding(new Insets(30));
         contentBox.setAlignment(Pos.TOP_CENTER);
@@ -116,6 +114,9 @@ public class ClientMainController {
         
         RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
         List<Restaurant> restaurants = restaurantRepo.getAllRestaurants();
+        
+        System.out.println("=== RESTAURANT LIST DEBUG ===");
+        System.out.println("Total restaurants: " + restaurants.size());
 
         if (restaurants.isEmpty()) {
             Label noRestaurants = new Label("No restaurants available at the moment.");
@@ -124,6 +125,12 @@ public class ClientMainController {
             restaurantBox.getChildren().add(noRestaurants);
         } else {
             for (Restaurant restaurant : restaurants) {
+                System.out.println("\n--- Restaurant " + restaurant.getRestaurantId() + " ---");
+                System.out.println("Name: " + restaurant.getName());
+                System.out.println("Address: " + restaurant.getAddress());
+                System.out.println("Hours: " + restaurant.getOpeningHours());
+                System.out.println("Rating: " + restaurant.getRating());
+                
                 restaurantBox.getChildren().add(createRestaurantCard(stage, user, restaurant));
             }
         }
@@ -141,71 +148,77 @@ public class ClientMainController {
             "-fx-background-color: white; " +
             "-fx-background-radius: 15; " +
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 5);" +
-            "-fx-border-color: #e0e0e0; -fx-border-radius: 15;"
+            "-fx-border-color: #e0e0e0; " +
+            "-fx-border-width: 1; " +
+            "-fx-border-radius: 15;"
         );
         card.setPrefWidth(800);
-        card.setMaxWidth(Double.MAX_VALUE); 
 
         HBox contentBox = new HBox(20);
         contentBox.setAlignment(Pos.CENTER_LEFT);
 
-        // IMAGE SECTION
+        // IMAGE
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
-        imageBox.setMinWidth(150);
-        imageBox.setMinHeight(150);
-        imageBox.setMaxWidth(150);
-        imageBox.setMaxHeight(150);
+        imageBox.setPrefSize(150, 150);
         imageBox.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 10;");
 
-        try {
-            if (restaurant.getImagePath() != null && !restaurant.getImagePath().isEmpty()) {
-                ImageView imageView = new ImageView(new Image(restaurant.getImagePath(), 150, 150, true, true));
-                imageView.setFitWidth(150);
-                imageView.setFitHeight(150);
-                
-                javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(150, 150);
-                clip.setArcWidth(20);
-                clip.setArcHeight(20);
-                imageView.setClip(clip);
-                
-                imageBox.getChildren().add(imageView);
-            } else {
-                Label placeholder = new Label("🍽️");
-                placeholder.setFont(Font.font(50));
-                placeholder.setTextFill(Color.GRAY);
-                imageBox.getChildren().add(placeholder);
-            }
-        } catch (Exception e) {
-            Label placeholder = new Label("🍽️");
-            placeholder.setFont(Font.font(50));
-            imageBox.getChildren().add(placeholder);
-        }
+        Label imagePlaceholder = new Label("🍽️");
+        imagePlaceholder.setFont(Font.font(50));
+        imagePlaceholder.setStyle("-fx-text-fill: #95a5a6;");
+        imageBox.getChildren().add(imagePlaceholder);
 
-        // INFO SECTION - ALL TEXT IS NOW BLACK/DARK
-        VBox infoBox = new VBox(10);
+        // INFO BOX - SIMPLIFIED with inline styles
+        VBox infoBox = new VBox(12);
         infoBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
+        infoBox.setPrefWidth(400);
 
-        Label nameLabel = new Label(restaurant.getName() != null ? restaurant.getName() : "Unnamed Restaurant");
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
-        nameLabel.setTextFill(Color.BLACK);
-
-        Label addressLabel = new Label("📍 " + (restaurant.getAddress() != null && !restaurant.getAddress().isEmpty() ? restaurant.getAddress() : "Address not available"));
-        addressLabel.setFont(Font.font("System", 14));
-        addressLabel.setTextFill(Color.web("#2d3436"));
+        // Restaurant Name - BIG and BOLD
+        String restaurantName = restaurant.getName() != null ? restaurant.getName() : "Restaurant";
+        Label nameLabel = new Label(restaurantName);
+        nameLabel.setStyle(
+            "-fx-font-size: 26px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #000000;"
+        );
+        nameLabel.setWrapText(true);
+        nameLabel.setMaxWidth(400);
         
-        Label hoursLabel = new Label("🕐 " + (restaurant.getOpeningHours() != null && !restaurant.getOpeningHours().isEmpty() ? restaurant.getOpeningHours() : "Hours not available"));
-        hoursLabel.setFont(Font.font("System", 14));
-        hoursLabel.setTextFill(Color.web("#2d3436"));
+        // Address
+        String address = restaurant.getAddress() != null ? restaurant.getAddress() : "Address not available";
+        Label addressLabel = new Label("📍 " + address);
+        addressLabel.setStyle(
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: #2d3436;"
+        );
+        addressLabel.setWrapText(true);
+        addressLabel.setMaxWidth(400);
         
+        // Hours
+        String hours = restaurant.getOpeningHours() != null ? restaurant.getOpeningHours() : "Hours not available";
+        Label hoursLabel = new Label("🕐 " + hours);
+        hoursLabel.setStyle(
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: #2d3436;"
+        );
+        hoursLabel.setWrapText(true);
+        hoursLabel.setMaxWidth(400);
+        
+        // Rating
         Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()));
-        ratingLabel.setStyle("-fx-background-color: #fff3cd; -fx-text-fill: #856404; -fx-padding: 5 10; -fx-background-radius: 15;");
-        ratingLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        ratingLabel.setStyle(
+            "-fx-background-color: #fff3cd; " +
+            "-fx-text-fill: #856404; " +
+            "-fx-padding: 5 10; " +
+            "-fx-background-radius: 15; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold;"
+        );
 
         infoBox.getChildren().addAll(nameLabel, addressLabel, hoursLabel, ratingLabel);
 
-        // BUTTON SECTION
+        // BUTTON
         Button viewMenuButton = new Button("View Menu");
         viewMenuButton.setPrefWidth(120);
         viewMenuButton.setStyle(
@@ -213,7 +226,7 @@ public class ClientMainController {
             "-fx-text-fill: white; " +
             "-fx-font-size: 14px; " +
             "-fx-font-weight: bold; " +
-            "-fx-padding: 10 20 10 20; " +
+            "-fx-padding: 10 20; " +
             "-fx-background-radius: 20; " +
             "-fx-cursor: hand;"
         );
