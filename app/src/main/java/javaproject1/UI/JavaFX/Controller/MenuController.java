@@ -21,53 +21,69 @@ public class MenuController {
     private static CartServiceImpl cartService = new CartServiceImpl();
     private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
 
+    // --- New Fancy/Dark Theme Colors ---
+    private static final String BACKGROUND_DARK = "#1f2937";
+    private static final String PRIMARY_COLOR = "#059669";
+    private static final String ACCENT_GOLD = "#fcd34d";
+    private static final String CARD_BACKGROUND = "#374151";
+    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
+    private static final String ITEM_BACKGROUND = "#2b3543"; 
+    private static final String SUCCESS_GREEN = "#10b981";
+
+
     public static void show(Stage stage, User user, Restaurant restaurant) {
         System.out.println("=== MENU CONTROLLER DEBUG ===");
         System.out.println("Restaurant ID: " + restaurant.getRestaurantId());
         System.out.println("Restaurant Name: " + restaurant.getName());
         
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #f5f7fa;");
+        root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
         HBox navbar = ClientMainController.createNavBar(stage, user);
         root.setTop(navbar);
 
-        VBox contentBox = new VBox(20);
-        contentBox.setPadding(new Insets(30));
+        VBox contentBox = new VBox(30);
+        contentBox.setPadding(new Insets(50));
+        contentBox.setAlignment(Pos.TOP_CENTER);
+        contentBox.setMaxWidth(1000);
 
         // Restaurant header with back button
-        HBox headerBox = new HBox(15);
+        HBox headerBox = new HBox(30);
         headerBox.setAlignment(Pos.CENTER_LEFT);
 
-        Button backButton = new Button("← Back");
+        Button backButton = new Button("← Back to Restaurants");
         backButton.setStyle(
             "-fx-background-color: transparent; " +
-            "-fx-text-fill: #667eea; " +
-            "-fx-font-size: 14px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+            "-fx-font-size: 16px; " +
             "-fx-font-weight: bold; " +
             "-fx-cursor: hand;"
         );
+        backButton.setOnMouseEntered(e -> backButton.setStyle(backButton.getStyle() + "-fx-text-fill: " + ACCENT_GOLD + ";"));
+        backButton.setOnMouseExited(e -> backButton.setStyle(backButton.getStyle().replace("-fx-text-fill: " + ACCENT_GOLD + ";", "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";")));
         backButton.setOnAction(e -> ClientMainController.show(stage, user));
 
-        Label titleLabel = new Label(restaurant.getName() + " Menu");
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        Label titleLabel = new Label("🍽️ " + restaurant.getName() + " Menu");
+        titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
+        titleLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
 
         headerBox.getChildren().addAll(backButton, titleLabel);
 
         ScrollPane menuScroll = createMenuItems(user, restaurant);
         VBox.setVgrow(menuScroll, Priority.ALWAYS);
 
-        contentBox.getChildren().addAll(headerBox, menuScroll);
+        contentBox.getChildren().addAll(titleLabel, menuScroll);
         root.setCenter(contentBox);
 
-        Scene scene = new Scene(root, 1000, 700);
+        Scene scene = new Scene(root, 1200, 800);
         stage.setScene(scene);
     }
 
     private static ScrollPane createMenuItems(User user, Restaurant restaurant) {
-        VBox itemsBox = new VBox(15);
-        itemsBox.setPadding(new Insets(20));
+        VBox itemsBox = new VBox(20);
+        itemsBox.setPadding(new Insets(10, 0, 10, 0));
+        itemsBox.setAlignment(Pos.TOP_CENTER);
 
         // Refresh restaurant data
         try {
@@ -91,20 +107,14 @@ public class MenuController {
             System.out.println("=== LOADING " + menu.getItems().size() + " MENU ITEMS ===");
             
             for (MenuItem item : menu.getItems()) {
-                System.out.println("\n--- Menu Item ---");
-                System.out.println("ID: " + item.getItemId());
-                System.out.println("Name: " + item.getName());
-                System.out.println("Price: $" + item.getPrice());
-                System.out.println("Category: " + item.getCategory());
-                System.out.println("Description: " + item.getDescription());
-                
+                System.out.println("Item Name: " + item.getName() + ", Price: $" + item.getPrice());
                 itemsBox.getChildren().add(createMenuItemCard(user, item));
             }
         } else {
             System.out.println("=== NO MENU ITEMS FOUND ===");
-            Label noItems = new Label("No menu items available yet.");
-            noItems.setFont(Font.font("System", 16));
-            noItems.setTextFill(Color.web("#636e72"));
+            Label noItems = new Label("No menu items available yet for this restaurant.");
+            noItems.setFont(Font.font("System", 18));
+            noItems.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
             itemsBox.getChildren().add(noItems);
         }
 
@@ -115,95 +125,104 @@ public class MenuController {
     }
 
     private static HBox createMenuItemCard(User user, MenuItem item) {
-        HBox card = new HBox(20);
-        card.setPadding(new Insets(15));
+        HBox card = new HBox(30);
+        card.setPadding(new Insets(25));
         card.setAlignment(Pos.CENTER_LEFT);
+        card.setMaxWidth(800);
         card.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 12; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);" +
-            "-fx-border-color: rgb(27, 168, 203); " +
-            "-fx-border-width: 2; " +
-            "-fx-border-radius: 12;"
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 5);"
         );
 
-        // IMAGE
+        // IMAGE Placeholder
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
-        imageBox.setPrefSize(100, 100);
-        imageBox.setStyle("-fx-background-color: rgb(37, 93, 177); -fx-background-radius: 8;");
+        imageBox.setPrefSize(120, 120);
+        imageBox.setStyle("-fx-background-color: " + ITEM_BACKGROUND + "; -fx-background-radius: 10;");
 
-        Label placeholder = new Label("🍔");
-        placeholder.setFont(Font.font("System", 36));
-        placeholder.setStyle("-fx-text-fill: white;");
+        Label placeholder = new Label("🍽️");
+        placeholder.setFont(Font.font("System", 60));
+        placeholder.setStyle("-fx-text-fill: " + ACCENT_GOLD + ";");
         imageBox.getChildren().add(placeholder);
 
-        // INFO BOX - SIMPLIFIED with explicit inline styles
-        VBox infoBox = new VBox(8);
+        // INFO BOX
+        VBox infoBox = new VBox(5);
         infoBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
-        infoBox.setPrefWidth(400);
+        infoBox.setPrefWidth(450);
 
-        // Name Label - LARGE and BOLD
+        // Name Label - LARGE and BOLD, ACCENT color
         Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
         nameLabel.setStyle(
-            "-fx-font-size: 20px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-text-fill: #000000;"
+            "-fx-font-size: 24px; " +
+            "-fx-font-weight: extra-bold; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
         );
         nameLabel.setWrapText(true);
-        nameLabel.setMaxWidth(400);
         
-        // Category Label
-        Label categoryLabel = new Label(item.getCategory() != null ? item.getCategory() : "General");
+        // Category Label - Secondary Color
+        Label categoryLabel = new Label("Category: " + (item.getCategory() != null ? item.getCategory() : "General"));
         categoryLabel.setStyle(
-            "-fx-font-size: 12px; " +
-            "-fx-text-fill: #666666; " +
-            "-fx-font-style: italic;"
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: " + PRIMARY_COLOR + "; " +
+            "-fx-font-weight: bold;"
         );
         
         // Description Label
-        Label descLabel = new Label(item.getDescription() != null ? item.getDescription() : "No description");
+        Label descLabel = new Label(item.getDescription() != null ? item.getDescription() : "A delicious item from our menu.");
         descLabel.setStyle(
-            "-fx-font-size: 14px; " +
-            "-fx-text-fill: #333333;"
+            "-fx-font-size: 15px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
         descLabel.setWrapText(true);
-        descLabel.setMaxWidth(400);
         
-        // Price Label - GREEN
+        // Price Label - SUCCESS GREEN
         Label priceLabel = new Label("$" + String.format("%.2f", item.getPrice()));
         priceLabel.setStyle(
-            "-fx-font-size: 20px; " +
+            "-fx-font-size: 22px; " +
             "-fx-font-weight: bold; " +
-            "-fx-text-fill: #27ae60;"
+            "-fx-text-fill: " + SUCCESS_GREEN + ";"
         );
 
-        infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, priceLabel);
+        infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, new Region(), priceLabel);
+        VBox.setVgrow(infoBox.getChildren().get(3), Priority.ALWAYS); // Spacer to push price down
 
         // ACTION BOX
-        VBox actionBox = new VBox(10);
+        VBox actionBox = new VBox(15);
         actionBox.setAlignment(Pos.CENTER);
         actionBox.setPrefWidth(150);
 
         Spinner<Integer> quantitySpinner = new Spinner<>(1, 10, 1);
-        quantitySpinner.setPrefWidth(80);
+        quantitySpinner.setPrefWidth(100);
+        // Style the spinner controls for dark theme (custom CSS might be needed for full control, but this darkens the text)
+        quantitySpinner.getEditor().setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-background-color: " + ITEM_BACKGROUND + "; -fx-font-size: 16px;");
 
-        Button addButton = new Button("Add to Cart");
-        addButton.setPrefWidth(120);
+
+        Button addButton = new Button("Add to Cart ➕");
+        addButton.setPrefWidth(140);
         addButton.setStyle(
-            "-fx-background-color: #667eea; " +
-            "-fx-text-fill: white; " +
+            "-fx-background-color: " + PRIMARY_COLOR + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
             "-fx-font-weight: bold; " +
-            "-fx-padding: 8 16; " +
-            "-fx-background-radius: 15; " +
+            "-fx-padding: 10 18; " +
+            "-fx-background-radius: 18; " +
             "-fx-cursor: hand;"
         );
+        
+        // Hover effects
+        addButton.setOnMouseEntered(e -> addButton.setStyle(addButton.getStyle() + "-fx-background-color: #047857;"));
+        addButton.setOnMouseExited(e -> addButton.setStyle(addButton.getStyle().replace("-fx-background-color: #047857;", "-fx-background-color: " + PRIMARY_COLOR + ";")));
         
         addButton.setOnAction(e -> {
             CartItem cartItem = new CartItem(item, quantitySpinner.getValue());
             cartService.addItem(user.getCart(), cartItem);
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Added " + item.getName() + " to cart!");
+            
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Added " + item.getName() + " to cart!", ButtonType.OK);
+            DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
+            dialogPane.lookup(".label.content").setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-font-size: 16px;");
+            
             alert.showAndWait();
         });
 

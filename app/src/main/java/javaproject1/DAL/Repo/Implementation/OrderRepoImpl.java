@@ -164,15 +164,27 @@ public class OrderRepoImpl implements IOrderRepo {
 
     @Override
     public List<Order> getAllOrders() {
-        String sql = "SELECT * FROM orders";
+        String sql = "SELECT * FROM orders ORDER BY order_id DESC";
         List<Order> orders = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
+            // CRITICAL FIX: Process each order separately with its own result set
             while (rs.next()) {
-                orders.add(mapToOrder(rs, conn));
+                try {
+                    Order order = mapToOrder(rs, conn);
+                    if (order != null) {
+                        orders.add(order);
+                        System.out.println("DEBUG OrderRepo - Loaded order #" + order.getOrderId() + 
+                            " with " + (order.getItems() != null ? order.getItems().size() : 0) + " items");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error mapping order: " + e.getMessage());
+                    e.printStackTrace();
+                    // Continue processing other orders even if one fails
+                }
             }
 
         } catch (SQLException e) {
@@ -197,14 +209,18 @@ public class OrderRepoImpl implements IOrderRepo {
         String paymentId = rs.getString("payment_id");
         String deliveryId = rs.getString("delivery_id");
 
+        System.out.println("\n=== MAPPING ORDER #" + orderId + " ===");
+
         // Load user with full details
         User user = (userId > 0) ? userRepo.getUserById(userId) : null;
+        System.out.println("User: " + (user != null ? user.getName() : "N/A"));
 
         // Load restaurant with full details
         Restaurant restaurant = null;
         if (restaurantId != null) {
             RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
             restaurant = restaurantRepo.getRestaurantById(restaurantIdInt);
+            System.out.println("Restaurant: " + (restaurant != null ? restaurant.getName() : "N/A"));
         }
 
         // Load address with full details
@@ -212,6 +228,7 @@ public class OrderRepoImpl implements IOrderRepo {
         if (addressId != null) {
             AddressRepoImpl addressRepo = new AddressRepoImpl();
             address = addressRepo.getAddressById(addressIdInt);
+            System.out.println("Address: " + (address != null ? address.toString() : "N/A"));
         }
 
         // Load payment with full details
@@ -260,18 +277,22 @@ public class OrderRepoImpl implements IOrderRepo {
         order.setPayment(payment);
         order.setDelivery(delivery);
 
-        // CRITICAL FIX: Load cart items for this order
-        order.setItems(loadOrderItems(conn, orderId));
+        // CRITICAL FIX: Load cart items for THIS specific order using a NEW connection
+        // This ensures each order gets its own items loaded independently
+        List<CartItem> items = loadOrderItemsForOrder(orderId);
+        order.setItems(items);
 
-        System.out.println("DEBUG OrderRepo - Mapped order ID: " + orderId + ", Status: " + orderStatus + ", Items: " + (order.getItems() != null ? order.getItems().size() : 0));
+        System.out.println("Loaded " + items.size() + " items for order #" + orderId);
+        System.out.println("=== END MAPPING ORDER #" + orderId + " ===\n");
         
         return order;
     }
 
     /**
-     * Load cart items for a specific order by joining order_items and cart_item tables
+     * CRITICAL FIX: Load cart items for a specific order using a separate connection
+     * This prevents issues with nested result sets and ensures each order gets its own items
      */
-    private List<CartItem> loadOrderItems(Connection conn, int orderId) throws SQLException {
+    private List<CartItem> loadOrderItemsForOrder(int orderId) {
         List<CartItem> items = new ArrayList<>();
         
         String sql = """
@@ -281,9 +302,13 @@ public class OrderRepoImpl implements IOrderRepo {
             JOIN cart_item ci ON oi.cart_item_id = ci.cart_item_id
             JOIN menu_items mi ON ci.menu_item_id = mi.id
             WHERE oi.order_id = ?
+            ORDER BY oi.cart_item_id
             """;
         
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        // Use a separate connection for loading items to avoid nested ResultSet issues
+        try (Connection itemConn = DBConnection.getConnection();
+             PreparedStatement stmt = itemConn.prepareStatement(sql)) {
+            
             stmt.setInt(1, orderId);
             
             try (ResultSet rs = stmt.executeQuery()) {
@@ -306,9 +331,14 @@ public class OrderRepoImpl implements IOrderRepo {
                     
                     items.add(cartItem);
                     
-                    System.out.println("  - Loaded item: " + menuItem.getName() + " x" + cartItem.getQuantity());
+                    System.out.println("  ✓ Loaded: " + menuItem.getName() + " x" + cartItem.getQuantity() + 
+                        " = $" + String.format("%.2f", cartItem.getSubPrice()));
                 }
             }
+            
+        } catch (SQLException e) {
+            System.err.println("ERROR loading items for order #" + orderId + ": " + e.getMessage());
+            e.printStackTrace();
         }
         
         return items;
