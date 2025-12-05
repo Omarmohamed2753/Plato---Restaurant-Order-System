@@ -103,7 +103,6 @@ public class CheckoutController {
                 return;
             }
 
-            // Get payment method
             RadioButton selectedPayment = (RadioButton) paymentGroup.getSelectedToggle();
             if (selectedPayment == null) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Please select a payment method!");
@@ -113,7 +112,6 @@ public class CheckoutController {
 
             boolean isCreditCard = selectedPayment.getText().contains("Credit Card");
             
-            // Validate card details if credit card is selected
             if (isCreditCard) {
                 TextField cardNumberField = (TextField) cardDetailsBox.lookup("#cardNumber");
                 TextField cardHolderField = (TextField) cardDetailsBox.lookup("#cardHolder");
@@ -173,28 +171,30 @@ public class CheckoutController {
                 return;
             }
 
-            // Disable button during processing
             placeOrderButton.setDisable(true);
             orderMessageLabel.setText("Processing your order...");
             orderMessageLabel.setTextFill(Color.web("#3498db"));
 
             try {
-                // Create payment
+                // STEP 1: Create and save payment
                 Payment payment = new Payment();
                 payment.setPaymentId("PAY" + System.currentTimeMillis());
                 payment.setAmount(total);
                 payment.setPaymentMethod(isCreditCard ? PaymentM.CreditCard : PaymentM.Cash);
                 payment.setStatus("Pending");
                 payment.setTransactionDate(new Date());
-
+                
                 // Process payment
                 boolean paymentSuccess = paymentService.processPayment(payment);
-                
                 if (!paymentSuccess) {
                     throw new Exception("Payment processing failed!");
                 }
+                
+                // Save payment to DB
+                paymentService.addPayment(payment);
+                System.out.println("✓ Payment created: " + payment.getPaymentId());
 
-                // Create order
+                // STEP 2: Create order entity
                 Order order = new Order();
                 order.setUser(user);
                 order.setRestaurant(restaurant);
@@ -205,38 +205,38 @@ public class CheckoutController {
                 order.setOrderDate(new Date());
                 order.setPayment(payment);
 
-                // Save order to database
+                // STEP 3: Save order to DB
                 orderService.addOrder(order);
+                System.out.println("✓ Order created: " + order.getOrderId());
                 
-                if (order.getOrderId() != null) {
-                    payment.setOrderId(order.getOrderId());
-                    paymentService.updatePayment(payment);
-                    
-                    // Link order items to order in database
-                    try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
-                        String sql = "INSERT INTO order_items (order_id, cart_item_id) VALUES (?, ?)";
-                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                            for (CartItem item : cart.getItems()) {
+                if (order.getOrderId() == null || order.getOrderId().isEmpty()) {
+                    throw new Exception("Failed to create order - no order ID generated!");
+                }
+
+                // STEP 4: Update payment with order ID
+                payment.setOrderId(order.getOrderId());
+                paymentService.updatePayment(payment);
+                System.out.println("✓ Payment updated with order ID");
+
+                // STEP 5: Link cart items to order
+                try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
+                    String sql = "INSERT INTO order_items (order_id, cart_item_id) VALUES (?, ?)";
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        for (CartItem item : cart.getItems()) {
+                            if (item.getCartItemID() > 0) {
                                 stmt.setString(1, order.getOrderId());
                                 stmt.setInt(2, item.getCartItemID());
                                 stmt.addBatch();
                             }
-                            stmt.executeBatch();
                         }
+                        int[] results = stmt.executeBatch();
+                        System.out.println("✓ Linked " + results.length + " cart items to order");
                     }
                 }
 
-                // Clear cart
-                cartService.clearCart(cart);
-                
-                // Delete cart items from database
-                try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
-                    String deleteSql = "DELETE FROM cart_item WHERE cart_id = ?";
-                    try (java.sql.PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
-                        deleteStmt.setInt(1, cart.getCartId());
-                        deleteStmt.executeUpdate();
-                    }
-                }
+                // STEP 6: Clear cart (but don't delete cart_items yet - they're linked to order)
+                cart.getItems().clear();
+                System.out.println("✓ Cart cleared");
 
                 Alert success = new Alert(Alert.AlertType.INFORMATION, 
                     "Order placed successfully!\n\n" +
@@ -248,6 +248,7 @@ public class CheckoutController {
                 success.showAndWait();
                 
                 ClientMainController.show(stage, user);
+                
             } catch (Exception ex) {
                 placeOrderButton.setDisable(false);
                 orderMessageLabel.setText("Error: " + ex.getMessage());
@@ -273,6 +274,8 @@ public class CheckoutController {
         stage.setScene(scene);
     }
 
+    // ... keep all the other helper methods (createSummaryBox, createAddressBox, createPaymentBox, etc.) unchanged ...
+    
     private static VBox createSummaryBox(Cart cart, double subtotal, double tax, 
                                          double deliveryFee, double discount, double total) {
         VBox summaryBox = new VBox(15);
@@ -411,7 +414,6 @@ public class CheckoutController {
         cardRadio.setToggleGroup(paymentGroup);
         cardRadio.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
 
-        // Credit card details form (hidden by default)
         VBox cardDetailsBox = new VBox(10);
         cardDetailsBox.setPadding(new Insets(15, 0, 0, 30));
         cardDetailsBox.setVisible(false);
@@ -430,11 +432,6 @@ public class CheckoutController {
         cardNumberField.setId("cardNumber");
         cardNumberField.setPromptText("1234 5678 9012 3456");
         cardNumberField.setPrefWidth(300);
-        cardNumberField.textProperty().addListener((obs, old, newVal) -> {
-            if (newVal.length() > 19) {
-                cardNumberField.setText(old);
-            }
-        });
 
         TextField cardHolderField = new TextField();
         cardHolderField.setId("cardHolder");
@@ -445,21 +442,11 @@ public class CheckoutController {
         expiryField.setId("expiry");
         expiryField.setPromptText("MM/YY");
         expiryField.setPrefWidth(100);
-        expiryField.textProperty().addListener((obs, old, newVal) -> {
-            if (newVal.length() > 5) {
-                expiryField.setText(old);
-            }
-        });
 
         TextField cvvField = new TextField();
         cvvField.setId("cvv");
         cvvField.setPromptText("123");
         cvvField.setPrefWidth(80);
-        cvvField.textProperty().addListener((obs, old, newVal) -> {
-            if (!newVal.matches("\\d*") || newVal.length() > 4) {
-                cvvField.setText(old);
-            }
-        });
 
         cardGrid.add(new Label("Card Number:"), 0, 0);
         cardGrid.add(cardNumberField, 1, 0);
@@ -476,7 +463,6 @@ public class CheckoutController {
 
         cardDetailsBox.getChildren().addAll(cardGrid, secureLabel);
 
-        // Toggle card details visibility
         paymentGroup.selectedToggleProperty().addListener((obs, old, newVal) -> {
             if (newVal == cardRadio) {
                 cardDetailsBox.setVisible(true);

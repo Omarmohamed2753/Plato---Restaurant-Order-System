@@ -29,13 +29,31 @@ public class UserRepoImpl implements IUserRepo {
             
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
-                    user.setId(String.valueOf(rs.getInt(1)));
+                    int userId = rs.getInt(1);
+                    user.setId(String.valueOf(userId));
+                    
+                    // CRITICAL: Create cart for new user
+                    createCartForUser(conn, userId);
+                    
+                    System.out.println("User added with ID: " + userId);
                 }
             }
 
         } catch (SQLException e) {
             System.out.println("Add User Error: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Create a cart for a user
+     */
+    private void createCartForUser(Connection conn, int userId) throws SQLException {
+        String sql = "INSERT INTO cart (user_id) VALUES (?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            stmt.executeUpdate();
+            System.out.println("Cart created for user ID: " + userId);
         }
     }
 
@@ -144,7 +162,6 @@ public class UserRepoImpl implements IUserRepo {
         User user = new User();
         int userId = rs.getInt("user_id");
         
-        // FIXED: Explicitly set all user properties
         user.setId(String.valueOf(userId));
         user.setName(rs.getString("name") != null ? rs.getString("name") : "");
         user.setAge(rs.getInt("age"));
@@ -154,17 +171,92 @@ public class UserRepoImpl implements IUserRepo {
         user.setElite(rs.getBoolean("is_elite"));
 
         System.out.println("DEBUG UserRepo - Mapping user ID: " + userId);
-        System.out.println("  Name: " + user.getName());
-        System.out.println("  Email: " + user.getEmail());
-        System.out.println("  Elite: " + user.isElite());
 
         // Load related data
         user.setAddresses(loadAddresses(conn, userId));
         user.setOrders(loadOrders(conn, userId));
         user.setSubscription(loadSubscription(conn, userId));
-        user.setCart(loadCart(conn, userId));
+        user.setCart(loadOrCreateCart(conn, userId));
 
         return user;
+    }
+    
+    /**
+     * Load cart for user, create if doesn't exist
+     */
+    private Cart loadOrCreateCart(Connection conn, int userId) throws SQLException {
+        String sql = "SELECT cart_id FROM cart WHERE user_id = ?";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int cartId = rs.getInt("cart_id");
+                    return loadCartItems(conn, cartId);
+                }
+            }
+        }
+        
+        // Cart doesn't exist, create it
+        createCartForUser(conn, userId);
+        
+        // Now load the newly created cart
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int cartId = rs.getInt("cart_id");
+                    Cart cart = new Cart();
+                    cart.setCartId(cartId);
+                    System.out.println("Created new cart for user " + userId + " with ID: " + cartId);
+                    return cart;
+                }
+            }
+        }
+        
+        // Fallback
+        Cart cart = new Cart();
+        System.out.println("DEBUG UserRepo - Returning empty cart for user " + userId);
+        return cart;
+    }
+    
+    private Cart loadCartItems(Connection conn, int cartId) throws SQLException {
+        Cart cart = new Cart();
+        cart.setCartId(cartId);
+        
+        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
+                     "FROM cart_item ci " +
+                     "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
+                     "WHERE ci.cart_id = ?";
+                     
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, cartId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<CartItem> items = new ArrayList<>();
+                while (rs.next()) {
+                    CartItem item = new CartItem();
+                    item.setCartItemID(rs.getInt("cart_item_id"));
+                    
+                    MenuItem menuItem = new MenuItem();
+                    menuItem.setItemId(rs.getString("menu_item_id"));
+                    menuItem.setName(rs.getString("name") != null ? rs.getString("name") : "");
+                    menuItem.setPrice(rs.getDouble("price"));
+                    menuItem.setDescription(rs.getString("description") != null ? rs.getString("description") : "");
+                    menuItem.setCategory(rs.getString("category") != null ? rs.getString("category") : "");
+                    menuItem.setImagePath(rs.getString("image_path") != null ? rs.getString("image_path") : "");
+                    item.setMenuItem(menuItem);
+                    
+                    item.setQuantity(rs.getInt("quantity"));
+                    item.setSubPrice(rs.getDouble("sub_price"));
+                    
+                    items.add(item);
+                }
+                cart.setItems(items);
+            }
+        }
+        
+        System.out.println("DEBUG UserRepo - Loaded " + cart.getItems().size() + " items in cart " + cartId);
+        return cart;
     }
     
     private List<Order> loadOrders(Connection conn, int userId) throws SQLException {
@@ -199,66 +291,6 @@ public class UserRepoImpl implements IUserRepo {
         
         System.out.println("DEBUG UserRepo - Loaded " + orders.size() + " orders for user " + userId);
         return orders;
-    }
-    
-    private Cart loadCart(Connection conn, int userId) throws SQLException {
-        // First, get the cart_id for this user
-        String cartSql = "SELECT cart_id FROM cart WHERE user_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(cartSql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    int cartId = rs.getInt("cart_id");
-                    return loadCartItems(conn, cartId);
-                }
-            }
-        }
-        
-        // If no cart exists, create an empty one
-        Cart cart = new Cart();
-        System.out.println("DEBUG UserRepo - No cart found for user " + userId + ", returning empty cart");
-        return cart;
-    }
-    
-    private Cart loadCartItems(Connection conn, int cartId) throws SQLException {
-        Cart cart = new Cart();
-        cart.setCartId(cartId);
-        
-        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
-                     "FROM cart_item ci " +
-                     "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
-                     "WHERE ci.cart_id = ?";
-                     
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, cartId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                List<CartItem> items = new ArrayList<>();
-                while (rs.next()) {
-                    CartItem item = new CartItem();
-                    item.setCartItemID(rs.getInt("cart_item_id"));
-                    
-                    // Load full MenuItem details
-                    MenuItem menuItem = new MenuItem();
-                    menuItem.setItemId(rs.getString("menu_item_id"));
-                    menuItem.setName(rs.getString("name") != null ? rs.getString("name") : "");
-                    menuItem.setPrice(rs.getDouble("price"));
-                    menuItem.setDescription(rs.getString("description") != null ? rs.getString("description") : "");
-                    menuItem.setCategory(rs.getString("category") != null ? rs.getString("category") : "");
-                    menuItem.setImagePath(rs.getString("image_path") != null ? rs.getString("image_path") : "");
-                    item.setMenuItem(menuItem);
-                    
-                    // Set quantity and price
-                    item.setQuantity(rs.getInt("quantity"));
-                    item.setSubPrice(rs.getDouble("sub_price"));
-                    
-                    items.add(item);
-                }
-                cart.setItems(items);
-            }
-        }
-        
-        System.out.println("DEBUG UserRepo - Loaded " + cart.getItems().size() + " items in cart " + cartId);
-        return cart;
     }
     
     private List<Address> loadAddresses(Connection conn, int userId) throws SQLException {
