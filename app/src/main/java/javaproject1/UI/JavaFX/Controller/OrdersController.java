@@ -13,6 +13,7 @@ import javaproject1.BLL.Service.implementation.*;
 import javaproject1.DAL.Entity.*;
 
 import java.text.SimpleDateFormat;
+import java.util.List;
 
 public class OrdersController {
     private static OrderServiceImpl orderService = new OrderServiceImpl();
@@ -33,14 +34,18 @@ public class OrdersController {
 
         VBox ordersBox = new VBox(15);
         
-        // Refresh user data to get latest orders
-        UserServiceImpl userService = new UserServiceImpl();
-        User freshUser = userService.getUserById(Integer.parseInt(user.getId()));
+        // Get all orders and filter for current user
+        List<Order> allOrders = orderService.getAllOrders();
+        List<Order> userOrders = allOrders.stream()
+            .filter(o -> o.getUser() != null && 
+                        o.getUser().getId() != null && 
+                        o.getUser().getId().equals(user.getId()))
+            .toList();
         
-        if (freshUser != null && freshUser.getOrders() != null && !freshUser.getOrders().isEmpty()) {
-            System.out.println("DEBUG: Found " + freshUser.getOrders().size() + " orders for user " + user.getName());
-            
-            for (Order order : freshUser.getOrders()) {
+        System.out.println("DEBUG OrdersController: Found " + userOrders.size() + " orders for user " + user.getName());
+        
+        if (!userOrders.isEmpty()) {
+            for (Order order : userOrders) {
                 System.out.println("DEBUG: Creating card for order #" + order.getOrderId());
                 ordersBox.getChildren().add(createOrderCard(order));
             }
@@ -75,7 +80,7 @@ public class OrdersController {
             "-fx-border-width: 2; " +
             "-fx-border-radius: 10;"
         );
-        card.setMinHeight(150); // Ensure minimum height
+        card.setMinHeight(150);
         card.setPrefWidth(800);
 
         System.out.println("DEBUG: Creating card for order #" + order.getOrderId());
@@ -103,8 +108,15 @@ public class OrdersController {
 
         header.getChildren().addAll(idLabel, spacer, statusLabel);
 
-        // Restaurant info
-        String restaurantName = order.getRestaurant() != null ? order.getRestaurant().getName() : "N/A";
+        // Restaurant info - FIXED to show real data
+        String restaurantName = "Unknown Restaurant";
+        if (order.getRestaurant() != null && order.getRestaurant().getName() != null) {
+            restaurantName = order.getRestaurant().getName();
+            System.out.println("  Restaurant found: " + restaurantName);
+        } else {
+            System.out.println("  WARNING: Restaurant data is null for order #" + order.getOrderId());
+        }
+        
         Label restaurantLabel = new Label("🏪 Restaurant: " + restaurantName);
         restaurantLabel.setStyle(
             "-fx-font-size: 15px; " +
@@ -123,7 +135,7 @@ public class OrdersController {
             "-fx-text-fill: #636e72;"
         );
 
-        // Items section
+        // Items section - FIXED to show real items
         VBox itemsBox = new VBox(8);
         itemsBox.setPadding(new Insets(10, 0, 10, 0));
         itemsBox.setStyle(
@@ -143,7 +155,11 @@ public class OrdersController {
 
             System.out.println("  Items count: " + order.getItems().size());
             for (CartItem item : order.getItems()) {
-                String itemName = item.getMenuItem() != null ? item.getMenuItem().getName() : "Unknown Item";
+                String itemName = "Unknown Item";
+                if (item.getMenuItem() != null && item.getMenuItem().getName() != null) {
+                    itemName = item.getMenuItem().getName();
+                }
+                
                 int qty = item.getQuantity();
                 double price = item.getSubPrice();
                 
@@ -158,7 +174,7 @@ public class OrdersController {
                 itemsBox.getChildren().add(itemLabel);
             }
         } else {
-            System.out.println("  No items found!");
+            System.out.println("  WARNING: No items found for order #" + order.getOrderId());
             Label noItems = new Label("No items information available");
             noItems.setStyle(
                 "-fx-font-size: 13px; " +
@@ -168,7 +184,7 @@ public class OrdersController {
             itemsBox.getChildren().add(noItems);
         }
 
-        // Footer with total and address
+        // Footer with total and address - FIXED to show real address
         HBox footer = new HBox(30);
         footer.setAlignment(Pos.CENTER_LEFT);
         footer.setPadding(new Insets(10, 0, 0, 0));
@@ -183,7 +199,18 @@ public class OrdersController {
         leftFooter.getChildren().add(totalLabel);
 
         VBox rightFooter = new VBox(5);
-        String addressStr = order.getDeliveryAddress() != null ? order.getDeliveryAddress().toString() : "N/A";
+        String addressStr = "Not specified";
+        if (order.getDeliveryAddress() != null) {
+            Address addr = order.getDeliveryAddress();
+            addressStr = String.format("%s, %s, Building %d", 
+                addr.getStreet() != null ? addr.getStreet() : "Unknown Street",
+                addr.getCity() != null ? addr.getCity() : "Unknown City",
+                addr.getBuildingNumber());
+            System.out.println("  Address found: " + addressStr);
+        } else {
+            System.out.println("  WARNING: No delivery address for order #" + order.getOrderId());
+        }
+        
         Label addressLabel = new Label("📍 Delivery to: " + addressStr);
         addressLabel.setStyle(
             "-fx-font-size: 12px; " +
@@ -198,7 +225,7 @@ public class OrdersController {
         // Add all sections to card
         card.getChildren().addAll(header, restaurantLabel, dateLabel, itemsBox, footer);
         
-        System.out.println("DEBUG: Card created successfully");
+        System.out.println("DEBUG: Card created successfully for order #" + order.getOrderId());
         return card;
     }
 

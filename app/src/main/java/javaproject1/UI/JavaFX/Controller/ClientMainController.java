@@ -23,42 +23,57 @@ public class ClientMainController {
     private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
     private static User currentUser;
 
+    private static final String BACKGROUND_DARK = "#1f2937";
+    private static final String PRIMARY_COLOR = "#059669";
+    private static final String ACCENT_GOLD = "#fcd34d";
+    private static final String CARD_BACKGROUND = "#374151";
+    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
+    private static final String HOVER_COLOR = "#4b5563";
+    
+    private static final String BUTTON_STYLE_BASE = 
+        "-fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 20; -fx-cursor: hand; -fx-font-size: 15px;";
+
     public static void show(Stage stage, User user) {
         currentUser = user;
         
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #f5f7fa;");
+        root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
         HBox navbar = createNavBar(stage, user);
         root.setTop(navbar);
 
-        VBox contentBox = new VBox(20);
-        contentBox.setPadding(new Insets(30));
+        VBox contentBox = new VBox(30);
+        contentBox.setPadding(new Insets(40));
         contentBox.setAlignment(Pos.TOP_CENTER);
 
         Label welcomeLabel = new Label("Welcome, " + user.getName() + "!");
-        welcomeLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        welcomeLabel.setTextFill(Color.web("#1a1a1a"));
+        welcomeLabel.setFont(Font.font("Arial", FontWeight.BOLD, 38));
+        welcomeLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
+        
+        Label restaurantsTitle = new Label("Explore Our Plato Restaurant 🍽️");
+        restaurantsTitle.setFont(Font.font("Arial", FontWeight.SEMI_BOLD, 24));
+        restaurantsTitle.setTextFill(Color.web(ACCENT_GOLD));
 
         ScrollPane restaurantScroll = createRestaurantList(stage, user);
         VBox.setVgrow(restaurantScroll, Priority.ALWAYS);
 
-        contentBox.getChildren().addAll(welcomeLabel, restaurantScroll);
+        contentBox.getChildren().addAll(welcomeLabel, restaurantsTitle, restaurantScroll);
         root.setCenter(contentBox);
 
-        Scene scene = new Scene(root, 1000, 700);
+        Scene scene = new Scene(root, 1200, 800);
         stage.setScene(scene);
     }
 
     public static HBox createNavBar(Stage stage, User user) {
-        HBox navbar = new HBox(20);
-        navbar.setPadding(new Insets(15, 30, 15, 30));
+        HBox navbar = new HBox(30);
+        navbar.setPadding(new Insets(18, 50, 18, 50));
         navbar.setAlignment(Pos.CENTER_LEFT);
-        navbar.setStyle("-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);");
+        navbar.setStyle("-fx-background-color: " + CARD_BACKGROUND + "; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 5);");
 
-        Label brandLabel = new Label("🍽️ Plato");
-        brandLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-        brandLabel.setTextFill(Color.web("#667eea"));
+        Label brandLabel = new Label("🍽️ Elite Platter");
+        brandLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 24));
+        brandLabel.setTextFill(Color.web(ACCENT_GOLD));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -69,12 +84,21 @@ public class ClientMainController {
         Button profileButton = createNavButton("Profile", () -> ProfileController.show(stage, user));
         Button logoutButton = createNavButton("Logout", () -> {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to logout?");
+            DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
+            dialogPane.lookup(".label.content").setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-font-size: 14px;");
+            
             alert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.OK) {
                     WelcomeController.show(stage);
                 }
             });
         });
+        
+        logoutButton.setStyle(logoutButton.getStyle() + " -fx-background-color: #ef4444; -fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
+        logoutButton.setOnMouseEntered(e -> logoutButton.setStyle(logoutButton.getStyle() + "-fx-background-color: #dc2626;"));
+        logoutButton.setOnMouseExited(e -> logoutButton.setStyle(logoutButton.getStyle().replace("-fx-background-color: #dc2626;", "-fx-background-color: #ef4444;")));
+
 
         navbar.getChildren().addAll(brandLabel, spacer, homeButton, ordersButton, cartButton, profileButton, logoutButton);
         return navbar;
@@ -82,35 +106,33 @@ public class ClientMainController {
 
     private static Button createNavButton(String text, Runnable action) {
         Button button = new Button(text);
-        button.setStyle(
+        
+        String baseStyle = 
             "-fx-background-color: transparent; " +
-            "-fx-text-fill: #2d3436; " +
-            "-fx-font-size: 14px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+            "-fx-font-size: 15px; " +
             "-fx-cursor: hand; " +
-            "-fx-padding: 8 15 8 15;"
-        );
-        button.setOnMouseEntered(e -> button.setStyle(
-            "-fx-background-color: #f0f0f0; " +
-            "-fx-text-fill: #667eea; " +
-            "-fx-font-size: 14px; " +
+            "-fx-padding: 10 18 10 18;";
+            
+        String hoverStyle = 
+            "-fx-background-color: " + HOVER_COLOR + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-font-size: 15px; " +
             "-fx-cursor: hand; " +
-            "-fx-padding: 8 15 8 15; " +
-            "-fx-background-radius: 5;"
-        ));
-        button.setOnMouseExited(e -> button.setStyle(
-            "-fx-background-color: transparent; " +
-            "-fx-text-fill: #2d3436; " +
-            "-fx-font-size: 14px; " +
-            "-fx-cursor: hand; " +
-            "-fx-padding: 8 15 8 15;"
-        ));
+            "-fx-padding: 10 18 10 18; " +
+            "-fx-background-radius: 8;";
+
+        button.setStyle(baseStyle);
+        button.setOnMouseEntered(e -> button.setStyle(hoverStyle));
+        button.setOnMouseExited(e -> button.setStyle(baseStyle));
         button.setOnAction(e -> action.run());
         return button;
     }
 
     private static ScrollPane createRestaurantList(Stage stage, User user) {
-        VBox restaurantBox = new VBox(15);
-        restaurantBox.setPadding(new Insets(20));
+        VBox restaurantBox = new VBox(25);
+        restaurantBox.setPadding(new Insets(20, 0, 20, 0));
+        restaurantBox.setAlignment(Pos.TOP_CENTER);
         
         RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
         List<Restaurant> restaurants = restaurantRepo.getAllRestaurants();
@@ -119,9 +141,9 @@ public class ClientMainController {
         System.out.println("Total restaurants: " + restaurants.size());
 
         if (restaurants.isEmpty()) {
-            Label noRestaurants = new Label("No restaurants available at the moment.");
-            noRestaurants.setFont(Font.font("System", 16));
-            noRestaurants.setTextFill(Color.web("#636e72"));
+            Label noRestaurants = new Label("No gourmet restaurants available at the moment.");
+            noRestaurants.setFont(Font.font("System", 18));
+            noRestaurants.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
             restaurantBox.getChildren().add(noRestaurants);
         } else {
             for (Restaurant restaurant : restaurants) {
@@ -143,96 +165,91 @@ public class ClientMainController {
 
     private static VBox createRestaurantCard(Stage stage, User user, Restaurant restaurant) {
         VBox card = new VBox(15);
-        card.setPadding(new Insets(20));
+        card.setPadding(new Insets(25));
         card.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 5);" +
-            "-fx-border-color: #e0e0e0; " +
-            "-fx-border-width: 1; " +
-            "-fx-border-radius: 15;"
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 18; " + 
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 6);"
         );
-        card.setPrefWidth(800);
+        card.setMaxWidth(900);
 
-        HBox contentBox = new HBox(20);
+        HBox contentBox = new HBox(30);
         contentBox.setAlignment(Pos.CENTER_LEFT);
 
-        // IMAGE
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
-        imageBox.setPrefSize(150, 150);
-        imageBox.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 10;");
+        imageBox.setPrefSize(180, 180);
+        imageBox.setStyle("-fx-background-color: #2b3543; -fx-background-radius: 15;");
+        imageBox.setMinSize(180, 180);
+        imageBox.setMaxSize(180, 180);
 
-        Label imagePlaceholder = new Label("🍽️");
-        imagePlaceholder.setFont(Font.font(50));
-        imagePlaceholder.setStyle("-fx-text-fill: #95a5a6;");
+        Label imagePlaceholder = new Label("📸");
+        imagePlaceholder.setFont(Font.font(80));
+        imagePlaceholder.setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
         imageBox.getChildren().add(imagePlaceholder);
 
-        // INFO BOX - SIMPLIFIED with inline styles
-        VBox infoBox = new VBox(12);
+        VBox infoBox = new VBox(10);
         infoBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
-        infoBox.setPrefWidth(400);
+        infoBox.setPrefWidth(500);
 
-        // Restaurant Name - BIG and BOLD
-        String restaurantName = restaurant.getName() != null ? restaurant.getName() : "Restaurant";
+        String restaurantName = restaurant.getName() != null ? restaurant.getName() : "Luxury Restaurant";
         Label nameLabel = new Label(restaurantName);
         nameLabel.setStyle(
-            "-fx-font-size: 26px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-text-fill: #000000;"
+            "-fx-font-size: 30px; " +
+            "-fx-font-weight: extra-bold; " +
+            "-fx-text-fill: " + ACCENT_GOLD + ";"
         );
         nameLabel.setWrapText(true);
-        nameLabel.setMaxWidth(400);
+        nameLabel.setMaxWidth(500);
         
-        // Address
-        String address = restaurant.getAddress() != null ? restaurant.getAddress() : "Address not available";
+        String address = restaurant.getAddress() != null ? restaurant.getAddress() : "Exclusive Location";
         Label addressLabel = new Label("📍 " + address);
         addressLabel.setStyle(
-            "-fx-font-size: 14px; " +
-            "-fx-text-fill: #2d3436;"
+            "-fx-font-size: 16px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
         addressLabel.setWrapText(true);
-        addressLabel.setMaxWidth(400);
+        addressLabel.setMaxWidth(500);
         
-        // Hours
-        String hours = restaurant.getOpeningHours() != null ? restaurant.getOpeningHours() : "Hours not available";
+        String hours = restaurant.getOpeningHours() != null ? restaurant.getOpeningHours() : "24/7";
         Label hoursLabel = new Label("🕐 " + hours);
         hoursLabel.setStyle(
-            "-fx-font-size: 14px; " +
-            "-fx-text-fill: #2d3436;"
+            "-fx-font-size: 16px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
         hoursLabel.setWrapText(true);
-        hoursLabel.setMaxWidth(400);
+        hoursLabel.setMaxWidth(500);
         
-        // Rating
-        Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()));
+        Label ratingLabel = new Label("⭐ " + String.format("%.1f", restaurant.getRating()) + " / 5.0");
         ratingLabel.setStyle(
-            "-fx-background-color: #fff3cd; " +
-            "-fx-text-fill: #856404; " +
-            "-fx-padding: 5 10; " +
-            "-fx-background-radius: 15; " +
-            "-fx-font-size: 14px; " +
+            "-fx-background-color: " + PRIMARY_COLOR + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-padding: 6 15; " +
+            "-fx-background-radius: 20; " +
+            "-fx-font-size: 15px; " +
             "-fx-font-weight: bold;"
         );
 
         infoBox.getChildren().addAll(nameLabel, addressLabel, hoursLabel, ratingLabel);
 
-        // BUTTON
         Button viewMenuButton = new Button("View Menu");
-        viewMenuButton.setPrefWidth(120);
+        viewMenuButton.setPrefWidth(180);
         viewMenuButton.setStyle(
-            "-fx-background-color: #667eea; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 14px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 10 20; " +
-            "-fx-background-radius: 20; " +
-            "-fx-cursor: hand;"
+            "-fx-background-color: " + PRIMARY_COLOR + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            BUTTON_STYLE_BASE
         );
+        viewMenuButton.setOnMouseEntered(e -> viewMenuButton.setStyle(viewMenuButton.getStyle() + "-fx-background-color: #047857;"));
+        viewMenuButton.setOnMouseExited(e -> viewMenuButton.setStyle(viewMenuButton.getStyle().replace("-fx-background-color: #047857;", "-fx-background-color: " + PRIMARY_COLOR + ";")));
         viewMenuButton.setOnAction(e -> MenuController.show(stage, user, restaurant));
 
-        contentBox.getChildren().addAll(imageBox, infoBox, viewMenuButton);
+        VBox buttonContainer = new VBox();
+        buttonContainer.setAlignment(Pos.CENTER);
+        buttonContainer.getChildren().add(viewMenuButton);
+
+
+        contentBox.getChildren().addAll(imageBox, infoBox, buttonContainer);
         card.getChildren().add(contentBox);
 
         return card;

@@ -15,6 +15,7 @@ import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Enums.OrderStatus;
 import javaproject1.DAL.Enums.PaymentM;
 import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
+import javaproject1.DAL.Repo.Implementation.DeliveryRepoImpl;
 
 import java.util.*;
 
@@ -23,6 +24,8 @@ public class CheckoutController {
     private static CartServiceImpl cartService = new CartServiceImpl();
     private static PaymentServiceImpl paymentService = new PaymentServiceImpl();
     private static RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
+    private static DeliveryServiceImpl deliveryService = new DeliveryServiceImpl();
+    private static DeliveryRepoImpl deliveryRepo = new DeliveryRepoImpl();
 
     public static void show(Stage stage, User user) {
         Cart cart = user.getCart();
@@ -176,7 +179,19 @@ public class CheckoutController {
             orderMessageLabel.setTextFill(Color.web("#3498db"));
 
             try {
-                // STEP 1: Create and save payment
+                System.out.println("=== STARTING ORDER CREATION ===");
+                
+                // STEP 1: Create delivery record FIRST
+                Delivery delivery = new Delivery();
+                delivery.setDeliveryId("DEL" + System.currentTimeMillis());
+                delivery.setStatus("Pending Assignment");
+                delivery.setEstimatedDeliveryTime(null); // Will be set when assigned
+                delivery.setDeliveryPerson(null); // Will be assigned later by admin
+                
+                deliveryRepo.addDelivery(delivery);
+                System.out.println("✓ Delivery created: " + delivery.getDeliveryId());
+
+                // STEP 2: Create and save payment
                 Payment payment = new Payment();
                 payment.setPaymentId("PAY" + System.currentTimeMillis());
                 payment.setAmount(total);
@@ -184,17 +199,15 @@ public class CheckoutController {
                 payment.setStatus("Pending");
                 payment.setTransactionDate(new Date());
                 
-                // Process payment
                 boolean paymentSuccess = paymentService.processPayment(payment);
                 if (!paymentSuccess) {
                     throw new Exception("Payment processing failed!");
                 }
                 
-                // Save payment to DB
                 paymentService.addPayment(payment);
                 System.out.println("✓ Payment created: " + payment.getPaymentId());
 
-                // STEP 2: Create order entity
+                // STEP 3: Create order entity with ALL relationships
                 Order order = new Order();
                 order.setUser(user);
                 order.setRestaurant(restaurant);
@@ -204,21 +217,25 @@ public class CheckoutController {
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(new Date());
                 order.setPayment(payment);
+                order.setDelivery(delivery); // Link delivery to order
 
-                // STEP 3: Save order to DB
+                // STEP 4: Save order to DB
                 orderService.addOrder(order);
                 System.out.println("✓ Order created: " + order.getOrderId());
+                System.out.println("  - Restaurant: " + restaurant.getName());
+                System.out.println("  - Address: " + selectedAddress.toString());
+                System.out.println("  - Delivery ID: " + delivery.getDeliveryId());
                 
                 if (order.getOrderId() == null || order.getOrderId().isEmpty()) {
                     throw new Exception("Failed to create order - no order ID generated!");
                 }
 
-                // STEP 4: Update payment with order ID
+                // STEP 5: Update payment with order ID
                 payment.setOrderId(order.getOrderId());
                 paymentService.updatePayment(payment);
                 System.out.println("✓ Payment updated with order ID");
 
-                // STEP 5: Link cart items to order
+                // STEP 6: Link cart items to order
                 try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
                     String sql = "INSERT INTO order_items (order_id, cart_item_id) VALUES (?, ?)";
                     try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -234,13 +251,16 @@ public class CheckoutController {
                     }
                 }
 
-                // STEP 6: Clear cart (but don't delete cart_items yet - they're linked to order)
+                // STEP 7: Clear cart in memory only (items stay in DB linked to order)
                 cart.getItems().clear();
                 System.out.println("✓ Cart cleared");
+                System.out.println("=== ORDER CREATION COMPLETE ===");
 
                 Alert success = new Alert(Alert.AlertType.INFORMATION, 
                     "Order placed successfully!\n\n" +
                     "Order ID: " + order.getOrderId() + "\n" +
+                    "Restaurant: " + restaurant.getName() + "\n" +
+                    "Delivery to: " + selectedAddress.getStreet() + ", " + selectedAddress.getCity() + "\n" +
                     "Total: $" + String.format("%.2f", total) + "\n" +
                     "Payment: " + (isCreditCard ? "Credit Card" : "Cash on Delivery") + "\n\n" +
                     "You can track your order in 'My Orders'.");
@@ -274,8 +294,7 @@ public class CheckoutController {
         stage.setScene(scene);
     }
 
-    // ... keep all the other helper methods (createSummaryBox, createAddressBox, createPaymentBox, etc.) unchanged ...
-    
+    // Keep all helper methods unchanged...
     private static VBox createSummaryBox(Cart cart, double subtotal, double tax, 
                                          double deliveryFee, double discount, double total) {
         VBox summaryBox = new VBox(15);
