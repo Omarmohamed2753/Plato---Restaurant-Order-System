@@ -20,7 +20,7 @@ dependencies {
     // JUnit Jupiter for testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
+    
     // Guava
     implementation 'com.google.guava:guava:32.1.3-jre'
 }
@@ -40,6 +40,20 @@ application {
     mainClass = 'javaproject1.App'
 }
 
+// Add custom resources directory (if you keep capital R)
+sourceSets {
+    main {
+        resources {
+            srcDirs = ['src/main/Resources', 'src/main/resources']
+        }
+    }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Ensure resources are copied to build output
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }

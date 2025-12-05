@@ -124,181 +124,199 @@ public class MenuController {
         return scrollPane;
     }
 
-    // Replace the createMenuItemCard method in MenuController.java
+    private static HBox createMenuItemCard(User user, MenuItem item) {
+        HBox card = new HBox(30);
+        card.setPadding(new Insets(25));
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.setMaxWidth(800);
+        card.setStyle(
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 15; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 5);"
+        );
 
-private static HBox createMenuItemCard(User user, MenuItem item) {
-    HBox card = new HBox(30);
-    card.setPadding(new Insets(25));
-    card.setAlignment(Pos.CENTER_LEFT);
-    card.setMaxWidth(800);
-    card.setStyle(
-        "-fx-background-color: " + CARD_BACKGROUND + "; " +
-        "-fx-background-radius: 15; " +
-        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 5);"
-    );
+        // IMAGE BOX - Now with actual image loading
+        VBox imageBox = new VBox();
+        imageBox.setAlignment(Pos.CENTER);
+        imageBox.setPrefSize(120, 120);
+        imageBox.setMinSize(120, 120);
+        imageBox.setMaxSize(120, 120);
+        imageBox.setStyle("-fx-background-color: " + ITEM_BACKGROUND + "; -fx-background-radius: 10;");
 
-    // IMAGE BOX - Now with actual image loading
-    VBox imageBox = new VBox();
-    imageBox.setAlignment(Pos.CENTER);
-    imageBox.setPrefSize(120, 120);
-    imageBox.setMinSize(120, 120);
-    imageBox.setMaxSize(120, 120);
-    imageBox.setStyle("-fx-background-color: " + ITEM_BACKGROUND + "; -fx-background-radius: 10;");
+        // Try to load image
+        ImageView imageView = loadMenuItemImage(item.getImagePath());
+        if (imageView != null) {
+            imageView.setFitWidth(120);
+            imageView.setFitHeight(120);
+            imageView.setPreserveRatio(false);
+            imageView.setSmooth(true);
+            
+            // Add rounded corners effect
+            javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(120, 120);
+            clip.setArcWidth(20);
+            clip.setArcHeight(20);
+            imageView.setClip(clip);
+            
+            imageBox.getChildren().add(imageView);
+        } else {
+            // Fallback to placeholder if image not found
+            Label placeholder = new Label("🍽️");
+            placeholder.setFont(Font.font("System", 60));
+            placeholder.setStyle("-fx-text-fill: " + ACCENT_GOLD + ";");
+            imageBox.getChildren().add(placeholder);
+        }
 
-    // Try to load image
-    ImageView imageView = loadMenuItemImage(item.getImagePath());
-    if (imageView != null) {
-        imageView.setFitWidth(120);
-        imageView.setFitHeight(120);
-        imageView.setPreserveRatio(false);
-        imageView.setSmooth(true);
+        // INFO BOX
+        VBox infoBox = new VBox(5);
+        infoBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
+        infoBox.setPrefWidth(450);
+
+        Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
+        nameLabel.setStyle(
+            "-fx-font-size: 24px; " +
+            "-fx-font-weight: extra-bold; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
+        );
+        nameLabel.setWrapText(true);
         
-        // Add rounded corners effect
-        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(120, 120);
-        clip.setArcWidth(20);
-        clip.setArcHeight(20);
-        imageView.setClip(clip);
+        Label categoryLabel = new Label("Category: " + (item.getCategory() != null ? item.getCategory() : "General"));
+        categoryLabel.setStyle(
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: " + PRIMARY_COLOR + "; " +
+            "-fx-font-weight: bold;"
+        );
         
-        imageBox.getChildren().add(imageView);
-    } else {
-        // Fallback to placeholder if image not found
-        Label placeholder = new Label("🍽️");
-        placeholder.setFont(Font.font("System", 60));
-        placeholder.setStyle("-fx-text-fill: " + ACCENT_GOLD + ";");
-        imageBox.getChildren().add(placeholder);
+        Label descLabel = new Label(item.getDescription() != null ? item.getDescription() : "A delicious item from our menu.");
+        descLabel.setStyle(
+            "-fx-font-size: 15px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
+        );
+        descLabel.setWrapText(true);
+        
+        Label priceLabel = new Label("$" + String.format("%.2f", item.getPrice()));
+        priceLabel.setStyle(
+            "-fx-font-size: 22px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: " + SUCCESS_GREEN + ";"
+        );
+
+        infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, new Region(), priceLabel);
+        VBox.setVgrow(infoBox.getChildren().get(3), Priority.ALWAYS);
+
+        // ACTION BOX
+        VBox actionBox = new VBox(15);
+        actionBox.setAlignment(Pos.CENTER);
+        actionBox.setPrefWidth(150);
+
+        Spinner<Integer> quantitySpinner = new Spinner<>(1, 10, 1);
+        quantitySpinner.setPrefWidth(100);
+        quantitySpinner.getEditor().setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-background-color: " + ITEM_BACKGROUND + "; -fx-font-size: 16px;");
+
+        Button addButton = new Button("Add to Cart ➕");
+        addButton.setPrefWidth(140);
+        addButton.setStyle(
+            "-fx-background-color: " + PRIMARY_COLOR + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 10 18; " +
+            "-fx-background-radius: 18; " +
+            "-fx-cursor: hand;"
+        );
+        
+        addButton.setOnMouseEntered(e -> addButton.setStyle(addButton.getStyle() + "-fx-background-color: #047857;"));
+        addButton.setOnMouseExited(e -> addButton.setStyle(addButton.getStyle().replace("-fx-background-color: #047857;", "-fx-background-color: " + PRIMARY_COLOR + ";")));
+        
+        addButton.setOnAction(e -> {
+            CartItem cartItem = new CartItem(item, quantitySpinner.getValue());
+            cartService.addItem(user.getCart(), cartItem);
+            
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Added " + item.getName() + " to cart!", ButtonType.OK);
+            DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
+            dialogPane.lookup(".label.content").setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-font-size: 16px;");
+            
+            alert.showAndWait();
+        });
+
+        actionBox.getChildren().addAll(quantitySpinner, addButton);
+
+        card.getChildren().addAll(imageBox, infoBox, actionBox);
+        return card;
     }
 
-    // INFO BOX (rest of the code remains the same)
-    VBox infoBox = new VBox(5);
-    infoBox.setAlignment(Pos.CENTER_LEFT);
-    HBox.setHgrow(infoBox, Priority.ALWAYS);
-    infoBox.setPrefWidth(450);
-
-    Label nameLabel = new Label(item.getName() != null ? item.getName() : "Unnamed Item");
-    nameLabel.setStyle(
-        "-fx-font-size: 24px; " +
-        "-fx-font-weight: extra-bold; " +
-        "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
-    );
-    nameLabel.setWrapText(true);
-    
-    Label categoryLabel = new Label("Category: " + (item.getCategory() != null ? item.getCategory() : "General"));
-    categoryLabel.setStyle(
-        "-fx-font-size: 14px; " +
-        "-fx-text-fill: " + PRIMARY_COLOR + "; " +
-        "-fx-font-weight: bold;"
-    );
-    
-    Label descLabel = new Label(item.getDescription() != null ? item.getDescription() : "A delicious item from our menu.");
-    descLabel.setStyle(
-        "-fx-font-size: 15px; " +
-        "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
-    );
-    descLabel.setWrapText(true);
-    
-    Label priceLabel = new Label("$" + String.format("%.2f", item.getPrice()));
-    priceLabel.setStyle(
-        "-fx-font-size: 22px; " +
-        "-fx-font-weight: bold; " +
-        "-fx-text-fill: " + SUCCESS_GREEN + ";"
-    );
-
-    infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, new Region(), priceLabel);
-    VBox.setVgrow(infoBox.getChildren().get(3), Priority.ALWAYS);
-
-    // ACTION BOX (rest remains the same)
-    VBox actionBox = new VBox(15);
-    actionBox.setAlignment(Pos.CENTER);
-    actionBox.setPrefWidth(150);
-
-    Spinner<Integer> quantitySpinner = new Spinner<>(1, 10, 1);
-    quantitySpinner.setPrefWidth(100);
-    quantitySpinner.getEditor().setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-background-color: " + ITEM_BACKGROUND + "; -fx-font-size: 16px;");
-
-    Button addButton = new Button("Add to Cart ➕");
-    addButton.setPrefWidth(140);
-    addButton.setStyle(
-        "-fx-background-color: " + PRIMARY_COLOR + "; " +
-        "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
-        "-fx-font-weight: bold; " +
-        "-fx-padding: 10 18; " +
-        "-fx-background-radius: 18; " +
-        "-fx-cursor: hand;"
-    );
-    
-    addButton.setOnMouseEntered(e -> addButton.setStyle(addButton.getStyle() + "-fx-background-color: #047857;"));
-    addButton.setOnMouseExited(e -> addButton.setStyle(addButton.getStyle().replace("-fx-background-color: #047857;", "-fx-background-color: " + PRIMARY_COLOR + ";")));
-    
-    addButton.setOnAction(e -> {
-        CartItem cartItem = new CartItem(item, quantitySpinner.getValue());
-        cartService.addItem(user.getCart(), cartItem);
-        
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, "Added " + item.getName() + " to cart!", ButtonType.OK);
-        DialogPane dialogPane = alert.getDialogPane();
-        dialogPane.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
-        dialogPane.lookup(".label.content").setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-font-size: 16px;");
-        
-        alert.showAndWait();
-    });
-
-    actionBox.getChildren().addAll(quantitySpinner, addButton);
-
-    card.getChildren().addAll(imageBox, infoBox, actionBox);
-    return card;
-}
-
-private static ImageView loadMenuItemImage(String imagePath) {
-    if (imagePath == null || imagePath.trim().isEmpty()) {
-        return null;
-    }
-    
-    try {
-        // First, check if it's an absolute file path (for testing/development)
-        java.io.File file = new java.io.File(imagePath);
-        if (file.exists() && file.isFile()) {
-            try {
-                Image image = new Image(file.toURI().toString());
-                if (!image.isError()) {
-                    System.out.println("✓ Successfully loaded image from file: " + imagePath);
-                    ImageView imageView = new ImageView(image);
-                    return imageView;
-                }
-            } catch (Exception e) {
-                System.err.println("Error loading file image: " + e.getMessage());
-            }
+    private static ImageView loadMenuItemImage(String imagePath) {
+        if (imagePath == null || imagePath.trim().isEmpty()) {
+            return null;
         }
         
-        // Try multiple resource path variations
-        String[] pathsToTry = {
-            "/Images/menu/" + imagePath,           // images/menu/pizza.jpg
-            "/Images/" + imagePath,                // images/pizza.jpg
-            "/" + imagePath,                       // pizza.jpg
-            "/Images/menu/" + imagePath.toLowerCase(), // Case-insensitive
-            "/Images/" + imagePath.toLowerCase()
-        };
-        
-        for (String path : pathsToTry) {
-            try {
-                java.io.InputStream stream = MenuController.class.getResourceAsStream(path);
-                if (stream != null) {
-                    Image image = new Image(stream);
-                    if (!image.isError()) {
-                        System.out.println("✓ Successfully loaded image from resources: " + path);
-                        ImageView imageView = new ImageView(image);
-                        return imageView;
+        try {
+            // Clean the image path (remove any leading slashes or "Images/menu/" prefix)
+            String cleanPath = imagePath.trim();
+            if (cleanPath.startsWith("Images/menu/")) {
+                cleanPath = cleanPath.substring("Images/menu/".length());
+            } else if (cleanPath.startsWith("/Images/menu/")) {
+                cleanPath = cleanPath.substring("/Images/menu/".length());
+            } else if (cleanPath.startsWith("Images/")) {
+                cleanPath = cleanPath.substring("Images/".length());
+            }
+            
+            // First, try loading from the resources folder (during runtime)
+            String[] resourcePaths = {
+                "/Images/menu/" + cleanPath,
+                "/images/menu/" + cleanPath,  // lowercase
+                "/Images/" + cleanPath,
+                "/images/" + cleanPath
+            };
+            
+            for (String resPath : resourcePaths) {
+                try {
+                    java.io.InputStream stream = MenuController.class.getResourceAsStream(resPath);
+                    if (stream != null) {
+                        Image image = new Image(stream);
+                        if (!image.isError()) {
+                            System.out.println("✓ Successfully loaded image from resources: " + resPath);
+                            ImageView imageView = new ImageView(image);
+                            return imageView;
+                        }
+                        stream.close();
                     }
+                } catch (Exception e) {
+                    // Continue to next path
                 }
-            } catch (Exception e) {
-                // Continue to next path
             }
+            
+            // Second, try loading from file system (for development)
+            String[] filePaths = {
+                "app/src/main/Resources/Images/menu/" + cleanPath,
+                "src/main/Resources/Images/menu/" + cleanPath,
+                "Resources/Images/menu/" + cleanPath,
+                "app/src/main/resources/Images/menu/" + cleanPath,  // lowercase resources
+                "src/main/resources/Images/menu/" + cleanPath
+            };
+            
+            for (String filePath : filePaths) {
+                try {
+                    java.io.File file = new java.io.File(filePath);
+                    if (file.exists() && file.isFile()) {
+                        Image image = new Image(file.toURI().toString());
+                        if (!image.isError()) {
+                            System.out.println("✓ Successfully loaded image from file: " + filePath);
+                            ImageView imageView = new ImageView(image);
+                            return imageView;
+                        }
+                    }
+                } catch (Exception e) {
+                    // Continue to next path
+                }
+            }
+            
+            System.out.println("⚠ Image not found: " + imagePath + " (cleaned: " + cleanPath + ")");
+            return null;
+            
+        } catch (Exception e) {
+            System.err.println("Error loading image " + imagePath + ": " + e.getMessage());
+            return null;
         }
-        
-        System.out.println("⚠ Image not found for any path variation: " + imagePath);
-        return null;
-        
-    } catch (Exception e) {
-        System.err.println("Error loading image " + imagePath + ": " + e.getMessage());
-        return null;
     }
-}
 }
