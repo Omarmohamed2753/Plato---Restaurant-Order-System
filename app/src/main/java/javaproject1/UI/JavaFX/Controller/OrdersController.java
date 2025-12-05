@@ -18,21 +18,33 @@ import java.util.List;
 public class OrdersController {
     private static OrderServiceImpl orderService = new OrderServiceImpl();
 
+    // Dark Theme Colors
+    private static final String BACKGROUND_DARK = "#1f2937";
+    private static final String PRIMARY_COLOR = "#059669";
+    private static final String ACCENT_GOLD = "#fcd34d";
+    private static final String CARD_BACKGROUND = "#374151";
+    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
+    private static final String ITEM_BACKGROUND = "#2b3543";
+
     public static void show(Stage stage, User user) {
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #f5f7fa;");
+        root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
         HBox navbar = ClientMainController.createNavBar(stage, user);
         root.setTop(navbar);
 
-        VBox contentBox = new VBox(20);
-        contentBox.setPadding(new Insets(30));
+        VBox contentBox = new VBox(30);
+        contentBox.setPadding(new Insets(50));
+        contentBox.setAlignment(Pos.TOP_CENTER);
+        contentBox.setMaxWidth(1100);
 
-        Label titleLabel = new Label("My Orders");
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        Label titleLabel = new Label("📦 My Orders");
+        titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
+        titleLabel.setTextFill(Color.web(ACCENT_GOLD));
 
-        VBox ordersBox = new VBox(15);
+        VBox ordersBox = new VBox(20);
+        ordersBox.setAlignment(Pos.TOP_CENTER);
         
         // Get all orders and filter for current user
         List<Order> allOrders = orderService.getAllOrders();
@@ -51,11 +63,28 @@ public class OrdersController {
             }
         } else {
             System.out.println("DEBUG: No orders found for user");
-            Label emptyLabel = new Label("No orders yet. Start shopping to place your first order!");
-            emptyLabel.setFont(Font.font("System", 18));
-            emptyLabel.setTextFill(Color.web("#636e72"));
-            emptyLabel.setWrapText(true);
-            ordersBox.getChildren().add(emptyLabel);
+            VBox emptyBox = new VBox(20);
+            emptyBox.setAlignment(Pos.CENTER);
+            emptyBox.setPadding(new Insets(60));
+            emptyBox.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-background-radius: 20; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
+            );
+            
+            Label emptyIcon = new Label("🛒");
+            emptyIcon.setFont(Font.font("System", 60));
+            
+            Label emptyLabel = new Label("No orders yet!");
+            emptyLabel.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+            emptyLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
+            
+            Label emptySubLabel = new Label("Start shopping to place your first order");
+            emptySubLabel.setFont(Font.font("System", 18));
+            emptySubLabel.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
+            
+            emptyBox.getChildren().addAll(emptyIcon, emptyLabel, emptySubLabel);
+            ordersBox.getChildren().add(emptyBox);
         }
 
         contentBox.getChildren().addAll(titleLabel, ordersBox);
@@ -65,23 +94,21 @@ public class OrdersController {
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
         root.setCenter(scrollPane);
-        Scene scene = new Scene(root, 1000, 700);
+        Scene scene = new Scene(root, 1200, 800);
         stage.setScene(scene);
     }
 
     private static VBox createOrderCard(Order order) {
-        VBox card = new VBox(15);
-        card.setPadding(new Insets(20));
+        VBox card = new VBox(20);
+        card.setPadding(new Insets(30));
         card.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 10; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 3);" +
-            "-fx-border-color: #e0e0e0; " +
-            "-fx-border-width: 2; " +
-            "-fx-border-radius: 10;"
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 18; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
         );
         card.setMinHeight(150);
-        card.setPrefWidth(800);
+        card.setPrefWidth(900);
+        card.setMaxWidth(900);
 
         System.out.println("DEBUG: Creating card for order #" + order.getOrderId());
         System.out.println("  Status: " + order.getStatus());
@@ -94,9 +121,9 @@ public class OrdersController {
 
         Label idLabel = new Label("Order #" + (order.getOrderId() != null ? order.getOrderId() : "N/A"));
         idLabel.setStyle(
-            "-fx-font-size: 18px; " +
+            "-fx-font-size: 22px; " +
             "-fx-font-weight: bold; " +
-            "-fx-text-fill: #000000;"
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
         );
 
         Region spacer = new Region();
@@ -104,11 +131,11 @@ public class OrdersController {
 
         Label statusLabel = new Label(order.getStatus() != null ? order.getStatus().toString() : "UNKNOWN");
         statusLabel.setStyle(getStatusStyle(order.getStatus()));
-        statusLabel.setPadding(new Insets(8, 20, 8, 20));
+        statusLabel.setPadding(new Insets(10, 25, 10, 25));
 
         header.getChildren().addAll(idLabel, spacer, statusLabel);
 
-        // Restaurant info - FIXED to show real data
+        // Restaurant info
         String restaurantName = "Unknown Restaurant";
         if (order.getRestaurant() != null && order.getRestaurant().getName() != null) {
             restaurantName = order.getRestaurant().getName();
@@ -117,10 +144,10 @@ public class OrdersController {
             System.out.println("  WARNING: Restaurant data is null for order #" + order.getOrderId());
         }
         
-        Label restaurantLabel = new Label("🏪 Restaurant: " + restaurantName);
+        Label restaurantLabel = new Label("🏪 " + restaurantName);
         restaurantLabel.setStyle(
-            "-fx-font-size: 15px; " +
-            "-fx-text-fill: #2d3436; " +
+            "-fx-font-size: 18px; " +
+            "-fx-text-fill: " + PRIMARY_COLOR + "; " +
             "-fx-font-weight: bold;"
         );
 
@@ -129,27 +156,27 @@ public class OrdersController {
         if (order.getOrderDate() != null) {
             dateStr = new SimpleDateFormat("MMM dd, yyyy HH:mm").format(order.getOrderDate());
         }
-        Label dateLabel = new Label("📅 Date: " + dateStr);
+        Label dateLabel = new Label("📅 " + dateStr);
         dateLabel.setStyle(
-            "-fx-font-size: 13px; " +
-            "-fx-text-fill: #636e72;"
+            "-fx-font-size: 15px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
 
-        // Items section - FIXED to show real items
-        VBox itemsBox = new VBox(8);
-        itemsBox.setPadding(new Insets(10, 0, 10, 0));
+        // Items section
+        VBox itemsBox = new VBox(12);
+        itemsBox.setPadding(new Insets(15));
         itemsBox.setStyle(
-            "-fx-background-color: #f8f9fa; " +
-            "-fx-background-radius: 8; " +
-            "-fx-padding: 15;"
+            "-fx-background-color: " + ITEM_BACKGROUND + "; " +
+            "-fx-background-radius: 12; " +
+            "-fx-padding: 20;"
         );
 
         if (order.getItems() != null && !order.getItems().isEmpty()) {
             Label itemsTitle = new Label("📦 Items:");
             itemsTitle.setStyle(
-                "-fx-font-size: 14px; " +
+                "-fx-font-size: 16px; " +
                 "-fx-font-weight: bold; " +
-                "-fx-text-fill: #000000;"
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
             );
             itemsBox.getChildren().add(itemsTitle);
 
@@ -165,40 +192,62 @@ public class OrdersController {
                 
                 System.out.println("    - " + itemName + " x" + qty + " = $" + String.format("%.2f", price));
                 
-                Label itemLabel = new Label("  • " + itemName + " x" + qty + " - $" + String.format("%.2f", price));
+                HBox itemRow = new HBox(15);
+                itemRow.setAlignment(Pos.CENTER_LEFT);
+                
+                Label itemLabel = new Label("• " + itemName);
                 itemLabel.setStyle(
-                    "-fx-font-size: 13px; " +
-                    "-fx-text-fill: #2d3436; " +
-                    "-fx-padding: 3 0 3 10;"
+                    "-fx-font-size: 15px; " +
+                    "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
                 );
-                itemsBox.getChildren().add(itemLabel);
+                itemLabel.setPrefWidth(400);
+                
+                Label qtyLabel = new Label("x" + qty);
+                qtyLabel.setStyle(
+                    "-fx-font-size: 15px; " +
+                    "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
+                );
+                qtyLabel.setPrefWidth(50);
+                
+                Region itemSpacer = new Region();
+                HBox.setHgrow(itemSpacer, Priority.ALWAYS);
+                
+                Label priceLabel = new Label("$" + String.format("%.2f", price));
+                priceLabel.setStyle(
+                    "-fx-font-size: 15px; " +
+                    "-fx-font-weight: bold; " +
+                    "-fx-text-fill: " + ACCENT_GOLD + ";"
+                );
+                
+                itemRow.getChildren().addAll(itemLabel, qtyLabel, itemSpacer, priceLabel);
+                itemsBox.getChildren().add(itemRow);
             }
         } else {
             System.out.println("  WARNING: No items found for order #" + order.getOrderId());
             Label noItems = new Label("No items information available");
             noItems.setStyle(
-                "-fx-font-size: 13px; " +
-                "-fx-text-fill: #636e72; " +
+                "-fx-font-size: 15px; " +
+                "-fx-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
                 "-fx-font-style: italic;"
             );
             itemsBox.getChildren().add(noItems);
         }
 
-        // Footer with total and address - FIXED to show real address
-        HBox footer = new HBox(30);
+        // Footer with total and details
+        HBox footer = new HBox(40);
         footer.setAlignment(Pos.CENTER_LEFT);
         footer.setPadding(new Insets(10, 0, 0, 0));
 
         VBox leftFooter = new VBox(5);
         Label totalLabel = new Label("Total: $" + String.format("%.2f", order.getTotalAmount()));
         totalLabel.setStyle(
-            "-fx-font-size: 20px; " +
+            "-fx-font-size: 26px; " +
             "-fx-font-weight: bold; " +
-            "-fx-text-fill: #27ae60;"
+            "-fx-text-fill: " + PRIMARY_COLOR + ";"
         );
         leftFooter.getChildren().add(totalLabel);
 
-        VBox rightFooter = new VBox(8);
+        VBox rightFooter = new VBox(10);
         
         // Delivery Address
         String addressStr = "Not specified";
@@ -213,13 +262,13 @@ public class OrdersController {
             System.out.println("  WARNING: No delivery address for order #" + order.getOrderId());
         }
         
-        Label addressLabel = new Label("📍 Delivery to: " + addressStr);
+        Label addressLabel = new Label("📍 " + addressStr);
         addressLabel.setStyle(
-            "-fx-font-size: 12px; " +
-            "-fx-text-fill: #636e72;"
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
         addressLabel.setWrapText(true);
-        addressLabel.setMaxWidth(400);
+        addressLabel.setMaxWidth(500);
         rightFooter.getChildren().add(addressLabel);
         
         // Delivery Person Info
@@ -234,13 +283,13 @@ public class OrdersController {
             System.out.println("  WARNING: No delivery person assigned for order #" + order.getOrderId());
         }
         
-        Label deliveryPersonLabel = new Label("🚴 Delivery Person: " + deliveryPersonInfo);
+        Label deliveryPersonLabel = new Label("🚴 " + deliveryPersonInfo);
         deliveryPersonLabel.setStyle(
-            "-fx-font-size: 12px; " +
-            "-fx-text-fill: #636e72;"
+            "-fx-font-size: 14px; " +
+            "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
         deliveryPersonLabel.setWrapText(true);
-        deliveryPersonLabel.setMaxWidth(400);
+        deliveryPersonLabel.setMaxWidth(500);
         rightFooter.getChildren().add(deliveryPersonLabel);
 
         footer.getChildren().addAll(leftFooter, rightFooter);
@@ -254,16 +303,16 @@ public class OrdersController {
 
     private static String getStatusStyle(javaproject1.DAL.Enums.OrderStatus status) {
         if (status == null) {
-            return "-fx-background-color: #e9ecef; -fx-text-fill: #495057; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
+            return "-fx-background-color: #4b5563; -fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
         }
         
         return switch (status) {
-            case PENDING -> "-fx-background-color: #fff3cd; -fx-text-fill: #856404; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
-            case CONFIRMED, PREPARING -> "-fx-background-color: #cfe2ff; -fx-text-fill: #084298; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
-            case READY_FOR_DELIVERY, OUT_FOR_DELIVERY -> "-fx-background-color: #d1ecf1; -fx-text-fill: #0c5460; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
-            case DELIVERED -> "-fx-background-color: #d1e7dd; -fx-text-fill: #0f5132; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
-            case CANCELLED -> "-fx-background-color: #f8d7da; -fx-text-fill: #842029; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
-            default -> "-fx-background-color: #e9ecef; -fx-text-fill: #495057; -fx-background-radius: 15; -fx-font-size: 13px; -fx-font-weight: bold;";
+            case PENDING -> "-fx-background-color: #fbbf24; -fx-text-fill: #78350f; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
+            case CONFIRMED, PREPARING -> "-fx-background-color: #60a5fa; -fx-text-fill: #1e3a8a; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
+            case READY_FOR_DELIVERY, OUT_FOR_DELIVERY -> "-fx-background-color: #a78bfa; -fx-text-fill: #4c1d95; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
+            case DELIVERED -> "-fx-background-color: #10b981; -fx-text-fill: #064e3b; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
+            case CANCELLED -> "-fx-background-color: #ef4444; -fx-text-fill: #7f1d1d; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
+            default -> "-fx-background-color: #4b5563; -fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-background-radius: 18; -fx-font-size: 15px; -fx-font-weight: bold;";
         };
     }
 }

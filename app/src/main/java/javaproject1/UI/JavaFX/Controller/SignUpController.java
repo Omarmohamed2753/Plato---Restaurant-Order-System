@@ -9,7 +9,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.scene.layout.HBox;
 import javaproject1.BLL.Service.implementation.UserServiceImpl;
 import javaproject1.DAL.Entity.Address;
 import javaproject1.DAL.Entity.User;
@@ -18,28 +17,48 @@ public class SignUpController {
 
     private static UserServiceImpl userService = new UserServiceImpl();
 
+    // Dark Theme Colors
+    private static final String BACKGROUND_DARK = "#1f2937";
+    private static final String PRIMARY_COLOR = "#059669";
+    private static final String ACCENT_GOLD = "#fcd34d";
+    private static final String CARD_BACKGROUND = "#374151";
+    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
+    private static final String ITEM_BACKGROUND = "#2b3543";
+    private static final String ERROR_COLOR = "#ef4444";
+    private static final String SUCCESS_COLOR = "#10b981";
+
     public static void show(Stage stage) {
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #f5f7fa;");
+        root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
         // Header
         HBox header = createHeader(stage);
         root.setTop(header);
 
         // Form
-        VBox formBox = new VBox(20);
+        VBox formBox = new VBox(25);
         formBox.setAlignment(Pos.CENTER);
-        formBox.setPadding(new Insets(30));
-        formBox.setMaxWidth(500);
+        formBox.setPadding(new Insets(40));
+        formBox.setMaxWidth(650);
 
         Label titleLabel = new Label("Create Account");
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
+        titleLabel.setTextFill(Color.web(ACCENT_GOLD));
+
+        // Card container
+        VBox cardBox = new VBox(25);
+        cardBox.setPadding(new Insets(40));
+        cardBox.setStyle(
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 20; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
+        );
 
         // Form fields
         GridPane grid = new GridPane();
-        grid.setHgap(15);
-        grid.setVgap(15);
+        grid.setHgap(20);
+        grid.setVgap(20);
         grid.setAlignment(Pos.CENTER);
 
         TextField nameField = createTextField("Full Name");
@@ -73,6 +92,12 @@ public class SignUpController {
         grid.add(createFormLabel("Age:"), 0, row);
         grid.add(ageField, 1, row++);
         
+        // Separator for address section
+        Label addressSeparator = new Label("📍 Delivery Address");
+        addressSeparator.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        addressSeparator.setTextFill(Color.web(PRIMARY_COLOR));
+        grid.add(addressSeparator, 0, row++, 2, 1);
+        
         grid.add(createFormLabel("Street:"), 0, row);
         grid.add(streetField, 1, row++);
         
@@ -82,20 +107,27 @@ public class SignUpController {
         grid.add(createFormLabel("Building:"), 0, row);
         grid.add(buildingField, 1, row++);
 
-        Button signUpButton = new Button("Sign Up");
-        signUpButton.setPrefWidth(200);
-        signUpButton.setPrefHeight(45);
+        Button signUpButton = new Button("Create Account ✓");
+        signUpButton.setPrefWidth(250);
+        signUpButton.setPrefHeight(50);
         signUpButton.setStyle(
-            "-fx-background-color: #4CAF50; " +
+            "-fx-background-color: " + SUCCESS_COLOR + "; " +
             "-fx-text-fill: white; " +
-            "-fx-font-size: 16px; " +
+            "-fx-font-size: 18px; " +
             "-fx-font-weight: bold; " +
-            "-fx-background-radius: 22.5; " +
-            "-fx-cursor: hand;"
+            "-fx-background-radius: 25; " +
+            "-fx-cursor: hand; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 3);"
         );
 
+        signUpButton.setOnMouseEntered(e -> signUpButton.setStyle(signUpButton.getStyle() + "-fx-background-color: #059669;"));
+        signUpButton.setOnMouseExited(e -> signUpButton.setStyle(signUpButton.getStyle().replace("-fx-background-color: #059669;", "-fx-background-color: " + SUCCESS_COLOR + ";")));
+
         Label messageLabel = new Label();
-        messageLabel.setFont(Font.font("System", 14));
+        messageLabel.setFont(Font.font("System", 15));
+        messageLabel.setWrapText(true);
+        messageLabel.setMaxWidth(500);
+        messageLabel.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
 
         signUpButton.setOnAction(e -> {
             try {
@@ -122,6 +154,11 @@ public class SignUpController {
                     return;
                 }
 
+                if (password.length() < 6) {
+                    showError(messageLabel, "Password must be at least 6 characters!");
+                    return;
+                }
+
                 int age = Integer.parseInt(ageText);
                 int building = Integer.parseInt(buildingText);
 
@@ -133,8 +170,8 @@ public class SignUpController {
 
                 boolean success = userService.createAccount(user);
                 if (success) {
-                    showSuccess(messageLabel, "Account created successfully!");
-                    // Wait a moment then go to sign in
+                    showSuccess(messageLabel, "Account created successfully! Redirecting to sign in...");
+                    
                     new Thread(() -> {
                         try {
                             Thread.sleep(1500);
@@ -149,31 +186,45 @@ public class SignUpController {
                     showError(messageLabel, "Email already exists!");
                 }
             } catch (NumberFormatException ex) {
-                showError(messageLabel, "Age and Building must be numbers!");
+                showError(messageLabel, "Age and Building must be valid numbers!");
             } catch (Exception ex) {
                 showError(messageLabel, "Error: " + ex.getMessage());
+                ex.printStackTrace();
             }
         });
 
-        formBox.getChildren().addAll(titleLabel, grid, signUpButton, messageLabel);
+        HBox buttonBox = new HBox(20);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.getChildren().addAll(signUpButton, messageLabel);
+
+        cardBox.getChildren().addAll(grid, buttonBox);
+        formBox.getChildren().addAll(titleLabel, cardBox);
         
         ScrollPane scrollPane = new ScrollPane(formBox);
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background: #f5f7fa; -fx-background-color: transparent;");
+        scrollPane.setStyle("-fx-background: " + BACKGROUND_DARK + "; -fx-background-color: transparent;");
         
         root.setCenter(scrollPane);
 
-        Scene scene = new Scene(root, 800, 600);
+        Scene scene = new Scene(root, 1000, 700);
         stage.setScene(scene);
     }
 
     private static HBox createHeader(Stage stage) {
         HBox header = new HBox();
-        header.setPadding(new Insets(15, 20, 15, 20));
-        header.setStyle("-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);");
+        header.setPadding(new Insets(20, 30, 20, 30));
+        header.setStyle("-fx-background-color: " + CARD_BACKGROUND + "; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 8, 0, 0, 3);");
 
         Button backButton = new Button("← Back");
-        backButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #667eea; -fx-font-size: 14px; -fx-cursor: hand;");
+        backButton.setStyle(
+            "-fx-background-color: transparent; " +
+            "-fx-text-fill: " + PRIMARY_COLOR + "; " +
+            "-fx-font-size: 16px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-cursor: hand;"
+        );
+        backButton.setOnMouseEntered(e -> backButton.setStyle(backButton.getStyle() + "-fx-text-fill: " + ACCENT_GOLD + ";"));
+        backButton.setOnMouseExited(e -> backButton.setStyle(backButton.getStyle().replace("-fx-text-fill: " + ACCENT_GOLD + ";", "-fx-text-fill: " + PRIMARY_COLOR + ";")));
         backButton.setOnAction(e -> WelcomeController.show(stage));
 
         header.getChildren().add(backButton);
@@ -183,33 +234,47 @@ public class SignUpController {
     private static TextField createTextField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.setPrefWidth(300);
-        field.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+        field.setPrefWidth(350);
+        field.setStyle(
+            "-fx-padding: 12; " +
+            "-fx-font-size: 15px; " +
+            "-fx-background-color: " + ITEM_BACKGROUND + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+            "-fx-background-radius: 8;"
+        );
         return field;
     }
 
     private static PasswordField createPasswordField(String prompt) {
         PasswordField field = new PasswordField();
         field.setPromptText(prompt);
-        field.setPrefWidth(300);
-        field.setStyle("-fx-padding: 10; -fx-font-size: 14px;");
+        field.setPrefWidth(350);
+        field.setStyle(
+            "-fx-padding: 12; " +
+            "-fx-font-size: 15px; " +
+            "-fx-background-color: " + ITEM_BACKGROUND + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+            "-fx-background-radius: 8;"
+        );
         return field;
     }
     
     private static Label createFormLabel(String text) {
         Label label = new Label(text);
-        label.setFont(Font.font("System", FontWeight.BOLD, 14));
-        label.setTextFill(Color.web("#1a1a1a"));
+        label.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        label.setTextFill(Color.web(TEXT_COLOR_LIGHT));
         return label;
     }
 
     private static void showError(Label label, String message) {
-        label.setText(message);
-        label.setTextFill(Color.web("#e74c3c"));
+        label.setText("error " + message);
+        label.setTextFill(Color.web(ERROR_COLOR));
     }
 
     private static void showSuccess(Label label, String message) {
-        label.setText(message);
-        label.setTextFill(Color.web("#27ae60"));
+        label.setText("ture " + message);
+        label.setTextFill(Color.web(SUCCESS_COLOR));
     }
 }
