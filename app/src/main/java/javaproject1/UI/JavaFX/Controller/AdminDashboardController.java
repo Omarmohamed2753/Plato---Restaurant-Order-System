@@ -22,9 +22,19 @@ public class AdminDashboardController {
     private static UserServiceImpl userService = new UserServiceImpl();
     private static EmployeeServiceImpl employeeService = new EmployeeServiceImpl();
 
+    // Dark Theme Colors - matching client side
+    private static final String BACKGROUND_DARK = "#1f2937";
+    private static final String PRIMARY_COLOR = "#059669";
+    private static final String ACCENT_GOLD = "#fcd34d";
+    private static final String CARD_BACKGROUND = "#374151";
+    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
+    private static final String HOVER_COLOR = "#4b5563";
+    private static final String ERROR_COLOR = "#ef4444";
+
     public static void show(Stage stage, Admin admin) {
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: #f5f7fa;");
+        root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
         HBox navbar = createAdminNavBar(stage, admin);
         root.setTop(navbar);
@@ -32,17 +42,17 @@ public class AdminDashboardController {
         VBox sidebar = createSidebar(stage, admin);
         root.setLeft(sidebar);
 
-        VBox contentBox = new VBox(25);
-        contentBox.setPadding(new Insets(30));
+        VBox contentBox = new VBox(30);
+        contentBox.setPadding(new Insets(40));
 
         Label titleLabel = new Label("Admin Dashboard");
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 32));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 38));
+        titleLabel.setTextFill(Color.web(ACCENT_GOLD));
 
-        Label restaurantLabel = new Label("Restaurant: " + 
+        Label restaurantLabel = new Label("🏪 Restaurant: " + 
             (admin.getRestaurant() != null ? admin.getRestaurant().getName() : "N/A"));
-        restaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 18));
-        restaurantLabel.setTextFill(Color.web("#4a5568"));
+        restaurantLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 20));
+        restaurantLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
 
         HBox statsBox = createStatsCards(admin);
         VBox ordersSection = createOrdersSection(admin);
@@ -60,33 +70,41 @@ public class AdminDashboardController {
     }
 
     private static HBox createAdminNavBar(Stage stage, Admin admin) {
-        HBox navbar = new HBox(20);
-        navbar.setPadding(new Insets(15, 30, 15, 30));
+        HBox navbar = new HBox(30);
+        navbar.setPadding(new Insets(18, 50, 18, 50));
         navbar.setAlignment(Pos.CENTER_LEFT);
-        navbar.setStyle("-fx-background-color: #e74c3c; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);");
+        navbar.setStyle("-fx-background-color: " + CARD_BACKGROUND + "; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 5);");
 
         Label brandLabel = new Label("🔐 Admin Portal");
-        brandLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-        brandLabel.setTextFill(Color.WHITE);
+        brandLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 24));
+        brandLabel.setTextFill(Color.web(ACCENT_GOLD));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Label adminNameLabel = new Label("Admin: " + admin.getName());
-        adminNameLabel.setFont(Font.font("System", 14));
-        adminNameLabel.setTextFill(Color.WHITE);
+        adminNameLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 15));
+        adminNameLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
 
         Button logoutButton = new Button("Logout");
         logoutButton.setStyle(
-            "-fx-background-color: rgba(255,255,255,0.2); " +
+            "-fx-background-color: " + ERROR_COLOR + "; " +
             "-fx-text-fill: white; " +
-            "-fx-font-size: 13px; " +
-            "-fx-padding: 8 15 8 15; " +
-            "-fx-background-radius: 15; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 10 20; " +
+            "-fx-background-radius: 20; " +
             "-fx-cursor: hand;"
         );
+        logoutButton.setOnMouseEntered(e -> logoutButton.setStyle(logoutButton.getStyle() + "-fx-background-color: #dc2626;"));
+        logoutButton.setOnMouseExited(e -> logoutButton.setStyle(logoutButton.getStyle().replace("-fx-background-color: #dc2626;", "-fx-background-color: " + ERROR_COLOR + ";")));
+        
         logoutButton.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Logout from admin panel?");
+            DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
+            dialogPane.lookup(".label.content").setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-font-size: 14px;");
+            
             alert.showAndWait().ifPresent(response -> {
                 if (response == ButtonType.OK) {
                     WelcomeController.show(stage);
@@ -100,13 +118,14 @@ public class AdminDashboardController {
 
     private static VBox createSidebar(Stage stage, Admin admin) {
         VBox sidebar = new VBox(10);
-        sidebar.setPadding(new Insets(20));
-        sidebar.setPrefWidth(220);
-        sidebar.setStyle("-fx-background-color: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 2, 0);");
+        sidebar.setPadding(new Insets(30, 20, 30, 20));
+        sidebar.setPrefWidth(240);
+        sidebar.setStyle("-fx-background-color: " + CARD_BACKGROUND + "; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0, 2, 0);");
 
         Label menuLabel = new Label("MENU");
-        menuLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
-        menuLabel.setTextFill(Color.web("#718096"));
+        menuLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 13));
+        menuLabel.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
+        menuLabel.setPadding(new Insets(0, 0, 10, 5));
 
         Button dashboardBtn = createSidebarButton("📊 Dashboard", true);
         dashboardBtn.setOnAction(e -> show(stage, admin));
@@ -141,41 +160,39 @@ public class AdminDashboardController {
 
     private static Button createSidebarButton(String text, boolean active) {
         Button button = new Button(text);
-        button.setPrefWidth(180);
+        button.setPrefWidth(200);
         button.setAlignment(Pos.CENTER_LEFT);
+        button.setFont(Font.font("Arial", FontWeight.NORMAL, 15));
         
         if (active) {
             button.setStyle(
-                "-fx-background-color: #667eea; " +
+                "-fx-background-color: " + PRIMARY_COLOR + "; " +
                 "-fx-text-fill: white; " +
-                "-fx-font-size: 14px; " +
-                "-fx-padding: 12 15 12 15; " +
-                "-fx-background-radius: 8; " +
-                "-fx-cursor: hand;"
+                "-fx-padding: 12 15; " +
+                "-fx-background-radius: 10; " +
+                "-fx-cursor: hand; " +
+                "-fx-font-weight: bold;"
             );
         } else {
             button.setStyle(
                 "-fx-background-color: transparent; " +
-                "-fx-text-fill: #2d3436; " +
-                "-fx-font-size: 14px; " +
-                "-fx-padding: 12 15 12 15; " +
-                "-fx-background-radius: 8; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                "-fx-padding: 12 15; " +
+                "-fx-background-radius: 10; " +
                 "-fx-cursor: hand;"
             );
             button.setOnMouseEntered(e -> button.setStyle(
-                "-fx-background-color: #f5f7fa; " +
-                "-fx-text-fill: #667eea; " +
-                "-fx-font-size: 14px; " +
-                "-fx-padding: 12 15 12 15; " +
-                "-fx-background-radius: 8; " +
+                "-fx-background-color: " + HOVER_COLOR + "; " +
+                "-fx-text-fill: " + ACCENT_GOLD + "; " +
+                "-fx-padding: 12 15; " +
+                "-fx-background-radius: 10; " +
                 "-fx-cursor: hand;"
             ));
             button.setOnMouseExited(e -> button.setStyle(
                 "-fx-background-color: transparent; " +
-                "-fx-text-fill: #2d3436; " +
-                "-fx-font-size: 14px; " +
-                "-fx-padding: 12 15 12 15; " +
-                "-fx-background-radius: 8; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                "-fx-padding: 12 15; " +
+                "-fx-background-radius: 10; " +
                 "-fx-cursor: hand;"
             ));
         }
@@ -184,14 +201,14 @@ public class AdminDashboardController {
     }
 
     private static HBox createStatsCards(Admin admin) {
-        HBox statsBox = new HBox(20);
+        HBox statsBox = new HBox(25);
         statsBox.setAlignment(Pos.CENTER);
     
         if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
-            VBox ordersCard = createStatCard("📦", "Total Orders", "0", "#3498db");
+            VBox ordersCard = createStatCard("📦", "Total Orders", "0", PRIMARY_COLOR);
             VBox usersCard = createStatCard("👥", "Total Users", "0", "#9b59b6");
             VBox employeesCard = createStatCard("👔", "Employees", "0", "#e67e22");
-            VBox pendingCard = createStatCard("⏳", "Pending", "0", "#e74c3c");
+            VBox pendingCard = createStatCard("⏳", "Pending", "0", ERROR_COLOR);
     
             statsBox.getChildren().addAll(ordersCard, usersCard, employeesCard, pendingCard);
             return statsBox;
@@ -206,15 +223,13 @@ public class AdminDashboardController {
                              o.getRestaurant().getRestaurantId().equals(adminRestId))
                 .count();
     
-        VBox ordersCard = createStatCard("📦", "Total Orders", String.valueOf(totalOrders), "#3498db");
+        VBox ordersCard = createStatCard("📦", "Total Orders", String.valueOf(totalOrders), PRIMARY_COLOR);
         
         int totalUsers = userService.getAllUsers().size();
         VBox usersCard = createStatCard("👥", "Total Users", String.valueOf(totalUsers), "#9b59b6");
     
         int totalEmployees = (int) employeeService.getAllEmployees().stream()
-                .filter(e -> e.getRestaurant() != null &&
-                             e.getRestaurant().getRestaurantId() != null &&
-                             e.getRestaurant().getRestaurantId().equals(adminRestId))
+                
                 .count();
     
         VBox employeesCard = createStatCard("👔", "Employees", String.valueOf(totalEmployees), "#e67e22");
@@ -226,32 +241,32 @@ public class AdminDashboardController {
                              (o.getStatus() == OrderStatus.PENDING || o.getStatus() == OrderStatus.CONFIRMED))
                 .count();
     
-        VBox pendingCard = createStatCard("⏳", "Pending", String.valueOf(pendingOrders), "#e74c3c");
+        VBox pendingCard = createStatCard("⏳", "Pending", String.valueOf(pendingOrders), ERROR_COLOR);
     
         statsBox.getChildren().addAll(ordersCard, usersCard, employeesCard, pendingCard);
         return statsBox;
     }
 
     private static VBox createStatCard(String icon, String title, String value, String color) {
-        VBox card = new VBox(10);
-        card.setPadding(new Insets(25));
+        VBox card = new VBox(12);
+        card.setPadding(new Insets(30));
         card.setAlignment(Pos.CENTER);
-        card.setPrefWidth(200);
+        card.setPrefWidth(220);
         card.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 18; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
         );
 
         Label iconLabel = new Label(icon);
-        iconLabel.setFont(Font.font("System", 36));
+        iconLabel.setFont(Font.font("System", 42));
 
         Label titleLabel = new Label(title);
-        titleLabel.setFont(Font.font("System", 14));
-        titleLabel.setTextFill(Color.web("#4a5568"));
+        titleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 15));
+        titleLabel.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
 
         Label valueLabel = new Label(value);
-        valueLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
+        valueLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 32));
         valueLabel.setTextFill(Color.web(color));
 
         card.getChildren().addAll(iconLabel, titleLabel, valueLabel);
@@ -259,28 +274,35 @@ public class AdminDashboardController {
     }
 
     private static VBox createOrdersSection(Admin admin) {
-        VBox section = new VBox(15);
-        section.setPadding(new Insets(20));
+        VBox section = new VBox(20);
+        section.setPadding(new Insets(30));
         section.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+            "-fx-background-color: " + CARD_BACKGROUND + "; " +
+            "-fx-background-radius: 18; " +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
         );
     
         Label titleLabel = new Label("Recent Orders");
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        titleLabel.setTextFill(Color.web(ACCENT_GOLD));
     
         TableView<Order> table = new TableView<>();
-        table.setPrefHeight(300);
+        table.setPrefHeight(350);
+        table.setStyle(
+            "-fx-background-color: transparent; " +
+            "-fx-control-inner-background: #2b3543; " +
+            "-fx-table-cell-border-color: #4b5563;"
+        );
     
         TableColumn<Order, String> idCol = new TableColumn<>("Order ID");
-        idCol.setPrefWidth(100);
+        idCol.setPrefWidth(120);
+        idCol.setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
         idCol.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(data.getValue().getOrderId()));
     
         TableColumn<Order, String> userCol = new TableColumn<>("User");
-        userCol.setPrefWidth(150);
+        userCol.setPrefWidth(180);
+        userCol.setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
         userCol.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(
                         data.getValue().getUser() != null
@@ -289,14 +311,16 @@ public class AdminDashboardController {
                 ));
     
         TableColumn<Order, String> totalCol = new TableColumn<>("Total");
-        totalCol.setPrefWidth(100);
+        totalCol.setPrefWidth(120);
+        totalCol.setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
         totalCol.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(
                         "$" + String.format("%.2f", data.getValue().getTotalAmount())
                 ));
     
         TableColumn<Order, String> statusCol = new TableColumn<>("Status");
-        statusCol.setPrefWidth(150);
+        statusCol.setPrefWidth(180);
+        statusCol.setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
         statusCol.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(
                         data.getValue().getStatus().toString()
@@ -306,8 +330,8 @@ public class AdminDashboardController {
     
         if (admin.getRestaurant() == null || admin.getRestaurant().getRestaurantId() == null) {
             Label noRestaurantLabel = new Label("No restaurant assigned to this admin.");
-            noRestaurantLabel.setFont(Font.font("System", FontWeight.NORMAL, 14));
-            noRestaurantLabel.setTextFill(Color.web("#4a5568"));
+            noRestaurantLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
+            noRestaurantLabel.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
     
             section.getChildren().addAll(titleLabel, noRestaurantLabel, table);
             return section;

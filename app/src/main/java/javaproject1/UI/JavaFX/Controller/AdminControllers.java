@@ -29,26 +29,46 @@ public class AdminControllers {
     private static EmployeeServiceImpl employeeService = new EmployeeServiceImpl();
     private static DeliveryServiceImpl deliveryService = new DeliveryServiceImpl();
 
+    // Modern Dark Theme Colors (matching client side)
+    private static final String BACKGROUND_DARK = "#1f2937";
+    private static final String PRIMARY_COLOR = "#059669";
+    private static final String ACCENT_GOLD = "#fcd34d";
+    private static final String CARD_BACKGROUND = "#374151";
+    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
+    private static final String ITEM_BACKGROUND = "#2b3543";
+    private static final String ERROR_COLOR = "#ef4444";
+    private static final String SUCCESS_COLOR = "#10b981";
+    private static final String BUTTON_BLUE = "#3b82f6";
+
     // ================== ORDERS CONTROLLER ==================
     public static class AdminOrdersController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Manage Orders");
 
             TableView<Order> table = new TableView<>();
+            table.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-control-inner-background: " + CARD_BACKGROUND + ";"
+            );
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             
             TableColumn<Order, String> idCol = new TableColumn<>("ID");
             idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getOrderId()));
+            styleTableColumn(idCol);
 
             TableColumn<Order, String> userCol = new TableColumn<>("User");
             userCol.setCellValueFactory(d -> new SimpleStringProperty(
                 d.getValue().getUser() != null ? d.getValue().getUser().getName() : "Unknown"));
+            styleTableColumn(userCol);
 
             TableColumn<Order, String> totalCol = new TableColumn<>("Total");
             totalCol.setCellValueFactory(d -> new SimpleStringProperty("$" + String.format("%.2f", d.getValue().getTotalAmount())));
+            styleTableColumn(totalCol);
 
             TableColumn<Order, String> statusCol = new TableColumn<>("Status");
             statusCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getStatus().toString()));
+            styleTableColumn(statusCol);
 
             TableColumn<Order, String> deliveryCol = new TableColumn<>("Delivery Person");
             deliveryCol.setCellValueFactory(d -> {
@@ -58,12 +78,22 @@ public class AdminControllers {
                 }
                 return new SimpleStringProperty("Not Assigned");
             });
+            styleTableColumn(deliveryCol);
 
             TableColumn<Order, Void> assignCol = new TableColumn<>("Assign Delivery");
             assignCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("Assign");
                 {
-                    btn.setStyle("-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
+                    btn.setStyle(
+                        "-fx-background-color: " + PRIMARY_COLOR + "; " +
+                        "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 15; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-cursor: hand;"
+                    );
+                    btn.setOnMouseEntered(e -> btn.setStyle(btn.getStyle() + "-fx-background-color: #047857;"));
+                    btn.setOnMouseExited(e -> btn.setStyle(btn.getStyle().replace("-fx-background-color: #047857;", "-fx-background-color: " + PRIMARY_COLOR + ";")));
                     btn.setOnAction(event -> {
                         Order order = getTableView().getItems().get(getIndex());
                         showAssignDeliveryDialog(stage, admin, order, table);
@@ -76,7 +106,6 @@ public class AdminControllers {
                         setGraphic(null);
                     } else {
                         Order order = getTableView().getItems().get(getIndex());
-                        // Show button for all orders except DELIVERED and CANCELLED
                         if (order.getStatus() != OrderStatus.DELIVERED && 
                             order.getStatus() != OrderStatus.CANCELLED) {
                             setGraphic(btn);
@@ -86,12 +115,22 @@ public class AdminControllers {
                     }
                 }
             });
+            styleTableColumn(assignCol);
 
             TableColumn<Order, Void> actionCol = new TableColumn<>("Action");
             actionCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("Next Status");
                 {
-                    btn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
+                    btn.setStyle(
+                        "-fx-background-color: " + BUTTON_BLUE + "; " +
+                        "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 15; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-cursor: hand;"
+                    );
+                    btn.setOnMouseEntered(e -> btn.setStyle(btn.getStyle() + "-fx-background-color: #2563eb;"));
+                    btn.setOnMouseExited(e -> btn.setStyle(btn.getStyle().replace("-fx-background-color: #2563eb;", "-fx-background-color: " + BUTTON_BLUE + ";")));
                     btn.setOnAction(event -> {
                         Order order = getTableView().getItems().get(getIndex());
                         advanceOrderStatus(order);
@@ -104,6 +143,7 @@ public class AdminControllers {
                     setGraphic(empty ? null : btn);
                 }
             });
+            styleTableColumn(actionCol);
 
             table.getColumns().addAll(idCol, userCol, totalCol, statusCol, deliveryCol, assignCol, actionCol);
             loadOrdersData(table, admin);
@@ -117,7 +157,6 @@ public class AdminControllers {
             if (admin.getRestaurant() != null) {
                 System.out.println("DEBUG: Loading orders for restaurant " + admin.getRestaurant().getRestaurantId());
                 
-                // Get fresh orders from database with all related data
                 List<Order> allOrders = orderService.getAllOrders();
                 System.out.println("DEBUG: Total orders in system: " + allOrders.size());
                 
@@ -128,7 +167,6 @@ public class AdminControllers {
                 
                 System.out.println("DEBUG: Orders for this restaurant: " + orders.size());
                 
-                // Debug each order's delivery info
                 for (Order order : orders) {
                     System.out.println("  Order #" + order.getOrderId() + 
                         " - Delivery: " + (order.getDelivery() != null ? order.getDelivery().getDeliveryId() : "null") +
@@ -150,8 +188,8 @@ public class AdminControllers {
                     if (order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null) {
                         yield OrderStatus.OUT_FOR_DELIVERY;
                     } else {
-                        showAlert("Please assign a delivery person first!", Alert.AlertType.WARNING);
-                        yield order.getStatus(); // Don't advance
+                        showStyledAlert("Please assign a delivery person first!", Alert.AlertType.WARNING);
+                        yield order.getStatus();
                     }
                 }
                 case OUT_FOR_DELIVERY -> OrderStatus.DELIVERED;
@@ -167,21 +205,34 @@ public class AdminControllers {
             Dialog<Employee> dialog = new Dialog<>();
             dialog.setTitle("Assign Delivery Person");
             dialog.setHeaderText("Select a delivery person for Order #" + order.getOrderId());
+            dialog.getDialogPane().setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
             ButtonType assignButtonType = new ButtonType("Assign", ButtonBar.ButtonData.OK_DONE);
             dialog.getDialogPane().getButtonTypes().addAll(assignButtonType, ButtonType.CANCEL);
 
-            // Get all delivery persons who are available
+            // Style buttons
+            dialog.getDialogPane().lookupButton(assignButtonType).setStyle(
+                "-fx-background-color: " + PRIMARY_COLOR + "; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 10 20; " +
+                "-fx-background-radius: 15;"
+            );
+            dialog.getDialogPane().lookupButton(ButtonType.CANCEL).setStyle(
+                "-fx-background-color: " + ERROR_COLOR + "; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 10 20; " +
+                "-fx-background-radius: 15;"
+            );
+
             List<Employee> allEmployees = employeeService.getAllEmployees();
             List<Order> activeOrders = orderService.getAllOrders();
             
-            // Filter for delivery persons only in this restaurant
             List<Employee> deliveryPersons = allEmployees.stream()
                 .filter(emp -> emp.getRole() != null && emp.getRole().equalsIgnoreCase("Delivery"))
                 .collect(Collectors.toList());
 
-            // CRITICAL FIX: Find ALL occupied delivery persons (not just OUT_FOR_DELIVERY)
-            // A delivery person is busy if they're assigned to ANY order that's NOT delivered or cancelled
             java.util.Set<String> occupiedDeliveryPersonIds = activeOrders.stream()
                 .filter(o -> o.getStatus() != OrderStatus.DELIVERED && o.getStatus() != OrderStatus.CANCELLED)
                 .filter(o -> o.getDelivery() != null && o.getDelivery().getDeliveryPerson() != null)
@@ -189,11 +240,10 @@ public class AdminControllers {
                 .collect(Collectors.toSet());
 
             if (deliveryPersons.isEmpty()) {
-                showAlert("No delivery persons available in this restaurant!", Alert.AlertType.WARNING);
+                showStyledAlert("No delivery persons available in this restaurant!", Alert.AlertType.WARNING);
                 return;
             }
 
-            // CRITICAL: Separate available and busy delivery persons
             List<Employee> availablePersons = new ArrayList<>();
             List<Employee> busyPersons = new ArrayList<>();
             
@@ -205,30 +255,35 @@ public class AdminControllers {
                 }
             }
             
-            // Check if any available persons exist
             if (availablePersons.isEmpty()) {
-                showAlert("No delivery persons available right now!\nAll delivery staff are currently busy with other orders.", 
+                showStyledAlert("No delivery persons available right now!\nAll delivery staff are currently busy with other orders.", 
                          Alert.AlertType.WARNING);
                 return;
             }
 
-            VBox content = new VBox(15);
+            VBox content = new VBox(20);
             content.setPadding(new Insets(20));
+            content.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
-            // Show availability stats
             Label statsLabel = new Label(String.format("Available: %d | Busy: %d", 
                 availablePersons.size(), busyPersons.size()));
-            statsLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #059669;");
+            statsLabel.setStyle(
+                "-fx-font-size: 16px; " +
+                "-fx-font-weight: bold; " +
+                "-fx-text-fill: " + SUCCESS_COLOR + ";"
+            );
 
             ComboBox<Employee> deliveryCombo = new ComboBox<>();
-            deliveryCombo.setPrefWidth(300);
+            deliveryCombo.setPrefWidth(350);
+            deliveryCombo.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + ";"
+            );
             
-            // Add ONLY available employees to the combo box
             for (Employee emp : availablePersons) {
                 deliveryCombo.getItems().add(emp);
             }
 
-            // Custom cell factory - now only shows available persons
             deliveryCombo.setCellFactory(lv -> new ListCell<Employee>() {
                 @Override
                 protected void updateItem(Employee emp, boolean empty) {
@@ -237,41 +292,48 @@ public class AdminControllers {
                         setText(null);
                         setStyle("");
                     } else {
-                        // All persons in the combo are available
                         setText(emp.getName() + " - " + emp.getPhoneNumber() + " ✓ Available");
-                        setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                        setStyle(
+                            "-fx-text-fill: " + SUCCESS_COLOR + "; " +
+                            "-fx-font-weight: bold; " +
+                            "-fx-background-color: " + CARD_BACKGROUND + ";"
+                        );
                     }
                 }
             });
 
-            // Button cell should show selected person
             deliveryCombo.setButtonCell(new ListCell<Employee>() {
                 @Override
                 protected void updateItem(Employee emp, boolean empty) {
                     super.updateItem(emp, empty);
                     if (empty || emp == null) {
                         setText("Select Available Delivery Person");
+                        setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
                     } else {
                         setText(emp.getName() + " ✓");
+                        setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
                     }
                 }
             });
 
+            Label promptLabel = new Label("Select Delivery Person:");
+            promptLabel.setStyle(
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                "-fx-font-size: 14px; " +
+                "-fx-font-weight: bold;"
+            );
+
             Label infoLabel = new Label(busyPersons.isEmpty() ? 
                 "All delivery staff are available!" : 
                 String.format("Note: %d delivery person(s) are currently busy with other orders", busyPersons.size()));
-            infoLabel.setStyle("-fx-text-fill: #636e72; -fx-font-size: 12px;");
-
-            content.getChildren().addAll(
-                statsLabel,
-                new Label("Select Delivery Person:"),
-                deliveryCombo,
-                infoLabel
+            infoLabel.setStyle(
+                "-fx-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+                "-fx-font-size: 12px;"
             );
 
+            content.getChildren().addAll(statsLabel, promptLabel, deliveryCombo, infoLabel);
             dialog.getDialogPane().setContent(content);
 
-            // Disable assign button if no selection
             Node assignButton = dialog.getDialogPane().lookupButton(assignButtonType);
             assignButton.setDisable(true);
             deliveryCombo.valueProperty().addListener((obs, old, newVal) -> {
@@ -286,8 +348,6 @@ public class AdminControllers {
             });
 
             dialog.showAndWait().ifPresent(selectedEmployee -> {
-                // CRITICAL: Double-check that employee is still available (race condition protection)
-                // Reload orders to check current status
                 List<Order> currentOrders = orderService.getAllOrders();
                 boolean isNowOccupied = currentOrders.stream()
                     .filter(o -> o.getStatus() != OrderStatus.DELIVERED && o.getStatus() != OrderStatus.CANCELLED)
@@ -295,7 +355,7 @@ public class AdminControllers {
                     .anyMatch(o -> o.getDelivery().getDeliveryPerson().getId().equals(selectedEmployee.getId()));
                 
                 if (isNowOccupied) {
-                    showAlert("Sorry! This delivery person was just assigned to another order.\nPlease select a different person.", 
+                    showStyledAlert("Sorry! This delivery person was just assigned to another order.\nPlease select a different person.", 
                              Alert.AlertType.ERROR);
                     return;
                 }
@@ -305,10 +365,8 @@ public class AdminControllers {
                     System.out.println("Order ID: " + order.getOrderId());
                     System.out.println("Employee: " + selectedEmployee.getName() + " (ID: " + selectedEmployee.getId() + ")");
                     
-                    // CRITICAL FIX: Get or create delivery record
                     Delivery delivery = order.getDelivery();
                     if (delivery == null) {
-                        // Create new delivery
                         delivery = new Delivery();
                         delivery.setDeliveryId("DEL" + System.currentTimeMillis());
                         delivery.setStatus("Pending Assignment");
@@ -318,13 +376,10 @@ public class AdminControllers {
                         System.out.println("Using existing delivery: " + delivery.getDeliveryId());
                     }
 
-                    // Assign delivery person using the service
                     deliveryService.assignDeliveryPerson(delivery, selectedEmployee, order);
                     System.out.println("Service assigned delivery person");
                     
-                    // CRITICAL FIX: Update delivery in database with delivery person
                     try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
-                        // Update delivery table with person
                         String updateDeliverySql = "UPDATE delivery SET delivery_person_id = ?, status = ? WHERE delivery_id = ?";
                         try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateDeliverySql)) {
                             stmt.setInt(1, Integer.parseInt(selectedEmployee.getId()));
@@ -334,7 +389,6 @@ public class AdminControllers {
                             System.out.println("Updated delivery table: " + rows + " rows");
                         }
                         
-                        // CRITICAL FIX: Link delivery to order if not already linked
                         String updateOrderSql = "UPDATE orders SET delivery_id = ? WHERE order_id = ?";
                         try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateOrderSql)) {
                             stmt.setString(1, delivery.getDeliveryId());
@@ -344,22 +398,20 @@ public class AdminControllers {
                         }
                     }
                     
-                    // CRITICAL FIX: Update the in-memory order object
                     order.setDelivery(delivery);
                     delivery.setDeliveryPerson(selectedEmployee);
                     
                     System.out.println("=== ASSIGNMENT COMPLETE ===");
                     
-                    showAlert("Delivery person assigned successfully!\n" +
+                    showStyledAlert("Delivery person assigned successfully!\n" +
                              "Order #" + order.getOrderId() + " → " + selectedEmployee.getName(), 
                              Alert.AlertType.INFORMATION);
                     
-                    // CRITICAL FIX: Reload data from database to refresh the table
                     System.out.println("Refreshing table data...");
                     loadOrdersData(table, admin);
                     
                 } catch (Exception ex) {
-                    showAlert("Error assigning delivery person: " + ex.getMessage(), Alert.AlertType.ERROR);
+                    showStyledAlert("Error assigning delivery person: " + ex.getMessage(), Alert.AlertType.ERROR);
                     System.err.println("ERROR in delivery assignment:");
                     ex.printStackTrace();
                 }
@@ -372,47 +424,76 @@ public class AdminControllers {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Manage Menu");
 
-            HBox form = new HBox(10);
+            HBox form = new HBox(15);
             form.setAlignment(Pos.CENTER_LEFT);
-            TextField nameField = new TextField(); 
-            nameField.setPromptText("Name");
-            nameField.setPrefWidth(150);
+            form.setPadding(new Insets(20));
+            form.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-background-radius: 15; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 3);"
+            );
             
-            TextField priceField = new TextField(); 
-            priceField.setPromptText("Price");
-            priceField.setPrefWidth(100);
+            TextField nameField = createStyledTextField("Name");
+            nameField.setPrefWidth(180);
             
-            TextField descField = new TextField(); 
-            descField.setPromptText("Description");
-            descField.setPrefWidth(200);
+            TextField priceField = createStyledTextField("Price");
+            priceField.setPrefWidth(120);
             
-            TextField catField = new TextField(); 
-            catField.setPromptText("Category");
-            catField.setPrefWidth(120);
+            TextField descField = createStyledTextField("Description");
+            descField.setPrefWidth(220);
+            
+            TextField catField = createStyledTextField("Category");
+            catField.setPrefWidth(140);
             
             Button addBtn = new Button("Add Item");
-            addBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 8 15;");
+            addBtn.setStyle(
+                "-fx-background-color: " + SUCCESS_COLOR + "; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 10 20; " +
+                "-fx-background-radius: 15; " +
+                "-fx-cursor: hand;"
+            );
+            addBtn.setOnMouseEntered(e -> addBtn.setStyle(addBtn.getStyle() + "-fx-background-color: #059669;"));
+            addBtn.setOnMouseExited(e -> addBtn.setStyle(addBtn.getStyle().replace("-fx-background-color: #059669;", "-fx-background-color: " + SUCCESS_COLOR + ";")));
 
             TableView<MenuItem> table = new TableView<>();
+            table.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-control-inner-background: " + CARD_BACKGROUND + ";"
+            );
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
             TableColumn<MenuItem, String> nameCol = new TableColumn<>("Name");
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
+            styleTableColumn(nameCol);
 
             TableColumn<MenuItem, String> priceCol = new TableColumn<>("Price");
             priceCol.setCellValueFactory(d -> new SimpleStringProperty("$" + String.format("%.2f", d.getValue().getPrice())));
+            styleTableColumn(priceCol);
 
             TableColumn<MenuItem, String> catCol = new TableColumn<>("Category");
             catCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getCategory()));
+            styleTableColumn(catCol);
             
             TableColumn<MenuItem, String> descCol = new TableColumn<>("Description");
             descCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getDescription()));
+            styleTableColumn(descCol);
 
             TableColumn<MenuItem, Void> delCol = new TableColumn<>("Delete");
             delCol.setCellFactory(param -> new TableCell<>() {
-                private final Button btn = new Button("X");
+                private final Button btn = new Button("Remove");
                 {
-                    btn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
+                    btn.setStyle(
+                        "-fx-background-color: " + ERROR_COLOR + "; " +
+                        "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 15; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-cursor: hand;"
+                    );
+                    btn.setOnMouseEntered(e -> btn.setStyle(btn.getStyle() + "-fx-background-color: #dc2626;"));
+                    btn.setOnMouseExited(e -> btn.setStyle(btn.getStyle().replace("-fx-background-color: #dc2626;", "-fx-background-color: " + ERROR_COLOR + ";")));
                     btn.setOnAction(event -> {
                         MenuItem item = getTableView().getItems().get(getIndex());
                         if (admin.getRestaurant() != null) {
@@ -427,6 +508,7 @@ public class AdminControllers {
                     setGraphic(empty ? null : btn);
                 }
             });
+            styleTableColumn(delCol);
 
             table.getColumns().addAll(nameCol, priceCol, catCol, descCol, delCol);
             loadMenuData(table, admin);
@@ -439,7 +521,7 @@ public class AdminControllers {
                     String category = catField.getText().trim();
                     
                     if (name.isEmpty() || priceText.isEmpty()) {
-                        showAlert("Name and Price are required!", Alert.AlertType.WARNING);
+                        showStyledAlert("Name and Price are required!", Alert.AlertType.WARNING);
                         return;
                     }
 
@@ -455,20 +537,18 @@ public class AdminControllers {
                         int rId = Integer.parseInt(admin.getRestaurant().getRestaurantId());
                         menuService.addItem(rId, newItem);
                         
-                        // Clear fields
                         nameField.clear(); 
                         priceField.clear(); 
                         descField.clear();
                         catField.clear();
                         
-                        // Refresh table
                         loadMenuData(table, admin);
-                        showAlert("Menu item added successfully!", Alert.AlertType.INFORMATION);
+                        showStyledAlert("Menu item added successfully!", Alert.AlertType.INFORMATION);
                     }
                 } catch (NumberFormatException ex) {
-                    showAlert("Price must be a valid number!", Alert.AlertType.ERROR);
+                    showStyledAlert("Price must be a valid number!", Alert.AlertType.ERROR);
                 } catch (Exception ex) {
-                    showAlert("Error: " + ex.getMessage(), Alert.AlertType.ERROR);
+                    showStyledAlert("Error: " + ex.getMessage(), Alert.AlertType.ERROR);
                     ex.printStackTrace();
                 }
             });
@@ -482,13 +562,12 @@ public class AdminControllers {
         private static void loadMenuData(TableView<MenuItem> table, Admin admin) {
             if (admin.getRestaurant() != null) {
                 try {
-                    // Re-fetch the restaurant to get fresh data
                     Restaurant freshRestaurant = restaurantService.getRestaurantById(
                         Integer.parseInt(admin.getRestaurant().getRestaurantId())
                     );
                     
                     if (freshRestaurant != null) {
-                        admin.setRestaurant(freshRestaurant); // Update admin's reference
+                        admin.setRestaurant(freshRestaurant);
                         Menu menu = freshRestaurant.getMenu();
                         
                         if (menu != null && menu.getItems() != null) {
@@ -511,66 +590,87 @@ public class AdminControllers {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Manage Employees");
 
-            HBox form = new HBox(10);
+            HBox form = new HBox(15);
             form.setAlignment(Pos.CENTER_LEFT);
+            form.setPadding(new Insets(20));
+            form.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-background-radius: 15; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 3);"
+            );
             
-            TextField nameField = new TextField(); 
-            nameField.setPromptText("Name");
-            nameField.setPrefWidth(150);
+            TextField nameField = createStyledTextField("Name");
+            nameField.setPrefWidth(180);
             
-            TextField roleField = new TextField(); 
-            roleField.setPromptText("Role");
-            roleField.setPrefWidth(150);
+            TextField roleField = createStyledTextField("Role");
+            roleField.setPrefWidth(180);
             
-            TextField phoneField = new TextField();
-            phoneField.setPromptText("Phone");
-            phoneField.setPrefWidth(130);
+            TextField phoneField = createStyledTextField("Phone");
+            phoneField.setPrefWidth(160);
             
-            Button hireBtn = new Button("Hire");
-            hireBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 8 15;");
+            Button hireBtn = new Button("Hire Employee");
+            hireBtn.setStyle(
+                "-fx-background-color: " + SUCCESS_COLOR + "; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 10 20; " +
+                "-fx-background-radius: 15; " +
+                "-fx-cursor: hand;"
+            );
+            hireBtn.setOnMouseEntered(e -> hireBtn.setStyle(hireBtn.getStyle() + "-fx-background-color: #059669;"));
+            hireBtn.setOnMouseExited(e -> hireBtn.setStyle(hireBtn.getStyle().replace("-fx-background-color: #059669;", "-fx-background-color: " + SUCCESS_COLOR + ";")));
 
             TableView<Employee> table = new TableView<>();
+            table.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-control-inner-background: " + CARD_BACKGROUND + ";"
+            );
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             
             TableColumn<Employee, String> nameCol = new TableColumn<>("Name");
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
+            styleTableColumn(nameCol);
             
             TableColumn<Employee, String> roleCol = new TableColumn<>("Role");
             roleCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getRole()));
+            styleTableColumn(roleCol);
             
             TableColumn<Employee, String> phoneCol = new TableColumn<>("Phone");
             phoneCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getPhoneNumber()));
+            styleTableColumn(phoneCol);
 
             TableColumn<Employee, Void> actionCol = new TableColumn<>("Action");
             actionCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("Fire");
             
                 {
-                    btn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
+                    btn.setStyle(
+                        "-fx-background-color: " + ERROR_COLOR + "; " +
+                        "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 15; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-cursor: hand;"
+                    );
+                    btn.setOnMouseEntered(e -> btn.setStyle(btn.getStyle() + "-fx-background-color: #dc2626;"));
+                    btn.setOnMouseExited(e -> btn.setStyle(btn.getStyle().replace("-fx-background-color: #dc2626;", "-fx-background-color: " + ERROR_COLOR + ";")));
             
                     btn.setOnAction(event -> {
                         Employee emp = getTableView().getItems().get(getIndex());
             
                         if (admin.getRestaurant() != null) {
-                            // Fire employee in the restaurant
                             restaurantService.fireEmployee(admin.getRestaurant(), emp);
             
-                            String empId = emp.getId(); // could be "EMP2" or a large number
-            
-                            // Extract digits only
-                            String numericPart = empId.replaceAll("\\D", ""); // removes non-digits
+                            String empId = emp.getId();
+                            String numericPart = empId.replaceAll("\\D", "");
             
                             try {
-                                // Parse numeric part as int safely
                                 int intId = Integer.parseInt(numericPart);
                                 employeeService.deleteEmployee(intId);
                             } catch (NumberFormatException ex) {
-                                // If numeric part is empty or too large, handle gracefully
                                 System.err.println("Cannot delete employee, ID numeric part invalid: " + empId);
-                                // Optionally show an alert to the user
                             }
             
-                            // Reload table data
                             loadEmployeeData(table, admin);
                         }
                     });
@@ -582,6 +682,7 @@ public class AdminControllers {
                     setGraphic(empty ? null : btn);
                 }
             });
+            styleTableColumn(actionCol);
 
             table.getColumns().addAll(nameCol, roleCol, phoneCol, actionCol);
             loadEmployeeData(table, admin);
@@ -592,7 +693,7 @@ public class AdminControllers {
                 String phone = phoneField.getText().trim();
                 
                 if(name.isEmpty() || role.isEmpty()) {
-                    showAlert("Name and Role are required!", Alert.AlertType.WARNING);
+                    showStyledAlert("Name and Role are required!", Alert.AlertType.WARNING);
                     return;
                 }
             
@@ -611,7 +712,7 @@ public class AdminControllers {
                     nameField.clear(); 
                     roleField.clear();
                     phoneField.clear();
-                    showAlert("Employee hired successfully!", Alert.AlertType.INFORMATION);
+                    showStyledAlert("Employee hired successfully!", Alert.AlertType.INFORMATION);
                 }
             });
 
@@ -624,7 +725,6 @@ public class AdminControllers {
         private static void loadEmployeeData(TableView<Employee> table, Admin admin) {
             if (admin.getRestaurant() != null) {
                 try {
-                    // Refresh restaurant data
                     Restaurant r = restaurantService.getRestaurantById(Integer.parseInt(admin.getRestaurant().getRestaurantId()));
                     admin.setRestaurant(r);
                     
@@ -650,28 +750,33 @@ public class AdminControllers {
             VBox layout = createBaseLayout(stage, admin, "Restaurant Reviews");
             
             TableView<Review> table = new TableView<>();
+            table.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-control-inner-background: " + CARD_BACKGROUND + ";"
+            );
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             
             TableColumn<Review, String> userCol = new TableColumn<>("User");
             userCol.setCellValueFactory(d -> new SimpleStringProperty(
                 d.getValue().getUser() != null ? d.getValue().getUser().getName() : "Anonymous"
             ));
+            styleTableColumn(userCol);
             
             TableColumn<Review, String> ratingCol = new TableColumn<>("Rating");
             ratingCol.setCellValueFactory(d -> new SimpleStringProperty("⭐ " + d.getValue().getRating()));
+            styleTableColumn(ratingCol);
             
             TableColumn<Review, String> commentCol = new TableColumn<>("Comment");
             commentCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getComment()));
+            styleTableColumn(commentCol);
 
             table.getColumns().addAll(userCol, ratingCol, commentCol);
 
             if (admin.getRestaurant() != null) {
                 String restaurantId = admin.getRestaurant().getRestaurantId();
                 
-                // Load ALL reviews from database (with full user details)
                 List<Review> allReviews = reviewService.getAllReviews();
                 
-                // Filter for this restaurant only
                 List<Review> restaurantReviews = allReviews.stream()
                     .filter(review -> review.getRestaurant() != null && 
                                      review.getRestaurant().getRestaurantId() != null &&
@@ -687,14 +792,16 @@ public class AdminControllers {
                     layout.getChildren().add(table);
                 } else {
                     Label noReviews = new Label("No reviews yet.");
-                    noReviews.setFont(Font.font("System", 16));
-                    noReviews.setTextFill(Color.web("#636e72"));
+                    noReviews.setFont(Font.font("System", 18));
+                    noReviews.setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
+                    VBox.setMargin(noReviews, new Insets(40, 0, 0, 0));
                     layout.getChildren().add(noReviews);
                 }
             } else {
                 Label noRestaurant = new Label("No restaurant assigned.");
-                noRestaurant.setFont(Font.font("System", 16));
-                noRestaurant.setTextFill(Color.web("#636e72"));
+                noRestaurant.setFont(Font.font("System", 18));
+                noRestaurant.setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
+                VBox.setMargin(noRestaurant, new Insets(40, 0, 0, 0));
                 layout.getChildren().add(noRestaurant);
             }
             
@@ -708,31 +815,40 @@ public class AdminControllers {
             VBox layout = createBaseLayout(stage, admin, "Users Information");
             
             TableView<User> table = new TableView<>();
+            table.setStyle(
+                "-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-control-inner-background: " + CARD_BACKGROUND + ";"
+            );
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             
             TableColumn<User, String> idCol = new TableColumn<>("ID");
             idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getId()));
+            styleTableColumn(idCol);
             
             TableColumn<User, String> nameCol = new TableColumn<>("Name");
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
+            styleTableColumn(nameCol);
             
             TableColumn<User, String> emailCol = new TableColumn<>("Email");
             emailCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getEmail()));
+            styleTableColumn(emailCol);
             
             TableColumn<User, String> phoneCol = new TableColumn<>("Phone");
             phoneCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getPhoneNumber()));
+            styleTableColumn(phoneCol);
             
             TableColumn<User, String> eliteCol = new TableColumn<>("Elite");
             eliteCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().isElite() ? "Yes" : "No"));
+            styleTableColumn(eliteCol);
             
             TableColumn<User, String> ordersCol = new TableColumn<>("Orders");
             ordersCol.setCellValueFactory(d -> new SimpleStringProperty(
                 d.getValue().getOrders() != null ? String.valueOf(d.getValue().getOrders().size()) : "0"
             ));
+            styleTableColumn(ordersCol);
 
             table.getColumns().addAll(idCol, nameCol, emailCol, phoneCol, eliteCol, ordersCol);
             
-            // Load all users from database
             UserServiceImpl userService = new UserServiceImpl();
             List<User> allUsers = userService.getAllUsers();
             table.setItems(FXCollections.observableArrayList(allUsers));
@@ -745,20 +861,28 @@ public class AdminControllers {
 
     // ================== HELPER METHODS ==================
     private static VBox createBaseLayout(Stage stage, Admin admin, String title) {
-        VBox layout = new VBox(20);
-        layout.setPadding(new Insets(30));
-        layout.setStyle("-fx-background-color: #f5f7fa;");
+        VBox layout = new VBox(25);
+        layout.setPadding(new Insets(40));
+        layout.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
         
-        HBox header = new HBox(20);
+        HBox header = new HBox(25);
         header.setAlignment(Pos.CENTER_LEFT);
         
-        Button backBtn = new Button("← Back to Dashboard");
-        backBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #667eea; -fx-font-weight: bold; -fx-cursor: hand;");
+        Button backBtn = new Button("← Back");
+        backBtn.setStyle(
+            "-fx-background-color: transparent; " +
+            "-fx-text-fill: " + PRIMARY_COLOR + "; " +
+            "-fx-font-weight: bold; " +
+            "-fx-font-size: 16px; " +
+            "-fx-cursor: hand;"
+        );
+        backBtn.setOnMouseEntered(e -> backBtn.setStyle(backBtn.getStyle() + "-fx-text-fill: " + ACCENT_GOLD + ";"));
+        backBtn.setOnMouseExited(e -> backBtn.setStyle(backBtn.getStyle().replace("-fx-text-fill: " + ACCENT_GOLD + ";", "-fx-text-fill: " + PRIMARY_COLOR + ";")));
         backBtn.setOnAction(e -> AdminDashboardController.show(stage, admin));
         
         Label titleLabel = new Label(title);
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 28));
-        titleLabel.setTextFill(Color.web("#1a1a1a"));
+        titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 36));
+        titleLabel.setStyle("-fx-text-fill: " + ACCENT_GOLD + ";");
         
         header.getChildren().addAll(backBtn, titleLabel);
         layout.getChildren().add(header);
@@ -766,8 +890,53 @@ public class AdminControllers {
         return layout;
     }
     
-    private static void showAlert(String message, Alert.AlertType type) {
+    private static TextField createStyledTextField(String prompt) {
+        TextField field = new TextField();
+        field.setPromptText(prompt);
+        field.setStyle(
+            "-fx-padding: 12; " +
+            "-fx-font-size: 14px; " +
+            "-fx-background-color: " + ITEM_BACKGROUND + "; " +
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+            "-fx-background-radius: 10;"
+        );
+        return field;
+    }
+    
+    private static void styleTableColumn(TableColumn<?, ?> column) {
+        column.setStyle(
+            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+            "-fx-alignment: CENTER-LEFT; " +
+            "-fx-font-size: 14px;"
+        );
+    }
+    
+    private static void showStyledAlert(String message, Alert.AlertType type) {
         Alert alert = new Alert(type, message);
+        DialogPane dialogPane = alert.getDialogPane();
+        dialogPane.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
+        
+        // Style content
+        javafx.scene.Node content = dialogPane.lookup(".label.content");
+        if (content != null) {
+            content.setStyle(
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
+                "-fx-font-size: 14px;"
+            );
+        }
+        
+        // Style header
+        javafx.scene.Node header = dialogPane.lookup(".header-panel");
+        if (header != null) {
+            header.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
+        }
+        
+        javafx.scene.Node headerText = dialogPane.lookup(".header-panel .label");
+        if (headerText != null) {
+            headerText.setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + ";");
+        }
+        
         alert.showAndWait();
     }
 }

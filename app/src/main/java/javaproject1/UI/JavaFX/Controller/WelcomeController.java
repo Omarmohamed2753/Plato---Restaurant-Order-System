@@ -28,8 +28,8 @@ public class WelcomeController {
         contentBox.setPadding(new Insets(80));
 
         // Title with icon
-        Label iconLabel = new Label("🍽️");
-        iconLabel.setFont(Font.font("System", 80));
+        // Label iconLabel = new Label("🍽️");
+        // iconLabel.setFont(Font.font("System", 80));
         
         Label titleLabel = new Label("Welcome to Plato");
         titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 56));
@@ -53,7 +53,7 @@ public class WelcomeController {
 
         buttonBox.getChildren().addAll(signUpButton, signInButton);
 
-        contentBox.getChildren().addAll(iconLabel, titleLabel, subtitleLabel, buttonBox);
+        contentBox.getChildren().addAll( titleLabel, subtitleLabel, buttonBox);
         root.setCenter(contentBox);
 
         Scene scene = new Scene(root, 1000, 700);
