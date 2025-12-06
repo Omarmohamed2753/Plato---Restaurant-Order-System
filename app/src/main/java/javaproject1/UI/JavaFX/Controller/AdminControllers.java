@@ -4,6 +4,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -25,6 +26,7 @@ public class AdminControllers {
     private static MenuServiceImpl menuService = new MenuServiceImpl();
     private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
     private static EmployeeServiceImpl employeeService = new EmployeeServiceImpl();
+    private static DeliveryServiceImpl deliveryService = new DeliveryServiceImpl();
 
     // ================== ORDERS CONTROLLER ==================
     public static class AdminOrdersController {
@@ -47,6 +49,43 @@ public class AdminControllers {
             TableColumn<Order, String> statusCol = new TableColumn<>("Status");
             statusCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getStatus().toString()));
 
+            TableColumn<Order, String> deliveryCol = new TableColumn<>("Delivery Person");
+            deliveryCol.setCellValueFactory(d -> {
+                Order order = d.getValue();
+                if (order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null) {
+                    return new SimpleStringProperty(order.getDelivery().getDeliveryPerson().getName());
+                }
+                return new SimpleStringProperty("Not Assigned");
+            });
+
+            TableColumn<Order, Void> assignCol = new TableColumn<>("Assign Delivery");
+            assignCol.setCellFactory(param -> new TableCell<>() {
+                private final Button btn = new Button("Assign");
+                {
+                    btn.setStyle("-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-cursor: hand; -fx-padding: 5 10;");
+                    btn.setOnAction(event -> {
+                        Order order = getTableView().getItems().get(getIndex());
+                        showAssignDeliveryDialog(stage, admin, order, table);
+                    });
+                }
+                @Override
+                protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
+                    } else {
+                        Order order = getTableView().getItems().get(getIndex());
+                        // Show button for all orders except DELIVERED and CANCELLED
+                        if (order.getStatus() != OrderStatus.DELIVERED && 
+                            order.getStatus() != OrderStatus.CANCELLED) {
+                            setGraphic(btn);
+                        } else {
+                            setGraphic(null);
+                        }
+                    }
+                }
+            });
+
             TableColumn<Order, Void> actionCol = new TableColumn<>("Action");
             actionCol.setCellFactory(param -> new TableCell<>() {
                 private final Button btn = new Button("Next Status");
@@ -65,7 +104,7 @@ public class AdminControllers {
                 }
             });
 
-            table.getColumns().addAll(idCol, userCol, totalCol, statusCol, actionCol);
+            table.getColumns().addAll(idCol, userCol, totalCol, statusCol, deliveryCol, assignCol, actionCol);
             loadOrdersData(table, admin);
 
             VBox.setVgrow(table, Priority.ALWAYS);
@@ -75,10 +114,27 @@ public class AdminControllers {
 
         private static void loadOrdersData(TableView<Order> table, Admin admin) {
             if (admin.getRestaurant() != null) {
-                List<Order> orders = orderService.getAllOrders().stream()
+                System.out.println("DEBUG: Loading orders for restaurant " + admin.getRestaurant().getRestaurantId());
+                
+                // Get fresh orders from database with all related data
+                List<Order> allOrders = orderService.getAllOrders();
+                System.out.println("DEBUG: Total orders in system: " + allOrders.size());
+                
+                List<Order> orders = allOrders.stream()
                     .filter(o -> o.getRestaurant() != null && 
                             o.getRestaurant().getRestaurantId().equals(admin.getRestaurant().getRestaurantId()))
                     .collect(Collectors.toList());
+                
+                System.out.println("DEBUG: Orders for this restaurant: " + orders.size());
+                
+                // Debug each order's delivery info
+                for (Order order : orders) {
+                    System.out.println("  Order #" + order.getOrderId() + 
+                        " - Delivery: " + (order.getDelivery() != null ? order.getDelivery().getDeliveryId() : "null") +
+                        " - Person: " + (order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null ? 
+                                        order.getDelivery().getDeliveryPerson().getName() : "Not Assigned"));
+                }
+                
                 table.setItems(FXCollections.observableArrayList(orders));
                 table.refresh();
             }
@@ -89,11 +145,187 @@ public class AdminControllers {
                 case PENDING -> OrderStatus.CONFIRMED;
                 case CONFIRMED -> OrderStatus.PREPARING;
                 case PREPARING -> OrderStatus.READY_FOR_DELIVERY;
-                case READY_FOR_DELIVERY -> OrderStatus.OUT_FOR_DELIVERY;
+                case READY_FOR_DELIVERY -> {
+                    if (order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null) {
+                        yield OrderStatus.OUT_FOR_DELIVERY;
+                    } else {
+                        showAlert("Please assign a delivery person first!", Alert.AlertType.WARNING);
+                        yield order.getStatus(); // Don't advance
+                    }
+                }
                 case OUT_FOR_DELIVERY -> OrderStatus.DELIVERED;
                 default -> order.getStatus();
             };
-            orderService.updateStatus(order, nextStatus);
+            
+            if (nextStatus != order.getStatus()) {
+                orderService.updateStatus(order, nextStatus);
+            }
+        }
+
+        private static void showAssignDeliveryDialog(Stage stage, Admin admin, Order order, TableView<Order> table) {
+            Dialog<Employee> dialog = new Dialog<>();
+            dialog.setTitle("Assign Delivery Person");
+            dialog.setHeaderText("Select a delivery person for Order #" + order.getOrderId());
+
+            ButtonType assignButtonType = new ButtonType("Assign", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(assignButtonType, ButtonType.CANCEL);
+
+            // Get all delivery persons who are available
+            List<Employee> allEmployees = employeeService.getAllEmployees();
+            List<Order> activeOrders = orderService.getAllOrders();
+            
+            // Filter for delivery persons only
+            List<Employee> deliveryPersons = allEmployees.stream()
+                .filter(emp -> emp.getRole() != null && emp.getRole().equalsIgnoreCase("Delivery"))
+                .collect(Collectors.toList());
+
+            // Find occupied delivery persons
+            java.util.Set<String> occupiedDeliveryPersonIds = activeOrders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.OUT_FOR_DELIVERY)
+                .filter(o -> o.getDelivery() != null && o.getDelivery().getDeliveryPerson() != null)
+                .map(o -> o.getDelivery().getDeliveryPerson().getId())
+                .collect(Collectors.toSet());
+
+            if (deliveryPersons.isEmpty()) {
+                showAlert("No delivery persons available in this restaurant!", Alert.AlertType.WARNING);
+                return;
+            }
+
+            VBox content = new VBox(15);
+            content.setPadding(new Insets(20));
+
+            ComboBox<Employee> deliveryCombo = new ComboBox<>();
+            deliveryCombo.setPrefWidth(300);
+            
+            // Add employees with status indication
+            for (Employee emp : deliveryPersons) {
+                deliveryCombo.getItems().add(emp);
+            }
+
+            // Custom cell factory to show availability status
+            deliveryCombo.setCellFactory(lv -> new ListCell<Employee>() {
+                @Override
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText(null);
+                        setStyle("");
+                    } else {
+                        boolean isOccupied = occupiedDeliveryPersonIds.contains(emp.getId());
+                        setText(emp.getName() + " - " + emp.getPhoneNumber() + 
+                               (isOccupied ? " (BUSY)" : " (Available)"));
+                        
+                        if (isOccupied) {
+                            setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                            setDisable(true);
+                        } else {
+                            setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                            setDisable(false);
+                        }
+                    }
+                }
+            });
+
+            // Button cell should also show status
+            deliveryCombo.setButtonCell(new ListCell<Employee>() {
+                @Override
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText("Select Delivery Person");
+                    } else {
+                        boolean isOccupied = occupiedDeliveryPersonIds.contains(emp.getId());
+                        setText(emp.getName() + (isOccupied ? " (BUSY)" : " (Available)"));
+                    }
+                }
+            });
+
+            Label infoLabel = new Label("Note: Busy delivery persons are currently handling other orders");
+            infoLabel.setStyle("-fx-text-fill: #636e72; -fx-font-size: 12px;");
+
+            content.getChildren().addAll(
+                new Label("Delivery Person:"),
+                deliveryCombo,
+                infoLabel
+            );
+
+            dialog.getDialogPane().setContent(content);
+
+            // Disable assign button if no selection
+            Node assignButton = dialog.getDialogPane().lookupButton(assignButtonType);
+            assignButton.setDisable(true);
+            deliveryCombo.valueProperty().addListener((obs, old, newVal) -> {
+                assignButton.setDisable(newVal == null || occupiedDeliveryPersonIds.contains(newVal.getId()));
+            });
+
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == assignButtonType) {
+                    return deliveryCombo.getValue();
+                }
+                return null;
+            });
+
+            dialog.showAndWait().ifPresent(selectedEmployee -> {
+                // Double-check that employee is not occupied
+                if (occupiedDeliveryPersonIds.contains(selectedEmployee.getId())) {
+                    showAlert("This delivery person is now busy with another order!", Alert.AlertType.ERROR);
+                    return;
+                }
+
+                try {
+                    // Create or get delivery record
+                    Delivery delivery = order.getDelivery();
+                    if (delivery == null) {
+                        delivery = new Delivery();
+                        delivery.setDeliveryId("DEL" + System.currentTimeMillis());
+                        delivery.setStatus("Pending Assignment");
+                        deliveryService.addDelivery(delivery);
+                        order.setDelivery(delivery);
+                        
+                        System.out.println("DEBUG: Created new delivery with ID: " + delivery.getDeliveryId());
+                    }
+
+                    // Assign delivery person using the service
+                    deliveryService.assignDeliveryPerson(delivery, selectedEmployee, order);
+                    System.out.println("DEBUG: Assigned " + selectedEmployee.getName() + " to delivery " + delivery.getDeliveryId());
+                    
+                    // CRITICAL: Update the delivery record in database with the new delivery person
+                    try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
+                        String updateDeliverySql = "UPDATE delivery SET delivery_person_id = ?, status = ? WHERE delivery_id = ?";
+                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateDeliverySql)) {
+                            stmt.setInt(1, Integer.parseInt(selectedEmployee.getId()));
+                            stmt.setString(2, "Assigned");
+                            stmt.setString(3, delivery.getDeliveryId());
+                            stmt.executeUpdate();
+                            System.out.println("DEBUG: Updated delivery table with person ID: " + selectedEmployee.getId());
+                        }
+                        
+                        // CRITICAL: Update the order record with the delivery_id
+                        String updateOrderSql = "UPDATE orders SET delivery_id = ? WHERE order_id = ?";
+                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateOrderSql)) {
+                            stmt.setString(1, delivery.getDeliveryId());
+                            stmt.setString(2, order.getOrderId());
+                            stmt.executeUpdate();
+                            System.out.println("DEBUG: Linked order " + order.getOrderId() + " to delivery " + delivery.getDeliveryId());
+                        }
+                    }
+                    
+                    // Update order object
+                    order.setDelivery(delivery);
+                    
+                    showAlert("Delivery person assigned successfully!\n" +
+                             "Order #" + order.getOrderId() + " → " + selectedEmployee.getName(), 
+                             Alert.AlertType.INFORMATION);
+                    
+                    // Reload the table to show updated data
+                    loadOrdersData(table, admin);
+                    
+                } catch (Exception ex) {
+                    showAlert("Error assigning delivery person: " + ex.getMessage(), Alert.AlertType.ERROR);
+                    System.err.println("ERROR in delivery assignment:");
+                    ex.printStackTrace();
+                }
+            });
         }
     }
 
@@ -262,9 +494,6 @@ public class AdminControllers {
             TableView<Employee> table = new TableView<>();
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             
-            // TableColumn<Employee, String> idCol = new TableColumn<>("ID");
-            // idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getId()));
-            
             TableColumn<Employee, String> nameCol = new TableColumn<>("Name");
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
             
@@ -315,7 +544,6 @@ public class AdminControllers {
                     setGraphic(empty ? null : btn);
                 }
             });
-            
 
             table.getColumns().addAll(nameCol, roleCol, phoneCol, actionCol);
             loadEmployeeData(table, admin);
@@ -348,7 +576,6 @@ public class AdminControllers {
                     showAlert("Employee hired successfully!", Alert.AlertType.INFORMATION);
                 }
             });
-            
 
             form.getChildren().addAll(nameField, roleField, phoneField, hireBtn);
             VBox.setVgrow(table, Priority.ALWAYS);
@@ -379,6 +606,8 @@ public class AdminControllers {
 
     // ================== REVIEWS CONTROLLER ==================
     public static class AdminReviewsController {
+        private static ReviewServiceImpl reviewService = new ReviewServiceImpl();
+        
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Restaurant Reviews");
             
@@ -399,25 +628,43 @@ public class AdminControllers {
             table.getColumns().addAll(userCol, ratingCol, commentCol);
 
             if (admin.getRestaurant() != null) {
-                Restaurant r = restaurantService.getRestaurantById(Integer.parseInt(admin.getRestaurant().getRestaurantId()));
-                if (r != null && r.getReviews() != null && !r.getReviews().isEmpty()) {
-                    table.setItems(FXCollections.observableArrayList(r.getReviews()));
+                String restaurantId = admin.getRestaurant().getRestaurantId();
+                
+                // Load ALL reviews from database (with full user details)
+                List<Review> allReviews = reviewService.getAllReviews();
+                
+                // Filter for this restaurant only
+                List<Review> restaurantReviews = allReviews.stream()
+                    .filter(review -> review.getRestaurant() != null && 
+                                     review.getRestaurant().getRestaurantId() != null &&
+                                     review.getRestaurant().getRestaurantId().equals(restaurantId))
+                    .collect(Collectors.toList());
+                
+                System.out.println("DEBUG AdminReviewsController: Found " + restaurantReviews.size() + 
+                                   " reviews for restaurant " + restaurantId);
+                
+                if (!restaurantReviews.isEmpty()) {
+                    table.setItems(FXCollections.observableArrayList(restaurantReviews));
+                    VBox.setVgrow(table, Priority.ALWAYS);
+                    layout.getChildren().add(table);
                 } else {
                     Label noReviews = new Label("No reviews yet.");
                     noReviews.setFont(Font.font("System", 16));
                     noReviews.setTextFill(Color.web("#636e72"));
                     layout.getChildren().add(noReviews);
                 }
+            } else {
+                Label noRestaurant = new Label("No restaurant assigned.");
+                noRestaurant.setFont(Font.font("System", 16));
+                noRestaurant.setTextFill(Color.web("#636e72"));
+                layout.getChildren().add(noRestaurant);
             }
             
-            VBox.setVgrow(table, Priority.ALWAYS);
-            if (!table.getItems().isEmpty()) {
-                layout.getChildren().add(table);
-            }
             stage.getScene().setRoot(layout);
         }
     }
 
+    // ================== USERS CONTROLLER ==================
     public static class AdminUsersController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Users Information");
@@ -457,6 +704,7 @@ public class AdminControllers {
             stage.getScene().setRoot(layout);
         }
     }
+
     // ================== HELPER METHODS ==================
     private static VBox createBaseLayout(Stage stage, Admin admin, String title) {
         VBox layout = new VBox(20);
