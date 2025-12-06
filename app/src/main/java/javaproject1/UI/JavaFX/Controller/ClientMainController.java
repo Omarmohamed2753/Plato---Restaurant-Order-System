@@ -184,10 +184,28 @@ public class ClientMainController {
         imageBox.setMinSize(180, 180);
         imageBox.setMaxSize(180, 180);
 
-        Label imagePlaceholder = new Label("📸");
-        imagePlaceholder.setFont(Font.font(80));
-        imagePlaceholder.setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
-        imageBox.getChildren().add(imagePlaceholder);
+        ImageView imageView = loadRestaurantImage(restaurant.getImagePath());
+
+        if (imageView != null) {
+            imageView.setFitWidth(180);
+            imageView.setFitHeight(180);
+            // imageView.setPreserveRatio(false); // Fill the square
+            imageView.setSmooth(true);
+
+            // Add rounded corners to the image to match the container
+            javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(180, 180);
+            clip.setArcWidth(15);
+            clip.setArcHeight(15);
+            imageView.setClip(clip);
+
+            imageBox.getChildren().add(imageView);
+        } else {
+            // Fallback: If no image is found, show the label
+            Label imagePlaceholder = new Label("📷");
+            imagePlaceholder.setFont(Font.font(80));
+            imagePlaceholder.setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
+            imageBox.getChildren().add(imagePlaceholder);
+        }
 
         VBox infoBox = new VBox(10);
         infoBox.setAlignment(Pos.CENTER_LEFT);
@@ -254,5 +272,34 @@ public class ClientMainController {
         card.getChildren().add(contentBox);
 
         return card;
+    }
+    private static ImageView loadRestaurantImage(String imagePath) {
+        if (imagePath == null || imagePath.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            // 1. Clean the path to get just the filename (e.g., "1.jpg")
+            String filename = new java.io.File(imagePath).getName();
+
+            // 2. Look in resources (Standard for built apps)
+            String resourcePath = "/images/menu/" + filename; 
+
+            java.net.URL imageUrl = ClientMainController.class.getResource(resourcePath);
+
+            if (imageUrl != null) {
+                return new ImageView(new Image(imageUrl.toExternalForm()));
+            } 
+
+            // 3. Optional: Fallback for local files (good for testing before moving files)
+            java.io.File file = new java.io.File(imagePath);
+            if (file.exists()) {
+                return new ImageView(new Image(file.toURI().toString()));
+            }
+
+        } catch (Exception e) {
+            System.err.println("Could not load image: " + imagePath);
+        }
+        return null; 
     }
 }

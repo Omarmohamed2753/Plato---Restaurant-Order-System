@@ -64,7 +64,7 @@ public class MenuController {
         backButton.setOnMouseExited(e -> backButton.setStyle(backButton.getStyle().replace("-fx-text-fill: " + ACCENT_GOLD + ";", "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";")));
         backButton.setOnAction(e -> ClientMainController.show(stage, user));
 
-        Label titleLabel = new Label("🍽️ " + restaurant.getName() + " Menu");
+        Label titleLabel = new Label("🍽️" + restaurant.getName() + " Menu");
         titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
         titleLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
 
@@ -247,76 +247,38 @@ public class MenuController {
 
     private static ImageView loadMenuItemImage(String imagePath) {
         if (imagePath == null || imagePath.trim().isEmpty()) {
-            return null;
+            return null; // Return null to trigger the placeholder
         }
-        
+
         try {
-            // Clean the image path (remove any leading slashes or "Images/menu/" prefix)
-            String cleanPath = imagePath.trim();
-            if (cleanPath.startsWith("Images/menu/")) {
-                cleanPath = cleanPath.substring("Images/menu/".length());
-            } else if (cleanPath.startsWith("/Images/menu/")) {
-                cleanPath = cleanPath.substring("/Images/menu/".length());
-            } else if (cleanPath.startsWith("Images/")) {
-                cleanPath = cleanPath.substring("Images/".length());
-            }
-            
-            // First, try loading from the resources folder (during runtime)
-            String[] resourcePaths = {
-                "/Images/menu/" + cleanPath,
-                "/images/menu/" + cleanPath,  // lowercase
-                "/Images/" + cleanPath,
-                "/images/" + cleanPath
-            };
-            
-            for (String resPath : resourcePaths) {
-                try {
-                    java.io.InputStream stream = MenuController.class.getResourceAsStream(resPath);
-                    if (stream != null) {
-                        Image image = new Image(stream);
-                        if (!image.isError()) {
-                            System.out.println("✓ Successfully loaded image from resources: " + resPath);
-                            ImageView imageView = new ImageView(image);
-                            return imageView;
-                        }
-                        stream.close();
-                    }
-                } catch (Exception e) {
-                    // Continue to next path
+            // 1. Extract just the filename (e.g., "1.jpg") from any path (e.g., "C:/Users/.../1.jpg")
+            // This fixes the issue even if you don't update the database immediately!
+            String filename = new java.io.File(imagePath).getName();
+
+            // 2. Define the path where images live in your resources
+            String resourcePath = "/images/menu/" + filename;
+
+            // 3. Try to load from the classpath (The correct way for JavaFX apps)
+            // Note: The leading '/' is required to start at the root of 'src/main/resources'
+            java.net.URL imageUrl = MenuController.class.getResource(resourcePath);
+
+            if (imageUrl != null) {
+                System.out.println("✓ Loaded image: " + resourcePath);
+                return new ImageView(new Image(imageUrl.toExternalForm()));
+            } else {
+                System.err.println("⚠ Image not found in resources: " + resourcePath);
+
+                // Optional: Fallback to try loading from local file system (Only for development)
+                // This helps if you haven't moved the files to src/main/resources yet
+                java.io.File file = new java.io.File(imagePath);
+                if (file.exists()) {
+                     System.out.println("✓ Loaded from local disk: " + imagePath);
+                     return new ImageView(new Image(file.toURI().toString()));
                 }
             }
-            
-            // Second, try loading from file system (for development)
-            String[] filePaths = {
-                "app/src/main/Resources/Images/menu/" + cleanPath,
-                "src/main/Resources/Images/menu/" + cleanPath,
-                "Resources/Images/menu/" + cleanPath,
-                "app/src/main/resources/Images/menu/" + cleanPath,  // lowercase resources
-                "src/main/resources/Images/menu/" + cleanPath
-            };
-            
-            for (String filePath : filePaths) {
-                try {
-                    java.io.File file = new java.io.File(filePath);
-                    if (file.exists() && file.isFile()) {
-                        Image image = new Image(file.toURI().toString());
-                        if (!image.isError()) {
-                            System.out.println("✓ Successfully loaded image from file: " + filePath);
-                            ImageView imageView = new ImageView(image);
-                            return imageView;
-                        }
-                    }
-                } catch (Exception e) {
-                    // Continue to next path
-                }
-            }
-            
-            System.out.println("⚠ Image not found: " + imagePath + " (cleaned: " + cleanPath + ")");
-            return null;
-            
         } catch (Exception e) {
-            System.err.println("Error loading image " + imagePath + ": " + e.getMessage());
-            return null;
+            System.err.println("Error loading image: " + e.getMessage());
         }
+        return null;
     }
 }
