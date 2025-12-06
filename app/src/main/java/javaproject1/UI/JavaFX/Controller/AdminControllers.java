@@ -17,6 +17,7 @@ import javaproject1.DAL.Entity.Menu;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Enums.OrderStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -162,183 +163,208 @@ public class AdminControllers {
             }
         }
 
-        // In AdminControllers.java, replace the showAssignDeliveryDialog method with this fixed version:
+        private static void showAssignDeliveryDialog(Stage stage, Admin admin, Order order, TableView<Order> table) {
+            Dialog<Employee> dialog = new Dialog<>();
+            dialog.setTitle("Assign Delivery Person");
+            dialog.setHeaderText("Select a delivery person for Order #" + order.getOrderId());
 
-private static void showAssignDeliveryDialog(Stage stage, Admin admin, Order order, TableView<Order> table) {
-    Dialog<Employee> dialog = new Dialog<>();
-    dialog.setTitle("Assign Delivery Person");
-    dialog.setHeaderText("Select a delivery person for Order #" + order.getOrderId());
+            ButtonType assignButtonType = new ButtonType("Assign", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(assignButtonType, ButtonType.CANCEL);
 
-    ButtonType assignButtonType = new ButtonType("Assign", ButtonBar.ButtonData.OK_DONE);
-    dialog.getDialogPane().getButtonTypes().addAll(assignButtonType, ButtonType.CANCEL);
+            // Get all delivery persons who are available
+            List<Employee> allEmployees = employeeService.getAllEmployees();
+            List<Order> activeOrders = orderService.getAllOrders();
+            
+            // Filter for delivery persons only in this restaurant
+            List<Employee> deliveryPersons = allEmployees.stream()
+                .filter(emp -> emp.getRole() != null && emp.getRole().equalsIgnoreCase("Delivery"))
+                .collect(Collectors.toList());
 
-    // Get all delivery persons who are available
-    List<Employee> allEmployees = employeeService.getAllEmployees();
-    List<Order> activeOrders = orderService.getAllOrders();
-    
-    // Filter for delivery persons only
-    List<Employee> deliveryPersons = allEmployees.stream()
-        .filter(emp -> emp.getRole() != null && emp.getRole().equalsIgnoreCase("Delivery"))
-        .collect(Collectors.toList());
+            // CRITICAL FIX: Find ALL occupied delivery persons (not just OUT_FOR_DELIVERY)
+            // A delivery person is busy if they're assigned to ANY order that's NOT delivered or cancelled
+            java.util.Set<String> occupiedDeliveryPersonIds = activeOrders.stream()
+                .filter(o -> o.getStatus() != OrderStatus.DELIVERED && o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> o.getDelivery() != null && o.getDelivery().getDeliveryPerson() != null)
+                .map(o -> o.getDelivery().getDeliveryPerson().getId())
+                .collect(Collectors.toSet());
 
-    // Find occupied delivery persons
-    java.util.Set<String> occupiedDeliveryPersonIds = activeOrders.stream()
-        .filter(o -> o.getStatus() == OrderStatus.OUT_FOR_DELIVERY)
-        .filter(o -> o.getDelivery() != null && o.getDelivery().getDeliveryPerson() != null)
-        .map(o -> o.getDelivery().getDeliveryPerson().getId())
-        .collect(Collectors.toSet());
+            if (deliveryPersons.isEmpty()) {
+                showAlert("No delivery persons available in this restaurant!", Alert.AlertType.WARNING);
+                return;
+            }
 
-    if (deliveryPersons.isEmpty()) {
-        showAlert("No delivery persons available in this restaurant!", Alert.AlertType.WARNING);
-        return;
-    }
-
-    VBox content = new VBox(15);
-    content.setPadding(new Insets(20));
-
-    ComboBox<Employee> deliveryCombo = new ComboBox<>();
-    deliveryCombo.setPrefWidth(300);
-    
-    // Add employees with status indication
-    for (Employee emp : deliveryPersons) {
-        deliveryCombo.getItems().add(emp);
-    }
-
-    // Custom cell factory to show availability status
-    deliveryCombo.setCellFactory(lv -> new ListCell<Employee>() {
-        @Override
-        protected void updateItem(Employee emp, boolean empty) {
-            super.updateItem(emp, empty);
-            if (empty || emp == null) {
-                setText(null);
-                setStyle("");
-            } else {
-                boolean isOccupied = occupiedDeliveryPersonIds.contains(emp.getId());
-                setText(emp.getName() + " - " + emp.getPhoneNumber() + 
-                       (isOccupied ? " (BUSY)" : " (Available)"));
-                
-                if (isOccupied) {
-                    setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
-                    setDisable(true);
+            // CRITICAL: Separate available and busy delivery persons
+            List<Employee> availablePersons = new ArrayList<>();
+            List<Employee> busyPersons = new ArrayList<>();
+            
+            for (Employee emp : deliveryPersons) {
+                if (occupiedDeliveryPersonIds.contains(emp.getId())) {
+                    busyPersons.add(emp);
                 } else {
-                    setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
-                    setDisable(false);
+                    availablePersons.add(emp);
                 }
             }
-        }
-    });
-
-    // Button cell should also show status
-    deliveryCombo.setButtonCell(new ListCell<Employee>() {
-        @Override
-        protected void updateItem(Employee emp, boolean empty) {
-            super.updateItem(emp, empty);
-            if (empty || emp == null) {
-                setText("Select Delivery Person");
-            } else {
-                boolean isOccupied = occupiedDeliveryPersonIds.contains(emp.getId());
-                setText(emp.getName() + (isOccupied ? " (BUSY)" : " (Available)"));
-            }
-        }
-    });
-
-    Label infoLabel = new Label("Note: Busy delivery persons are currently handling other orders");
-    infoLabel.setStyle("-fx-text-fill: #636e72; -fx-font-size: 12px;");
-
-    content.getChildren().addAll(
-        new Label("Delivery Person:"),
-        deliveryCombo,
-        infoLabel
-    );
-
-    dialog.getDialogPane().setContent(content);
-
-    // Disable assign button if no selection
-    Node assignButton = dialog.getDialogPane().lookupButton(assignButtonType);
-    assignButton.setDisable(true);
-    deliveryCombo.valueProperty().addListener((obs, old, newVal) -> {
-        assignButton.setDisable(newVal == null || occupiedDeliveryPersonIds.contains(newVal.getId()));
-    });
-
-    dialog.setResultConverter(dialogButton -> {
-        if (dialogButton == assignButtonType) {
-            return deliveryCombo.getValue();
-        }
-        return null;
-    });
-
-    dialog.showAndWait().ifPresent(selectedEmployee -> {
-        // Double-check that employee is not occupied
-        if (occupiedDeliveryPersonIds.contains(selectedEmployee.getId())) {
-            showAlert("This delivery person is now busy with another order!", Alert.AlertType.ERROR);
-            return;
-        }
-
-        try {
-            System.out.println("=== ASSIGNING DELIVERY PERSON ===");
-            System.out.println("Order ID: " + order.getOrderId());
-            System.out.println("Employee: " + selectedEmployee.getName() + " (ID: " + selectedEmployee.getId() + ")");
             
-            // CRITICAL FIX: Get or create delivery record
-            Delivery delivery = order.getDelivery();
-            if (delivery == null) {
-                // Create new delivery
-                delivery = new Delivery();
-                delivery.setDeliveryId("DEL" + System.currentTimeMillis());
-                delivery.setStatus("Pending Assignment");
-                deliveryService.addDelivery(delivery);
-                System.out.println("Created new delivery: " + delivery.getDeliveryId());
-            } else {
-                System.out.println("Using existing delivery: " + delivery.getDeliveryId());
+            // Check if any available persons exist
+            if (availablePersons.isEmpty()) {
+                showAlert("No delivery persons available right now!\nAll delivery staff are currently busy with other orders.", 
+                         Alert.AlertType.WARNING);
+                return;
             }
 
-            // Assign delivery person using the service
-            deliveryService.assignDeliveryPerson(delivery, selectedEmployee, order);
-            System.out.println("Service assigned delivery person");
+            VBox content = new VBox(15);
+            content.setPadding(new Insets(20));
+
+            // Show availability stats
+            Label statsLabel = new Label(String.format("Available: %d | Busy: %d", 
+                availablePersons.size(), busyPersons.size()));
+            statsLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #059669;");
+
+            ComboBox<Employee> deliveryCombo = new ComboBox<>();
+            deliveryCombo.setPrefWidth(300);
             
-            // CRITICAL FIX: Update delivery in database with delivery person
-            try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
-                // Update delivery table with person
-                String updateDeliverySql = "UPDATE delivery SET delivery_person_id = ?, status = ? WHERE delivery_id = ?";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateDeliverySql)) {
-                    stmt.setInt(1, Integer.parseInt(selectedEmployee.getId()));
-                    stmt.setString(2, "Assigned");
-                    stmt.setString(3, delivery.getDeliveryId());
-                    int rows = stmt.executeUpdate();
-                    System.out.println("Updated delivery table: " + rows + " rows");
+            // Add ONLY available employees to the combo box
+            for (Employee emp : availablePersons) {
+                deliveryCombo.getItems().add(emp);
+            }
+
+            // Custom cell factory - now only shows available persons
+            deliveryCombo.setCellFactory(lv -> new ListCell<Employee>() {
+                @Override
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText(null);
+                        setStyle("");
+                    } else {
+                        // All persons in the combo are available
+                        setText(emp.getName() + " - " + emp.getPhoneNumber() + " ✓ Available");
+                        setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                    }
                 }
+            });
+
+            // Button cell should show selected person
+            deliveryCombo.setButtonCell(new ListCell<Employee>() {
+                @Override
+                protected void updateItem(Employee emp, boolean empty) {
+                    super.updateItem(emp, empty);
+                    if (empty || emp == null) {
+                        setText("Select Available Delivery Person");
+                    } else {
+                        setText(emp.getName() + " ✓");
+                    }
+                }
+            });
+
+            Label infoLabel = new Label(busyPersons.isEmpty() ? 
+                "All delivery staff are available!" : 
+                String.format("Note: %d delivery person(s) are currently busy with other orders", busyPersons.size()));
+            infoLabel.setStyle("-fx-text-fill: #636e72; -fx-font-size: 12px;");
+
+            content.getChildren().addAll(
+                statsLabel,
+                new Label("Select Delivery Person:"),
+                deliveryCombo,
+                infoLabel
+            );
+
+            dialog.getDialogPane().setContent(content);
+
+            // Disable assign button if no selection
+            Node assignButton = dialog.getDialogPane().lookupButton(assignButtonType);
+            assignButton.setDisable(true);
+            deliveryCombo.valueProperty().addListener((obs, old, newVal) -> {
+                assignButton.setDisable(newVal == null);
+            });
+
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == assignButtonType) {
+                    return deliveryCombo.getValue();
+                }
+                return null;
+            });
+
+            dialog.showAndWait().ifPresent(selectedEmployee -> {
+                // CRITICAL: Double-check that employee is still available (race condition protection)
+                // Reload orders to check current status
+                List<Order> currentOrders = orderService.getAllOrders();
+                boolean isNowOccupied = currentOrders.stream()
+                    .filter(o -> o.getStatus() != OrderStatus.DELIVERED && o.getStatus() != OrderStatus.CANCELLED)
+                    .filter(o -> o.getDelivery() != null && o.getDelivery().getDeliveryPerson() != null)
+                    .anyMatch(o -> o.getDelivery().getDeliveryPerson().getId().equals(selectedEmployee.getId()));
                 
-                // CRITICAL FIX: Link delivery to order if not already linked
-                String updateOrderSql = "UPDATE orders SET delivery_id = ? WHERE order_id = ?";
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateOrderSql)) {
-                    stmt.setString(1, delivery.getDeliveryId());
-                    stmt.setString(2, order.getOrderId());
-                    int rows = stmt.executeUpdate();
-                    System.out.println("Linked order to delivery: " + rows + " rows");
+                if (isNowOccupied) {
+                    showAlert("Sorry! This delivery person was just assigned to another order.\nPlease select a different person.", 
+                             Alert.AlertType.ERROR);
+                    return;
                 }
-            }
-            
-            // CRITICAL FIX: Update the in-memory order object
-            order.setDelivery(delivery);
-            delivery.setDeliveryPerson(selectedEmployee);
-            
-            System.out.println("=== ASSIGNMENT COMPLETE ===");
-            
-            showAlert("Delivery person assigned successfully!\n" +
-                     "Order #" + order.getOrderId() + " → " + selectedEmployee.getName(), 
-                     Alert.AlertType.INFORMATION);
-            
-            // CRITICAL FIX: Reload data from database to refresh the table
-            System.out.println("Refreshing table data...");
-            loadOrdersData(table, admin);
-            
-        } catch (Exception ex) {
-            showAlert("Error assigning delivery person: " + ex.getMessage(), Alert.AlertType.ERROR);
-            System.err.println("ERROR in delivery assignment:");
-            ex.printStackTrace();
+
+                try {
+                    System.out.println("=== ASSIGNING DELIVERY PERSON ===");
+                    System.out.println("Order ID: " + order.getOrderId());
+                    System.out.println("Employee: " + selectedEmployee.getName() + " (ID: " + selectedEmployee.getId() + ")");
+                    
+                    // CRITICAL FIX: Get or create delivery record
+                    Delivery delivery = order.getDelivery();
+                    if (delivery == null) {
+                        // Create new delivery
+                        delivery = new Delivery();
+                        delivery.setDeliveryId("DEL" + System.currentTimeMillis());
+                        delivery.setStatus("Pending Assignment");
+                        deliveryService.addDelivery(delivery);
+                        System.out.println("Created new delivery: " + delivery.getDeliveryId());
+                    } else {
+                        System.out.println("Using existing delivery: " + delivery.getDeliveryId());
+                    }
+
+                    // Assign delivery person using the service
+                    deliveryService.assignDeliveryPerson(delivery, selectedEmployee, order);
+                    System.out.println("Service assigned delivery person");
+                    
+                    // CRITICAL FIX: Update delivery in database with delivery person
+                    try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
+                        // Update delivery table with person
+                        String updateDeliverySql = "UPDATE delivery SET delivery_person_id = ?, status = ? WHERE delivery_id = ?";
+                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateDeliverySql)) {
+                            stmt.setInt(1, Integer.parseInt(selectedEmployee.getId()));
+                            stmt.setString(2, "Assigned");
+                            stmt.setString(3, delivery.getDeliveryId());
+                            int rows = stmt.executeUpdate();
+                            System.out.println("Updated delivery table: " + rows + " rows");
+                        }
+                        
+                        // CRITICAL FIX: Link delivery to order if not already linked
+                        String updateOrderSql = "UPDATE orders SET delivery_id = ? WHERE order_id = ?";
+                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateOrderSql)) {
+                            stmt.setString(1, delivery.getDeliveryId());
+                            stmt.setString(2, order.getOrderId());
+                            int rows = stmt.executeUpdate();
+                            System.out.println("Linked order to delivery: " + rows + " rows");
+                        }
+                    }
+                    
+                    // CRITICAL FIX: Update the in-memory order object
+                    order.setDelivery(delivery);
+                    delivery.setDeliveryPerson(selectedEmployee);
+                    
+                    System.out.println("=== ASSIGNMENT COMPLETE ===");
+                    
+                    showAlert("Delivery person assigned successfully!\n" +
+                             "Order #" + order.getOrderId() + " → " + selectedEmployee.getName(), 
+                             Alert.AlertType.INFORMATION);
+                    
+                    // CRITICAL FIX: Reload data from database to refresh the table
+                    System.out.println("Refreshing table data...");
+                    loadOrdersData(table, admin);
+                    
+                } catch (Exception ex) {
+                    showAlert("Error assigning delivery person: " + ex.getMessage(), Alert.AlertType.ERROR);
+                    System.err.println("ERROR in delivery assignment:");
+                    ex.printStackTrace();
+                }
+            });
         }
-    });
-}
     }
 
     // ================== MENU CONTROLLER ==================
