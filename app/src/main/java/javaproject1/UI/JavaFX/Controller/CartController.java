@@ -15,7 +15,7 @@ import javaproject1.DAL.Entity.*;
 public class CartController {
     private static CartServiceImpl cartService = new CartServiceImpl();
 
-    // --- New Fancy/Dark Theme Colors ---
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -164,7 +164,6 @@ public class CartController {
             show(stage, user);
         });
 
-        // زيادة عرض زر الحذف قليلاً للتأكد من ملاءمة النص الجديد
         removeButton.setPrefWidth(210); 
 
         row.getChildren().addAll(nameLabel, qtyLabel, priceLabel, spacer, removeButton);

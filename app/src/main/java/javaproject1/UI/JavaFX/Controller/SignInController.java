@@ -22,7 +22,7 @@ public class SignInController {
     private static Thread clientThread;
     private static Thread adminThread;
 
-    // Dark Theme Colors
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -37,11 +37,9 @@ public class SignInController {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
-        // Header
         HBox header = createHeader(stage);
         root.setTop(header);
 
-        // Form
         VBox formBox = new VBox(30);
         formBox.setAlignment(Pos.CENTER);
         formBox.setPadding(new Insets(60));
@@ -51,7 +49,7 @@ public class SignInController {
         titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
         titleLabel.setTextFill(Color.web(ACCENT_GOLD));
 
-        // Tab pane for Client/Admin
+        
         TabPane tabPane = new TabPane();
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.setStyle(
@@ -59,13 +57,11 @@ public class SignInController {
             "-fx-border-color: transparent;"
         );
 
-        // Client Tab
         Tab clientTab = new Tab("Client Login");
         clientTab.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         VBox clientBox = createClientLoginForm(stage);
         clientTab.setContent(clientBox);
 
-        // Admin Tab
         Tab adminTab = new Tab("Admin Login");
         adminTab.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         VBox adminBox = createAdminLoginForm(stage);

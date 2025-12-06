@@ -17,7 +17,7 @@ public class SignUpController {
 
     private static UserServiceImpl userService = new UserServiceImpl();
 
-    // Dark Theme Colors
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -32,11 +32,9 @@ public class SignUpController {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
 
-        // Header
         HBox header = createHeader(stage);
         root.setTop(header);
 
-        // Form
         VBox formBox = new VBox(25);
         formBox.setAlignment(Pos.CENTER);
         formBox.setPadding(new Insets(40));
@@ -46,7 +44,6 @@ public class SignUpController {
         titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
         titleLabel.setTextFill(Color.web(ACCENT_GOLD));
 
-        // Card container
         VBox cardBox = new VBox(25);
         cardBox.setPadding(new Insets(40));
         cardBox.setStyle(
@@ -55,7 +52,6 @@ public class SignUpController {
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
         );
 
-        // Form fields
         GridPane grid = new GridPane();
         grid.setHgap(20);
         grid.setVgap(20);
@@ -68,7 +64,6 @@ public class SignUpController {
         TextField phoneField = createTextField("Phone Number");
         TextField ageField = createTextField("Age");
         
-        // Address fields
         TextField streetField = createTextField("Street");
         TextField cityField = createTextField("City");
         TextField buildingField = createTextField("Building Number");
@@ -92,7 +87,6 @@ public class SignUpController {
         grid.add(createFormLabel("Age:"), 0, row);
         grid.add(ageField, 1, row++);
         
-        // Separator for address section
         Label addressSeparator = new Label("📍 Delivery Address");
         addressSeparator.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         addressSeparator.setTextFill(Color.web(PRIMARY_COLOR));
@@ -141,7 +135,6 @@ public class SignUpController {
                 String city = cityField.getText().trim();
                 String buildingText = buildingField.getText().trim();
 
-                // Validation
                 if (name.isEmpty() || email.isEmpty() || password.isEmpty() || 
                     phone.isEmpty() || ageText.isEmpty() || street.isEmpty() || 
                     city.isEmpty() || buildingText.isEmpty()) {
@@ -162,10 +155,8 @@ public class SignUpController {
                 int age = Integer.parseInt(ageText);
                 int building = Integer.parseInt(buildingText);
 
-                // Create address
                 Address address = new Address(street, city, building);
 
-                // Create user
                 User user = new User(null, name, age, phone, email, password, address);
 
                 boolean success = userService.createAccount(user);

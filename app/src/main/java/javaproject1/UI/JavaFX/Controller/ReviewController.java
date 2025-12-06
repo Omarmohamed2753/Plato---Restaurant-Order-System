@@ -21,7 +21,7 @@ public class ReviewController {
     private static RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
     private static ReviewRepoImpl reviewRepo = new ReviewRepoImpl();
 
-    // Dark Theme Colors
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -51,10 +51,9 @@ public class ReviewController {
         titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 42));
         titleLabel.setTextFill(Color.web(ACCENT_GOLD));
 
-        // Reviews section
+       
         VBox reviewsSection = createReviewsSection(stage, user);
         
-        // Add new review section
         VBox addReviewSection = createAddReviewSection(stage, user);
 
         contentBox.getChildren().addAll(titleLabel, reviewsSection, addReviewSection);
@@ -79,7 +78,6 @@ public class ReviewController {
         VBox reviewsList = new VBox(15);
         reviewsList.setAlignment(Pos.TOP_CENTER);
 
-        // Get all reviews and filter for current user
         List<Review> allReviews = reviewService.getAllReviews();
         List<Review> userReviews = allReviews.stream()
             .filter(r -> r.getUser() != null && 
@@ -117,7 +115,6 @@ public class ReviewController {
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 5);"
         );
 
-        // Restaurant icon/info
         VBox iconBox = new VBox(5);
         iconBox.setAlignment(Pos.CENTER);
         iconBox.setPrefWidth(120);
@@ -125,7 +122,6 @@ public class ReviewController {
         Label restaurantIcon = new Label("🏪");
         restaurantIcon.setFont(Font.font("System", 50));
 
-        // Get fresh restaurant data from database
         String restaurantName = "Plato Restaurant";
         if (review.getRestaurant() != null) {
             String restaurantId = review.getRestaurant().getRestaurantId();
@@ -150,13 +146,11 @@ public class ReviewController {
 
         iconBox.getChildren().addAll(restaurantIcon, restaurantLabel);
 
-        // Review content
         VBox contentBox = new VBox(10);
         contentBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(contentBox, Priority.ALWAYS);
         contentBox.setPrefWidth(500);
 
-        // Rating display
         HBox ratingBox = new HBox(5);
         ratingBox.setAlignment(Pos.CENTER_LEFT);
         for (int i = 0; i < 5; i++) {
@@ -170,7 +164,6 @@ public class ReviewController {
         ratingText.setTextFill(Color.web(ACCENT_GOLD));
         ratingBox.getChildren().add(ratingText);
 
-        // Comment
         Label commentLabel = new Label(review.getComment() != null ? review.getComment() : "No comment provided");
         commentLabel.setFont(Font.font("System", 16));
         commentLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
@@ -179,7 +172,6 @@ public class ReviewController {
 
         contentBox.getChildren().addAll(ratingBox, commentLabel);
 
-        // Action buttons
         VBox actionBox = new VBox(10);
         actionBox.setAlignment(Pos.CENTER);
         actionBox.setPrefWidth(140);
@@ -245,7 +237,6 @@ public class ReviewController {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Edit Review");
         
-        // Get fresh restaurant name
         String restaurantName = "Plato Restaurant";
         if (review.getRestaurant() != null && review.getRestaurant().getRestaurantId() != null) {
             try {
@@ -319,7 +310,7 @@ public class ReviewController {
                     successPane.lookup(".label.content").setStyle("-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-font-size: 14px;");
                     successAlert.showAndWait();
 
-                    show(stage, user); // Refresh
+                    show(stage, user); 
                 } catch (Exception ex) {
                     Alert errorAlert = new Alert(Alert.AlertType.ERROR, 
                         "Error updating review: " + ex.getMessage());
@@ -354,7 +345,6 @@ public class ReviewController {
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 5);"
         );
 
-        // Get the first (and only) restaurant
         List<Restaurant> restaurants = restaurantRepo.getAllRestaurants();
         if (restaurants.isEmpty()) {
             Label noRestaurant = new Label("No restaurant available for reviews.");
@@ -364,14 +354,13 @@ public class ReviewController {
             return section;
         }
         
-        Restaurant restaurant = restaurants.get(0); // Get the single restaurant
+        Restaurant restaurant = restaurants.get(0); 
         
-        // Display restaurant name
+
         Label restaurantInfoLabel = new Label("📍 Restaurant: " + restaurant.getName());
         restaurantInfoLabel.setFont(Font.font("Arial", FontWeight.BOLD, 20));
         restaurantInfoLabel.setTextFill(Color.web(ACCENT_GOLD));
 
-        // Rating selection
         Label ratingLabel = createFormLabel("Rating:");
         HBox ratingBox = new HBox(15);
         ratingBox.setAlignment(Pos.CENTER_LEFT);
@@ -395,7 +384,6 @@ public class ReviewController {
         
         ratingBox.getChildren().addAll(ratingSpinner, ratingDisplay);
 
-        // Comment
         Label commentLabel = createFormLabel("Your Review:");
         TextArea commentArea = new TextArea();
         commentArea.setPromptText("Share your dining experience...");
@@ -409,7 +397,6 @@ public class ReviewController {
             "-fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
 
-        // Submit button
         Button submitButton = new Button("Submit Review ✓");
         submitButton.setPrefWidth(200);
         submitButton.setStyle(
@@ -433,7 +420,6 @@ public class ReviewController {
                     return;
                 }
 
-                // Create new review
                 Review newReview = new Review();
                 newReview.setReviewId("REV" + System.currentTimeMillis());
                 newReview.setUser(user);
@@ -445,7 +431,6 @@ public class ReviewController {
 
                 showSuccessMessage(messageLabel, "Review submitted successfully!");
 
-                // Clear form
                 ratingSpinner.getValueFactory().setValue(5);
                 commentArea.clear();
 

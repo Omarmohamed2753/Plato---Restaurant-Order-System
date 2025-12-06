@@ -181,7 +181,7 @@ public class CheckoutController {
             try {
                 System.out.println("=== STARTING ORDER CREATION ===");
                 
-                // STEP 1: Create delivery record FIRST
+                
                 Delivery delivery = new Delivery();
                 delivery.setDeliveryId("DEL" + System.currentTimeMillis());
                 delivery.setStatus("Pending Assignment");
@@ -191,7 +191,7 @@ public class CheckoutController {
                 deliveryRepo.addDelivery(delivery);
                 System.out.println("✓ Delivery created: " + delivery.getDeliveryId());
 
-                // STEP 2: Create and save payment
+               
                 Payment payment = new Payment();
                 payment.setPaymentId("PAY" + System.currentTimeMillis());
                 payment.setAmount(total);
@@ -207,7 +207,7 @@ public class CheckoutController {
                 paymentService.addPayment(payment);
                 System.out.println("✓ Payment created: " + payment.getPaymentId());
 
-                // STEP 3: Create order entity with ALL relationships
+                
                 Order order = new Order();
                 order.setUser(user);
                 order.setRestaurant(restaurant);
@@ -217,9 +217,8 @@ public class CheckoutController {
                 order.setStatus(OrderStatus.PENDING);
                 order.setOrderDate(new Date());
                 order.setPayment(payment);
-                order.setDelivery(delivery); // Link delivery to order
+                order.setDelivery(delivery); 
 
-                // STEP 4: Save order to DB
                 orderService.addOrder(order);
                 System.out.println("✓ Order created: " + order.getOrderId());
                 System.out.println("  - Restaurant: " + restaurant.getName());
@@ -229,13 +228,10 @@ public class CheckoutController {
                 if (order.getOrderId() == null || order.getOrderId().isEmpty()) {
                     throw new Exception("Failed to create order - no order ID generated!");
                 }
-
-                // STEP 5: Update payment with order ID
                 payment.setOrderId(order.getOrderId());
                 paymentService.updatePayment(payment);
                 System.out.println("✓ Payment updated with order ID");
 
-                // STEP 6: Link cart items to order
                 try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
                     String sql = "INSERT INTO order_items (order_id, cart_item_id) VALUES (?, ?)";
                     try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -251,7 +247,6 @@ public class CheckoutController {
                     }
                 }
 
-                // STEP 7: Clear cart in memory only (items stay in DB linked to order)
                 cart.getItems().clear();
                 System.out.println("✓ Cart cleared");
                 System.out.println("=== ORDER CREATION COMPLETE ===");
@@ -294,7 +289,6 @@ public class CheckoutController {
         stage.setScene(scene);
     }
 
-    // Keep all helper methods unchanged...
     private static VBox createSummaryBox(Cart cart, double subtotal, double tax, 
                                          double deliveryFee, double discount, double total) {
         VBox summaryBox = new VBox(15);

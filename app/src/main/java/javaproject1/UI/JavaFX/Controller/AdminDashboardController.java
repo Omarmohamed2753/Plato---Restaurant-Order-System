@@ -22,7 +22,7 @@ public class AdminDashboardController {
     private static UserServiceImpl userService = new UserServiceImpl();
     private static EmployeeServiceImpl employeeService = new EmployeeServiceImpl();
 
-    // Dark Theme Colors - matching client side
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";

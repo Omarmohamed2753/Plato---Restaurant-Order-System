@@ -29,7 +29,7 @@ public class AdminControllers {
     private static EmployeeServiceImpl employeeService = new EmployeeServiceImpl();
     private static DeliveryServiceImpl deliveryService = new DeliveryServiceImpl();
 
-    // Modern Dark Theme Colors (matching client side)
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -41,7 +41,7 @@ public class AdminControllers {
     private static final String SUCCESS_COLOR = "#10b981";
     private static final String BUTTON_BLUE = "#3b82f6";
 
-    // ================== ORDERS CONTROLLER ==================
+    // ORDERS CONTROLLER
     public static class AdminOrdersController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Manage Orders");
@@ -419,7 +419,7 @@ public class AdminControllers {
         }
     }
 
-    // ================== MENU CONTROLLER ==================
+    // MENU CONTROLLER 
     public static class AdminMenuController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Manage Menu");
@@ -585,7 +585,7 @@ public class AdminControllers {
         }
     }
 
-    // ================== EMPLOYEES CONTROLLER ==================
+    // EMPLOYEES CONTROLLER
     public static class AdminEmployeesController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Manage Employees");
@@ -742,7 +742,7 @@ public class AdminControllers {
         }
     }
 
-    // ================== REVIEWS CONTROLLER ==================
+    // REVIEWS CONTROLLER
     public static class AdminReviewsController {
         private static ReviewServiceImpl reviewService = new ReviewServiceImpl();
         
@@ -809,7 +809,7 @@ public class AdminControllers {
         }
     }
 
-    // ================== USERS CONTROLLER ==================
+    // USERS CONTROLLER 
     public static class AdminUsersController {
         public static void show(Stage stage, Admin admin) {
             VBox layout = createBaseLayout(stage, admin, "Users Information");
@@ -859,7 +859,7 @@ public class AdminControllers {
         }
     }
 
-    // ================== HELPER METHODS ==================
+    // HELPER METHODS 
     private static VBox createBaseLayout(Stage stage, Admin admin, String title) {
         VBox layout = new VBox(25);
         layout.setPadding(new Insets(40));

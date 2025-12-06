@@ -18,7 +18,7 @@ import java.util.List;
 public class OrdersController {
     private static OrderServiceImpl orderService = new OrderServiceImpl();
 
-    // Dark Theme Colors
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -46,7 +46,6 @@ public class OrdersController {
         VBox ordersBox = new VBox(20);
         ordersBox.setAlignment(Pos.TOP_CENTER);
         
-        // Get all orders and filter for current user
         List<Order> allOrders = orderService.getAllOrders();
         List<Order> userOrders = allOrders.stream()
             .filter(o -> o.getUser() != null && 
@@ -115,7 +114,6 @@ public class OrdersController {
         System.out.println("  Total: $" + order.getTotalAmount());
         System.out.println("  Restaurant: " + (order.getRestaurant() != null ? order.getRestaurant().getName() : "N/A"));
 
-        // Header with order ID and status
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER_LEFT);
 
@@ -135,7 +133,6 @@ public class OrdersController {
 
         header.getChildren().addAll(idLabel, spacer, statusLabel);
 
-        // Restaurant info
         String restaurantName = "Unknown Restaurant";
         if (order.getRestaurant() != null && order.getRestaurant().getName() != null) {
             restaurantName = order.getRestaurant().getName();
@@ -151,7 +148,7 @@ public class OrdersController {
             "-fx-font-weight: bold;"
         );
 
-        // Order date
+
         String dateStr = "N/A";
         if (order.getOrderDate() != null) {
             dateStr = new SimpleDateFormat("MMM dd, yyyy HH:mm").format(order.getOrderDate());
@@ -162,7 +159,6 @@ public class OrdersController {
             "-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";"
         );
 
-        // Items section
         VBox itemsBox = new VBox(12);
         itemsBox.setPadding(new Insets(15));
         itemsBox.setStyle(
@@ -233,7 +229,6 @@ public class OrdersController {
             itemsBox.getChildren().add(noItems);
         }
 
-        // Footer with total and details
         HBox footer = new HBox(40);
         footer.setAlignment(Pos.CENTER_LEFT);
         footer.setPadding(new Insets(10, 0, 0, 0));
@@ -248,8 +243,7 @@ public class OrdersController {
         leftFooter.getChildren().add(totalLabel);
 
         VBox rightFooter = new VBox(10);
-        
-        // Delivery Address
+
         String addressStr = "Not specified";
         if (order.getDeliveryAddress() != null) {
             Address addr = order.getDeliveryAddress();
@@ -271,7 +265,6 @@ public class OrdersController {
         addressLabel.setMaxWidth(500);
         rightFooter.getChildren().add(addressLabel);
         
-        // Delivery Person Info
         String deliveryPersonInfo = "Not assigned yet";
         if (order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null) {
             Employee deliveryPerson = order.getDelivery().getDeliveryPerson();
@@ -294,7 +287,6 @@ public class OrdersController {
 
         footer.getChildren().addAll(leftFooter, rightFooter);
 
-        // Add all sections to card
         card.getChildren().addAll(header, restaurantLabel, dateLabel, itemsBox, footer);
         
         System.out.println("DEBUG: Card created successfully for order #" + order.getOrderId());

@@ -21,7 +21,7 @@ public class MenuController {
     private static CartServiceImpl cartService = new CartServiceImpl();
     private static RestaurantServiceImpl restaurantService = new RestaurantServiceImpl();
 
-    // --- New Fancy/Dark Theme Colors ---
+    // Theme Colors ---
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -135,7 +135,7 @@ public class MenuController {
             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 5);"
         );
 
-        // IMAGE BOX - Now with actual image loading
+        
         VBox imageBox = new VBox();
         imageBox.setAlignment(Pos.CENTER);
         imageBox.setPrefSize(120, 120);
@@ -143,7 +143,6 @@ public class MenuController {
         imageBox.setMaxSize(120, 120);
         imageBox.setStyle("-fx-background-color: " + ITEM_BACKGROUND + "; -fx-background-radius: 10;");
 
-        // Try to load image
         ImageView imageView = loadMenuItemImage(item.getImagePath());
         if (imageView != null) {
             imageView.setFitWidth(120);
@@ -151,7 +150,7 @@ public class MenuController {
             imageView.setPreserveRatio(false);
             imageView.setSmooth(true);
             
-            // Add rounded corners effect
+            
             javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(120, 120);
             clip.setArcWidth(20);
             clip.setArcHeight(20);
@@ -159,14 +158,12 @@ public class MenuController {
             
             imageBox.getChildren().add(imageView);
         } else {
-            // Fallback to placeholder if image not found
             Label placeholder = new Label("🍽️");
             placeholder.setFont(Font.font("System", 60));
             placeholder.setStyle("-fx-text-fill: " + ACCENT_GOLD + ";");
             imageBox.getChildren().add(placeholder);
         }
 
-        // INFO BOX
         VBox infoBox = new VBox(5);
         infoBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
@@ -204,7 +201,7 @@ public class MenuController {
         infoBox.getChildren().addAll(nameLabel, categoryLabel, descLabel, new Region(), priceLabel);
         VBox.setVgrow(infoBox.getChildren().get(3), Priority.ALWAYS);
 
-        // ACTION BOX
+           
         VBox actionBox = new VBox(15);
         actionBox.setAlignment(Pos.CENTER);
         actionBox.setPrefWidth(150);
@@ -247,19 +244,18 @@ public class MenuController {
 
     private static ImageView loadMenuItemImage(String imagePath) {
         if (imagePath == null || imagePath.trim().isEmpty()) {
-            return null; // Return null to trigger the placeholder
+            return null; 
         }
 
         try {
-            // 1. Extract just the filename (e.g., "1.jpg") from any path (e.g., "C:/Users/.../1.jpg")
+            //  Extract just the filename (e.g., "1.jpg") from any path (e.g., "C:/Users/.../1.jpg")
             // This fixes the issue even if you don't update the database immediately!
             String filename = new java.io.File(imagePath).getName();
 
-            // 2. Define the path where images live in your resources
+            // Define the path where images live in your resources
             String resourcePath = "/images/menu/" + filename;
 
-            // 3. Try to load from the classpath (The correct way for JavaFX apps)
-            // Note: The leading '/' is required to start at the root of 'src/main/resources'
+            // Try to load from the classpath
             java.net.URL imageUrl = MenuController.class.getResource(resourcePath);
 
             if (imageUrl != null) {
@@ -268,7 +264,6 @@ public class MenuController {
             } else {
                 System.err.println("⚠ Image not found in resources: " + resourcePath);
 
-                // Optional: Fallback to try loading from local file system (Only for development)
                 // This helps if you haven't moved the files to src/main/resources yet
                 java.io.File file = new java.io.File(imagePath);
                 if (file.exists()) {

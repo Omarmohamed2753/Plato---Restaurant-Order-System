@@ -12,7 +12,7 @@ import javafx.stage.Stage;
 
 public class WelcomeController {
 
-    // Dark Theme Colors
+    // Theme Colors
     private static final String BACKGROUND_DARK = "#1f2937";
     private static final String PRIMARY_COLOR = "#059669";
     private static final String ACCENT_GOLD = "#fcd34d";
@@ -27,9 +27,6 @@ public class WelcomeController {
         contentBox.setAlignment(Pos.CENTER);
         contentBox.setPadding(new Insets(80));
 
-        // Title with icon
-        // Label iconLabel = new Label("🍽️");
-        // iconLabel.setFont(Font.font("System", 80));
         
         Label titleLabel = new Label("Welcome to Plato");
         titleLabel.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 56));
@@ -39,7 +36,6 @@ public class WelcomeController {
         subtitleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 24));
         subtitleLabel.setTextFill(Color.web(TEXT_COLOR_LIGHT));
 
-        // Buttons container
         VBox buttonBox = new VBox(20);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setMaxWidth(350);

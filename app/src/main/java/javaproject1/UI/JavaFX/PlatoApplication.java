@@ -15,7 +15,6 @@ public class PlatoApplication extends Application {
         primaryStage.setMinWidth(800);
         primaryStage.setMinHeight(600);
         
-        // Show welcome screen
         WelcomeController.show(primaryStage);
         
         primaryStage.show();

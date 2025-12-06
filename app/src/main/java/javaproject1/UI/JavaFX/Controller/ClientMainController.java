@@ -189,7 +189,7 @@ public class ClientMainController {
         if (imageView != null) {
             imageView.setFitWidth(180);
             imageView.setFitHeight(180);
-            // imageView.setPreserveRatio(false); // Fill the square
+            imageView.setPreserveRatio(false); // Fill the square
             imageView.setSmooth(true);
 
             // Add rounded corners to the image to match the container
@@ -200,7 +200,6 @@ public class ClientMainController {
 
             imageBox.getChildren().add(imageView);
         } else {
-            // Fallback: If no image is found, show the label
             Label imagePlaceholder = new Label("📷");
             imagePlaceholder.setFont(Font.font(80));
             imagePlaceholder.setStyle("-fx-text-fill: " + TEXT_COLOR_SECONDARY + ";");
@@ -279,10 +278,9 @@ public class ClientMainController {
         }
 
         try {
-            // 1. Clean the path to get just the filename (e.g., "1.jpg")
+            //  Clean the path to get just the filename (e.g., "1.jpg")
             String filename = new java.io.File(imagePath).getName();
 
-            // 2. Look in resources (Standard for built apps)
             String resourcePath = "/images/menu/" + filename; 
 
             java.net.URL imageUrl = ClientMainController.class.getResource(resourcePath);
@@ -291,7 +289,7 @@ public class ClientMainController {
                 return new ImageView(new Image(imageUrl.toExternalForm()));
             } 
 
-            // 3. Optional: Fallback for local files (good for testing before moving files)
+            // Fallback for local files (good for testing before moving files)
             java.io.File file = new java.io.File(imagePath);
             if (file.exists()) {
                 return new ImageView(new Image(file.toURI().toString()));
