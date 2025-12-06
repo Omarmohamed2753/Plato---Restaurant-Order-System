@@ -262,8 +262,8 @@ public class AdminControllers {
             TableView<Employee> table = new TableView<>();
             table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
             
-            TableColumn<Employee, String> idCol = new TableColumn<>("ID");
-            idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getId()));
+            // TableColumn<Employee, String> idCol = new TableColumn<>("ID");
+            // idCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getId()));
             
             TableColumn<Employee, String> nameCol = new TableColumn<>("Name");
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
@@ -317,7 +317,7 @@ public class AdminControllers {
             });
             
 
-            table.getColumns().addAll(idCol, nameCol, roleCol, phoneCol, actionCol);
+            table.getColumns().addAll(nameCol, roleCol, phoneCol, actionCol);
             loadEmployeeData(table, admin);
 
             hireBtn.setOnAction(e -> {
@@ -331,7 +331,6 @@ public class AdminControllers {
                 }
             
                 Employee newEmp = new Employee();
-                newEmp.setId("EMP" + System.currentTimeMillis());
                 newEmp.setName(name);
                 newEmp.setRole(role);
                 newEmp.setAge(25);
@@ -342,13 +341,7 @@ public class AdminControllers {
                     newEmp.setRestaurant(admin.getRestaurant());
                     employeeService.addEmployee(newEmp);
                     restaurantService.hireEmployee(admin.getRestaurant(), newEmp);
-            
-                    // Option A: Reload table from service
-                    // loadEmployeeData(table, admin);
-            
-                    // Option B (instant add without refetching):
                     table.getItems().add(newEmp);
-            
                     nameField.clear(); 
                     roleField.clear();
                     phoneField.clear();
