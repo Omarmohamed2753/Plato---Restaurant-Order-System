@@ -196,97 +196,140 @@ public class OrderRepoImpl implements IOrderRepo {
         return orders;
     }
 
-    private Order mapToOrder(ResultSet rs, Connection conn) throws SQLException {
-        int orderId = rs.getInt("order_id");
-        int userId = rs.getInt("user_id");
-        int restaurantIdInt = rs.getInt("restaurant_id");
-        String restaurantId = rs.wasNull() ? null : String.valueOf(restaurantIdInt);
-        double totalAmount = rs.getDouble("total_amount");
-        String status = rs.getString("status");
-        Timestamp orderDate = rs.getTimestamp("order_date");
-        int addressIdInt = rs.getInt("address_id");
-        String addressId = rs.wasNull() ? null : String.valueOf(addressIdInt);
-        String paymentId = rs.getString("payment_id");
-        String deliveryId = rs.getString("delivery_id");
+    // In OrderRepoImpl.java, replace the mapToOrder method with this fixed version:
 
-        System.out.println("\n=== MAPPING ORDER #" + orderId + " ===");
+private Order mapToOrder(ResultSet rs, Connection conn) throws SQLException {
+    int orderId = rs.getInt("order_id");
+    int userId = rs.getInt("user_id");
+    int restaurantIdInt = rs.getInt("restaurant_id");
+    String restaurantId = rs.wasNull() ? null : String.valueOf(restaurantIdInt);
+    double totalAmount = rs.getDouble("total_amount");
+    String status = rs.getString("status");
+    Timestamp orderDate = rs.getTimestamp("order_date");
+    int addressIdInt = rs.getInt("address_id");
+    String addressId = rs.wasNull() ? null : String.valueOf(addressIdInt);
+    String paymentId = rs.getString("payment_id");
+    String deliveryId = rs.getString("delivery_id");
 
-        // Load user with full details
-        User user = (userId > 0) ? userRepo.getUserById(userId) : null;
-        System.out.println("User: " + (user != null ? user.getName() : "N/A"));
+    System.out.println("\n=== MAPPING ORDER #" + orderId + " ===");
 
-        // Load restaurant with full details
-        Restaurant restaurant = null;
-        if (restaurantId != null) {
-            RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
-            restaurant = restaurantRepo.getRestaurantById(restaurantIdInt);
-            System.out.println("Restaurant: " + (restaurant != null ? restaurant.getName() : "N/A"));
-        }
+    // Load user with full details
+    User user = (userId > 0) ? userRepo.getUserById(userId) : null;
+    System.out.println("User: " + (user != null ? user.getName() : "N/A"));
 
-        // Load address with full details
-        Address address = null;
-        if (addressId != null) {
-            AddressRepoImpl addressRepo = new AddressRepoImpl();
-            address = addressRepo.getAddressById(addressIdInt);
-            System.out.println("Address: " + (address != null ? address.toString() : "N/A"));
-        }
-
-        // Load payment with full details
-        Payment payment = null;
-        if (paymentId != null) {
-            PaymentRepoImpl paymentRepo = new PaymentRepoImpl();
-            try {
-                payment = paymentRepo.getPaymentById(Integer.parseInt(paymentId));
-            } catch (NumberFormatException e) {
-                System.err.println("Invalid payment ID: " + paymentId);
-            }
-        }
-
-        // Load delivery with full details
-        Delivery delivery = null;
-        if (deliveryId != null) {
-            DeliveryRepoImpl deliveryRepo = new DeliveryRepoImpl();
-            try {
-                delivery = deliveryRepo.getDeliveryById(Integer.parseInt(deliveryId));
-            } catch (NumberFormatException e) {
-                System.err.println("Invalid delivery ID: " + deliveryId);
-            }
-        }
-
-        // Parse order status
-        OrderStatus orderStatus = OrderStatus.PENDING;
-        if (status != null) {
-            try {
-                orderStatus = OrderStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                System.err.println("Invalid order status: " + status);
-            }
-        }
-        
-        Date date = (orderDate != null) ? new Date(orderDate.getTime()) : null;
-
-        // Create order
-        Order order = new Order();
-        order.setOrderId(String.valueOf(orderId));
-        order.setUser(user);
-        order.setRestaurant(restaurant);
-        order.setTotalAmount(totalAmount);
-        order.setStatus(orderStatus);
-        order.setOrderDate(date);
-        order.setDeliveryAddress(address);
-        order.setPayment(payment);
-        order.setDelivery(delivery);
-
-        // CRITICAL FIX: Load cart items for THIS specific order using a NEW connection
-        // This ensures each order gets its own items loaded independently
-        List<CartItem> items = loadOrderItemsForOrder(orderId);
-        order.setItems(items);
-
-        System.out.println("Loaded " + items.size() + " items for order #" + orderId);
-        System.out.println("=== END MAPPING ORDER #" + orderId + " ===\n");
-        
-        return order;
+    // Load restaurant with full details
+    Restaurant restaurant = null;
+    if (restaurantId != null) {
+        RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
+        restaurant = restaurantRepo.getRestaurantById(restaurantIdInt);
+        System.out.println("Restaurant: " + (restaurant != null ? restaurant.getName() : "N/A"));
     }
+
+    // Load address with full details
+    Address address = null;
+    if (addressId != null) {
+        AddressRepoImpl addressRepo = new AddressRepoImpl();
+        address = addressRepo.getAddressById(addressIdInt);
+        System.out.println("Address: " + (address != null ? address.toString() : "N/A"));
+    }
+
+    // Load payment with full details
+    Payment payment = null;
+    if (paymentId != null) {
+        PaymentRepoImpl paymentRepo = new PaymentRepoImpl();
+        try {
+            payment = paymentRepo.getPaymentById(Integer.parseInt(paymentId));
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid payment ID: " + paymentId);
+        }
+    }
+
+    // CRITICAL FIX: Load delivery with FULL employee details from database
+    Delivery delivery = null;
+    if (deliveryId != null && !deliveryId.trim().isEmpty()) {
+        System.out.println("Loading delivery: " + deliveryId);
+        
+        // Load delivery from database with employee information
+        String deliverySql = "SELECT d.*, e.id as emp_id, e.name as emp_name, e.phone_number, e.role " +
+                            "FROM delivery d " +
+                            "LEFT JOIN employees e ON d.delivery_person_id = e.id " +
+                            "WHERE d.delivery_id = ?";
+        
+        try (PreparedStatement deliveryStmt = conn.prepareStatement(deliverySql)) {
+            deliveryStmt.setString(1, deliveryId);
+            
+            try (ResultSet deliveryRs = deliveryStmt.executeQuery()) {
+                if (deliveryRs.next()) {
+                    delivery = new Delivery();
+                    delivery.setDeliveryId(deliveryRs.getString("delivery_id"));
+                    delivery.setStatus(deliveryRs.getString("status"));
+                    
+                    Timestamp estimatedTime = deliveryRs.getTimestamp("estimated_delivery_time");
+                    if (estimatedTime != null) {
+                        delivery.setEstimatedDeliveryTime(new Date(estimatedTime.getTime()));
+                    }
+                    
+                    // CRITICAL: Load employee details if exists
+                    int empId = deliveryRs.getInt("emp_id");
+                    if (!deliveryRs.wasNull() && empId > 0) {
+                        Employee deliveryPerson = new Employee();
+                        deliveryPerson.setId(String.valueOf(empId));
+                        deliveryPerson.setName(deliveryRs.getString("emp_name"));
+                        deliveryPerson.setPhoneNumber(deliveryRs.getString("phone_number"));
+                        deliveryPerson.setRole(deliveryRs.getString("role"));
+                        
+                        delivery.setDeliveryPerson(deliveryPerson);
+                        
+                        System.out.println("✓ Delivery person loaded: " + deliveryPerson.getName() + 
+                                         " (ID: " + empId + ", Phone: " + deliveryPerson.getPhoneNumber() + ")");
+                    } else {
+                        System.out.println("⚠ No delivery person assigned yet");
+                    }
+                } else {
+                    System.err.println("✗ Delivery record not found in database: " + deliveryId);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("✗ Error loading delivery: " + e.getMessage());
+            e.printStackTrace();
+        }
+    } else {
+        System.out.println("No delivery ID for this order");
+    }
+
+    // Parse order status
+    OrderStatus orderStatus = OrderStatus.PENDING;
+    if (status != null) {
+        try {
+            orderStatus = OrderStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid order status: " + status);
+        }
+    }
+    
+    Date date = (orderDate != null) ? new Date(orderDate.getTime()) : null;
+
+    // Create order
+    Order order = new Order();
+    order.setOrderId(String.valueOf(orderId));
+    order.setUser(user);
+    order.setRestaurant(restaurant);
+    order.setTotalAmount(totalAmount);
+    order.setStatus(orderStatus);
+    order.setOrderDate(date);
+    order.setDeliveryAddress(address);
+    order.setPayment(payment);
+    order.setDelivery(delivery);
+
+    // Load cart items for THIS specific order
+    List<CartItem> items = loadOrderItemsForOrder(orderId);
+    order.setItems(items);
+
+    System.out.println("✓ Order mapped with " + items.size() + " items");
+    System.out.println("=== END MAPPING ORDER #" + orderId + " ===\n");
+    
+    return order;
+}
 
     /**
      * CRITICAL FIX: Load cart items for a specific order using a separate connection
