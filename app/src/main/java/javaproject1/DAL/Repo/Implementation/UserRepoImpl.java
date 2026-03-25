@@ -9,10 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserRepoImpl implements IUserRepo {
-    
+
     public UserRepoImpl() {
     }
-    
+
     @Override
     public void addUser(User user) {
         String sql = "INSERT INTO users (name, age, phone, email, password, is_elite) VALUES (?, ?, ?, ?, ?, ?)";
@@ -26,15 +26,15 @@ public class UserRepoImpl implements IUserRepo {
             stmt.setString(5, user.getPassword());
             stmt.setBoolean(6, user.isElite());
             stmt.executeUpdate();
-            
+
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
                     int userId = rs.getInt(1);
                     user.setId(String.valueOf(userId));
-                    
+
                     // CRITICAL: Create cart for new user
                     createCartForUser(conn, userId);
-                    
+
                     System.out.println("User added with ID: " + userId);
                 }
             }
@@ -44,9 +44,9 @@ public class UserRepoImpl implements IUserRepo {
             e.printStackTrace();
         }
     }
-    
+
     /**
-     * Create a cart for a user
+     * Create a cart row for a user (called once on registration).
      */
     private void createCartForUser(Connection conn, int userId) throws SQLException {
         String sql = "INSERT INTO cart (user_id) VALUES (?)";
@@ -158,10 +158,12 @@ public class UserRepoImpl implements IUserRepo {
         return user;
     }
 
+    // ── Mapping ───────────────────────────────────────────────────────────────
+
     private User mapToUser(ResultSet rs, Connection conn) throws SQLException {
         User user = new User();
         int userId = rs.getInt("user_id");
-        
+
         user.setId(String.valueOf(userId));
         user.setName(rs.getString("name") != null ? rs.getString("name") : "");
         user.setAge(rs.getInt("age"));
@@ -172,7 +174,6 @@ public class UserRepoImpl implements IUserRepo {
 
         System.out.println("DEBUG UserRepo - Mapping user ID: " + userId);
 
-        // Load related data
         user.setAddresses(loadAddresses(conn, userId));
         user.setOrders(loadOrders(conn, userId));
         user.setSubscription(loadSubscription(conn, userId));
@@ -180,13 +181,17 @@ public class UserRepoImpl implements IUserRepo {
 
         return user;
     }
-    
+
+    // ── Cart ──────────────────────────────────────────────────────────────────
+
     /**
-     * Load cart for user, create if doesn't exist
+     * Loads the user's cart, creating the row if it is missing.
+     * Only items that are NOT already referenced in order_items are loaded —
+     * this prevents "ghost" items reappearing after a completed checkout.
      */
     private Cart loadOrCreateCart(Connection conn, int userId) throws SQLException {
         String sql = "SELECT cart_id FROM cart WHERE user_id = ?";
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -196,11 +201,11 @@ public class UserRepoImpl implements IUserRepo {
                 }
             }
         }
-        
-        // Cart doesn't exist, create it
+
+        // Cart doesn't exist yet – create it
         createCartForUser(conn, userId);
-        
-        // Now load the newly created cart
+
+        // Re-query to get the new cart_id
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -213,22 +218,39 @@ public class UserRepoImpl implements IUserRepo {
                 }
             }
         }
-        
-        // Fallback
+
+        // Fallback — should never reach here
         Cart cart = new Cart();
         System.out.println("DEBUG UserRepo - Returning empty cart for user " + userId);
         return cart;
     }
-    
+
+    /**
+     * Loads cart items for the given cart_id, EXCLUDING any items that have
+     * already been claimed by an order (present in the order_items table).
+     *
+     * This is the key fix: after a checkout the cart_item rows are deleted
+     * from the cart, but even if any survived they will not reappear here
+     * because they are already in order_items.
+     */
     private Cart loadCartItems(Connection conn, int cartId) throws SQLException {
         Cart cart = new Cart();
         cart.setCartId(cartId);
-        
-        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
-                     "FROM cart_item ci " +
-                     "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
-                     "WHERE ci.cart_id = ?";
-                     
+
+        /*
+         * Only select cart_item rows that belong to this cart AND are NOT
+         * already referenced in order_items (i.e. not part of any placed order).
+         */
+        String sql =
+            "SELECT ci.cart_item_id, ci.quantity, ci.sub_price, " +
+            "       mi.id AS menu_item_id, mi.name, mi.price, " +
+            "       mi.description, mi.category, mi.image_path " +
+            "FROM   cart_item ci " +
+            "JOIN   menu_items mi ON ci.menu_item_id = mi.id " +
+            "WHERE  ci.cart_id = ? " +
+            "  AND  ci.cart_item_id NOT IN " +
+            "       (SELECT cart_item_id FROM order_items)";
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, cartId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -236,33 +258,39 @@ public class UserRepoImpl implements IUserRepo {
                 while (rs.next()) {
                     CartItem item = new CartItem();
                     item.setCartItemID(rs.getInt("cart_item_id"));
-                    
+
                     MenuItem menuItem = new MenuItem();
                     menuItem.setItemId(rs.getString("menu_item_id"));
                     menuItem.setName(rs.getString("name") != null ? rs.getString("name") : "");
                     menuItem.setPrice(rs.getDouble("price"));
-                    menuItem.setDescription(rs.getString("description") != null ? rs.getString("description") : "");
-                    menuItem.setCategory(rs.getString("category") != null ? rs.getString("category") : "");
-                    menuItem.setImagePath(rs.getString("image_path") != null ? rs.getString("image_path") : "");
+                    menuItem.setDescription(rs.getString("description") != null
+                            ? rs.getString("description") : "");
+                    menuItem.setCategory(rs.getString("category") != null
+                            ? rs.getString("category") : "");
+                    menuItem.setImagePath(rs.getString("image_path") != null
+                            ? rs.getString("image_path") : "");
                     item.setMenuItem(menuItem);
-                    
+
                     item.setQuantity(rs.getInt("quantity"));
                     item.setSubPrice(rs.getDouble("sub_price"));
-                    
+
                     items.add(item);
                 }
                 cart.setItems(items);
             }
         }
-        
-        System.out.println("DEBUG UserRepo - Loaded " + cart.getItems().size() + " items in cart " + cartId);
+
+        System.out.println("DEBUG UserRepo - Loaded " + cart.getItems().size()
+                + " active (non-ordered) items in cart " + cartId);
         return cart;
     }
-    
+
+    // ── Orders ────────────────────────────────────────────────────────────────
+
     private List<Order> loadOrders(Connection conn, int userId) throws SQLException {
         List<Order> orders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE user_id = ?";
-        
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -270,16 +298,17 @@ public class UserRepoImpl implements IUserRepo {
                     Order order = new Order();
                     order.setOrderId(rs.getString("order_id"));
                     order.setTotalAmount(rs.getDouble("total_amount"));
-                    
+
                     String statusStr = rs.getString("status");
                     if (statusStr != null) {
                         try {
-                            order.setStatus(javaproject1.DAL.Enums.OrderStatus.valueOf(statusStr.toUpperCase()));
+                            order.setStatus(
+                                javaproject1.DAL.Enums.OrderStatus.valueOf(statusStr.toUpperCase()));
                         } catch (IllegalArgumentException e) {
                             order.setStatus(javaproject1.DAL.Enums.OrderStatus.PENDING);
                         }
                     }
-                    
+
                     Timestamp orderDate = rs.getTimestamp("order_date");
                     if (orderDate != null) {
                         order.setOrderDate(new java.util.Date(orderDate.getTime()));
@@ -288,58 +317,73 @@ public class UserRepoImpl implements IUserRepo {
                 }
             }
         }
-        
-        System.out.println("DEBUG UserRepo - Loaded " + orders.size() + " orders for user " + userId);
+
+        System.out.println("DEBUG UserRepo - Loaded " + orders.size()
+                + " orders for user " + userId);
         return orders;
     }
-    
+
+    // ── Addresses ─────────────────────────────────────────────────────────────
+
     private List<Address> loadAddresses(Connection conn, int userId) throws SQLException {
         List<Address> addresses = new ArrayList<>();
-        String sql = "SELECT a.* FROM address a " +
-                     "INNER JOIN user_addresses ua ON a.id = ua.address_id " +
-                     "WHERE ua.user_id = ?";
-                     
+        String sql =
+            "SELECT a.* FROM address a " +
+            "INNER JOIN user_addresses ua ON a.id = ua.address_id " +
+            "WHERE ua.user_id = ?";
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Address address = new Address();
                     address.setId(rs.getString("id"));
-                    address.setStreet(rs.getString("street") != null ? rs.getString("street") : "");
-                    address.setCity(rs.getString("city") != null ? rs.getString("city") : "");
+                    address.setStreet(rs.getString("street") != null
+                            ? rs.getString("street") : "");
+                    address.setCity(rs.getString("city") != null
+                            ? rs.getString("city") : "");
                     address.setBuildingNumber(rs.getInt("building_number"));
                     addresses.add(address);
                 }
             }
         }
-        
-        System.out.println("DEBUG UserRepo - Loaded " + addresses.size() + " addresses for user " + userId);
+
+        System.out.println("DEBUG UserRepo - Loaded " + addresses.size()
+                + " addresses for user " + userId);
         return addresses;
     }
-    
+
+    // ── Subscription ──────────────────────────────────────────────────────────
+
     private Subscription loadSubscription(Connection conn, int userId) throws SQLException {
-        String sql = "SELECT * FROM subscriptions WHERE user_id = ? AND active = TRUE ORDER BY subscription_id DESC LIMIT 1";
-        
+        String sql =
+            "SELECT * FROM subscriptions " +
+            "WHERE user_id = ? AND active = TRUE " +
+            "ORDER BY subscription_id DESC LIMIT 1";
+
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     java.sql.Date startDateSql = rs.getDate("start_date");
-                    java.sql.Date endDateSql = rs.getDate("end_date");
-                    
-                    java.util.Date startDate = (startDateSql != null) ? new java.util.Date(startDateSql.getTime()) : null;
-                    java.util.Date endDate = (endDateSql != null) ? new java.util.Date(endDateSql.getTime()) : null;
-                    
+                    java.sql.Date endDateSql   = rs.getDate("end_date");
+
+                    java.util.Date startDate = (startDateSql != null)
+                            ? new java.util.Date(startDateSql.getTime()) : null;
+                    java.util.Date endDate   = (endDateSql != null)
+                            ? new java.util.Date(endDateSql.getTime()) : null;
+
                     Subscription subscription = new Subscription(startDate, endDate);
                     subscription.setId(rs.getInt("subscription_id"));
                     subscription.setActive(rs.getBoolean("active"));
-                    
-                    System.out.println("DEBUG UserRepo - Loaded subscription for user " + userId + ", active: " + subscription.isActive());
+
+                    System.out.println("DEBUG UserRepo - Loaded subscription for user "
+                            + userId + ", active: " + subscription.isActive());
                     return subscription;
                 }
             }
         }
-        
+
         System.out.println("DEBUG UserRepo - No active subscription for user " + userId);
         return null;
     }
