@@ -691,9 +691,27 @@ public class AdminControllers {
                 String name = nameField.getText().trim();
                 String role = roleField.getText().trim();
                 String phone = phoneField.getText().trim();
-                
-                if(name.isEmpty() || role.isEmpty()) {
+            
+                if (name.isEmpty() || role.isEmpty()) {
                     showStyledAlert("Name and Role are required!", Alert.AlertType.WARNING);
+                    return;
+                }
+            
+                if (!name.matches("^[A-Za-z ]{3,}$")) {
+                    showStyledAlert("Name must be at least 3 characters and contain only letters!", Alert.AlertType.ERROR);
+                    return;
+                }
+            
+                if (!(role.equalsIgnoreCase("Chef") ||
+                      role.equalsIgnoreCase("Cashier") ||
+                      role.equalsIgnoreCase("Delivery"))) {
+            
+                    showStyledAlert("Role must be: Chef, Cashier, or Delivery!", Alert.AlertType.ERROR);
+                    return;
+                }
+            
+                if (!phone.isEmpty() && !phone.matches("^(010|011|012|015)\\d{8}$")) {
+                    showStyledAlert("Phone must be a valid Egyptian number (010, 011, 012, 015) and 11 digits!", Alert.AlertType.ERROR);
                     return;
                 }
             
@@ -701,17 +719,19 @@ public class AdminControllers {
                 newEmp.setName(name);
                 newEmp.setRole(role);
                 newEmp.setAge(25);
-                newEmp.setPhoneNumber(phone.isEmpty() ? "N/A" : phone); 
+                newEmp.setPhoneNumber(phone.isEmpty() ? "N/A" : phone);
                 newEmp.setExperiencesYear(0);
-                
+            
                 if (admin.getRestaurant() != null) {
                     newEmp.setRestaurant(admin.getRestaurant());
                     employeeService.addEmployee(newEmp);
                     restaurantService.hireEmployee(admin.getRestaurant(), newEmp);
                     table.getItems().add(newEmp);
-                    nameField.clear(); 
+            
+                    nameField.clear();
                     roleField.clear();
                     phoneField.clear();
+            
                     showStyledAlert("Employee hired successfully!", Alert.AlertType.INFORMATION);
                 }
             });
