@@ -16,7 +16,9 @@ import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Entity.Menu;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Enums.OrderStatus;
+import javaproject1.plato.JPAUtil;
 
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -108,9 +110,10 @@ public class AdminControllers {
                         setGraphic(null);
                     } else {
                         Order order = getTableView().getItems().get(getIndex());
-                        if (order.getStatus() != OrderStatus.DELIVERED &&
-                            order.getStatus() != OrderStatus.CANCELLED) {
-                            setGraphic(btn);
+                        boolean alreadyAssigned = order.getDelivery() != null && order.getDelivery().getDeliveryPerson() != null;
+                        boolean terminal = order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED;
+                        if (!terminal && !alreadyAssigned) {
+                            setGraphic(btn);   // only show if no person assigned yet AND not done
                         } else {
                             setGraphic(null);
                         }
@@ -380,24 +383,10 @@ public class AdminControllers {
                     deliveryService.assignDeliveryPerson(delivery, selectedEmployee, order);
                     System.out.println("Service assigned delivery person");
 
-                    try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
-                        String updateDeliverySql = "UPDATE delivery SET delivery_person_id = ?, status = ? WHERE delivery_id = ?";
-                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateDeliverySql)) {
-                            stmt.setInt(1, Integer.parseInt(selectedEmployee.getId()));
-                            stmt.setString(2, "Assigned");
-                            stmt.setString(3, delivery.getDeliveryId());
-                            int rows = stmt.executeUpdate();
-                            System.out.println("Updated delivery table: " + rows + " rows");
-                        }
-
-                        String updateOrderSql = "UPDATE orders SET delivery_id = ? WHERE order_id = ?";
-                        try (java.sql.PreparedStatement stmt = conn.prepareStatement(updateOrderSql)) {
-                            stmt.setString(1, delivery.getDeliveryId());
-                            stmt.setString(2, order.getOrderId());
-                            int rows = stmt.executeUpdate();
-                            System.out.println("Linked order to delivery: " + rows + " rows");
-                        }
-                    }
+                    // Use JPA instead of raw JDBC
+                    assignDeliveryPersonViaJPA(delivery.getDeliveryId(),
+                            Integer.parseInt(selectedEmployee.getId()),
+                            order.getOrderId());
 
                     order.setDelivery(delivery);
                     delivery.setDeliveryPerson(selectedEmployee);
@@ -417,6 +406,47 @@ public class AdminControllers {
                     ex.printStackTrace();
                 }
             });
+        }
+
+        /**
+         * Updates delivery.delivery_person_id and orders.delivery_id via JPA —
+         * no raw JDBC Connection or PreparedStatement.
+         */
+        private static void assignDeliveryPersonViaJPA(String deliveryId,
+                                                        int employeeId,
+                                                        String orderId) {
+            EntityManager em = JPAUtil.getEntityManager();
+            try {
+                em.getTransaction().begin();
+
+                // Update delivery row: set delivery_person_id + status
+                javaproject1.plato.Delivery jpaDelivery =
+                        em.find(javaproject1.plato.Delivery.class, deliveryId);
+                if (jpaDelivery != null) {
+                    jpaDelivery.setDeliveryPersonId(employeeId);
+                    jpaDelivery.setStatus("Assigned");
+                    em.merge(jpaDelivery);
+                    System.out.println("Updated delivery table: delivery_id=" + deliveryId
+                            + ", employee_id=" + employeeId);
+                }
+
+                // Update orders row: set delivery_id
+                javaproject1.plato.Orders jpaOrder =
+                        em.find(javaproject1.plato.Orders.class, Integer.parseInt(orderId));
+                if (jpaOrder != null && jpaDelivery != null) {
+                    jpaOrder.setDeliveryId(jpaDelivery);
+                    em.merge(jpaOrder);
+                    System.out.println("Linked order to delivery: order_id=" + orderId);
+                }
+
+                em.getTransaction().commit();
+            } catch (Exception e) {
+                if (em.getTransaction().isActive()) em.getTransaction().rollback();
+                System.err.println("JPA error in assignDeliveryPersonViaJPA: " + e.getMessage());
+                throw new RuntimeException(e);
+            } finally {
+                em.close();
+            }
         }
     }
 
@@ -589,7 +619,7 @@ public class AdminControllers {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // EMPLOYEES CONTROLLER  ← FIXED
+    // EMPLOYEES CONTROLLER
     // ─────────────────────────────────────────────────────────────────────────
     public static class AdminEmployeesController {
         public static void show(Stage stage, Admin admin) {
@@ -740,7 +770,7 @@ public class AdminControllers {
                 employeeService.addEmployee(newEmp);
                 restaurantService.hireEmployee(admin.getRestaurant(), newEmp);
                     table.getItems().add(newEmp);
-                
+
                 // ── Clear fields ──────────────────────────────────────────────
                 nameField.clear();
                 roleField.clear();
