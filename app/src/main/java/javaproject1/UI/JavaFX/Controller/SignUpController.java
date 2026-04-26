@@ -1,8 +1,6 @@
 package javaproject1.UI.JavaFX.Controller;
 
 import javafx.geometry.Insets;
-import java.util.Set;
-
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -15,29 +13,30 @@ import javaproject1.BLL.Service.implementation.AddressServiceImpl;
 import javaproject1.BLL.Service.implementation.UserServiceImpl;
 import javaproject1.DAL.Entity.Address;
 import javaproject1.DAL.Entity.User;
+import javaproject1.plato.JPAUtil;
+
+import javax.persistence.EntityManager;
+import java.util.Set;
 
 public class SignUpController {
 
-    private static UserServiceImpl userService = new UserServiceImpl();
-    private static AddressServiceImpl addressService = new AddressServiceImpl();
+    private static final UserServiceImpl    userService    = new UserServiceImpl();
+    private static final AddressServiceImpl addressService = new AddressServiceImpl();
 
-    // Theme Colors
-    private static final String BACKGROUND_DARK = "#1f2937";
-    private static final String PRIMARY_COLOR = "#059669";
-    private static final String ACCENT_GOLD = "#fcd34d";
-    private static final String CARD_BACKGROUND = "#374151";
-    private static final String TEXT_COLOR_LIGHT = "#f9fafb";
+    private static final String BACKGROUND_DARK      = "#1f2937";
+    private static final String PRIMARY_COLOR        = "#059669";
+    private static final String ACCENT_GOLD          = "#fcd34d";
+    private static final String CARD_BACKGROUND      = "#374151";
+    private static final String TEXT_COLOR_LIGHT     = "#f9fafb";
     private static final String TEXT_COLOR_SECONDARY = "#d1d5db";
-    private static final String ITEM_BACKGROUND = "#2b3543";
-    private static final String ERROR_COLOR = "#ef4444";
-    private static final String SUCCESS_COLOR = "#10b981";
+    private static final String ITEM_BACKGROUND      = "#2b3543";
+    private static final String ERROR_COLOR          = "#ef4444";
+    private static final String SUCCESS_COLOR        = "#10b981";
 
     public static void show(Stage stage) {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: " + BACKGROUND_DARK + ";");
-
-        HBox header = createHeader(stage);
-        root.setTop(header);
+        root.setTop(createHeader(stage));
 
         VBox formBox = new VBox(25);
         formBox.setAlignment(Pos.CENTER);
@@ -50,127 +49,76 @@ public class SignUpController {
 
         VBox cardBox = new VBox(25);
         cardBox.setPadding(new Insets(40));
-        cardBox.setStyle(
-            "-fx-background-color: " + CARD_BACKGROUND + "; " +
-            "-fx-background-radius: 20; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);"
-        );
+        cardBox.setStyle("-fx-background-color: " + CARD_BACKGROUND + "; " +
+                "-fx-background-radius: 20; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 15, 0, 0, 5);");
 
         GridPane grid = new GridPane();
-        grid.setHgap(20);
-        grid.setVgap(20);
-        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(20); grid.setVgap(20); grid.setAlignment(Pos.CENTER);
 
-        TextField nameField     = createTextField("Full Name");
-        TextField emailField    = createTextField("Email (e.g. user@example.com)");
+        TextField     nameField            = createTextField("Full Name");
+        TextField     emailField           = createTextField("Email (e.g. user@example.com)");
         PasswordField passwordField        = createPasswordField("Password (min 6 characters)");
         PasswordField confirmPasswordField = createPasswordField("Confirm Password");
-        TextField phoneField    = createTextField("Phone (010/011/012/015 + 8 digits)");
-        TextField ageField      = createTextField("Age");
-        TextField streetField   = createTextField("Street");
-        TextField cityField     = createTextField("City");
-        TextField buildingField = createTextField("Building Number");
+        TextField     phoneField           = createTextField("Phone (010/011/012/015 + 8 digits)");
+        TextField     ageField             = createTextField("Age");
+        TextField     streetField          = createTextField("Street");
+        TextField     cityField            = createTextField("City");
+        TextField     buildingField        = createTextField("Building Number");
 
-        // Inline validation hint labels
         Label emailValidLabel = createInlineValidLabel();
         Label phoneValidLabel = createInlineValidLabel();
 
-        // ── Real-time email validation ────────────────────────────────────────
-        emailField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.isEmpty()) {
-                emailValidLabel.setText("");
-            } else if (isValidEmail(newVal)) {
-                emailValidLabel.setText("✓ Valid email");
+        emailField.textProperty().addListener((obs, o, n) -> {
+            if (n.isEmpty()) { emailValidLabel.setText(""); return; }
+            if (isValidEmail(n)) {
+                emailValidLabel.setText("Valid email");
                 emailValidLabel.setTextFill(Color.web(SUCCESS_COLOR));
             } else {
-                emailValidLabel.setText("✗ Enter a valid email (e.g. user@example.com)");
+                emailValidLabel.setText("Enter a valid email (e.g. user@example.com)");
                 emailValidLabel.setTextFill(Color.web(ERROR_COLOR));
             }
         });
 
-        // ── Real-time phone validation (digits only, max 11) ─────────────────
-        phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
-            // Strip any non-digit characters immediately
-            String digitsOnly = newVal.replaceAll("[^\\d]", "");
-            if (!digitsOnly.equals(newVal)) {
-                phoneField.setText(digitsOnly);
-                return;
-            }
-            // Enforce max length of 11
-            if (newVal.length() > 11) {
-                phoneField.setText(newVal.substring(0, 11));
-                return;
-            }
-
-            if (newVal.isEmpty()) {
-                phoneValidLabel.setText("");
-            } else if (isValidEgyptianPhone(newVal)) {
-                phoneValidLabel.setText("✓ Valid phone number");
+        phoneField.textProperty().addListener((obs, o, n) -> {
+            String digits = n.replaceAll("[^\\d]", "");
+            if (!digits.equals(n)) { phoneField.setText(digits); return; }
+            if (n.length() > 11) { phoneField.setText(n.substring(0, 11)); return; }
+            if (n.isEmpty()) { phoneValidLabel.setText(""); return; }
+            if (isValidEgyptianPhone(n)) {
+                phoneValidLabel.setText("Valid phone number");
                 phoneValidLabel.setTextFill(Color.web(SUCCESS_COLOR));
-            } else if (newVal.length() < 11) {
+            } else if (n.length() < 11) {
                 phoneValidLabel.setText("Enter 11 digits starting with 010, 011, 012, or 015");
                 phoneValidLabel.setTextFill(Color.web(TEXT_COLOR_SECONDARY));
             } else {
-                phoneValidLabel.setText("✗ Must start with 010, 011, 012, or 015");
+                phoneValidLabel.setText("Must start with 010, 011, 012, or 015");
                 phoneValidLabel.setTextFill(Color.web(ERROR_COLOR));
             }
         });
 
-        // ── Build grid rows ───────────────────────────────────────────────────
         int row = 0;
+        grid.add(createFormLabel("Name:"),    0, row); grid.add(nameField, 1, row++);
+        grid.add(createFormLabel("Email:"),   0, row); grid.add(new VBox(4, emailField, emailValidLabel), 1, row++);
+        grid.add(createFormLabel("Password:"),0, row); grid.add(passwordField, 1, row++);
+        grid.add(createFormLabel("Confirm:"), 0, row); grid.add(confirmPasswordField, 1, row++);
+        grid.add(createFormLabel("Phone:"),   0, row); grid.add(new VBox(4, phoneField, phoneValidLabel), 1, row++);
+        grid.add(createFormLabel("Age:"),     0, row); grid.add(ageField, 1, row++);
 
-        grid.add(createFormLabel("Name:"), 0, row);
-        grid.add(nameField, 1, row++);
+        Label addressSep = new Label("Delivery Address");
+        addressSep.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        addressSep.setTextFill(Color.web(PRIMARY_COLOR));
+        grid.add(addressSep, 0, row++, 2, 1);
 
-        grid.add(createFormLabel("Email:"), 0, row);
-        VBox emailBox = new VBox(4, emailField, emailValidLabel);
-        grid.add(emailBox, 1, row++);
+        grid.add(createFormLabel("Street:"),   0, row); grid.add(streetField,   1, row++);
+        grid.add(createFormLabel("City:"),     0, row); grid.add(cityField,     1, row++);
+        grid.add(createFormLabel("Building:"), 0, row); grid.add(buildingField, 1, row++);
 
-        grid.add(createFormLabel("Password:"), 0, row);
-        grid.add(passwordField, 1, row++);
-
-        grid.add(createFormLabel("Confirm:"), 0, row);
-        grid.add(confirmPasswordField, 1, row++);
-
-        grid.add(createFormLabel("Phone:"), 0, row);
-        VBox phoneBox = new VBox(4, phoneField, phoneValidLabel);
-        grid.add(phoneBox, 1, row++);
-
-        grid.add(createFormLabel("Age:"), 0, row);
-        grid.add(ageField, 1, row++);
-
-        Label addressSeparator = new Label("📍 Delivery Address");
-        addressSeparator.setFont(Font.font("Arial", FontWeight.BOLD, 18));
-        addressSeparator.setTextFill(Color.web(PRIMARY_COLOR));
-        grid.add(addressSeparator, 0, row++, 2, 1);
-
-        grid.add(createFormLabel("Street:"), 0, row);
-        grid.add(streetField, 1, row++);
-
-        grid.add(createFormLabel("City:"), 0, row);
-        grid.add(cityField, 1, row++);
-
-        grid.add(createFormLabel("Building:"), 0, row);
-        grid.add(buildingField, 1, row++);
-
-        // ── Sign-up button ────────────────────────────────────────────────────
-        Button signUpButton = new Button("Create Account ✓");
-        signUpButton.setPrefWidth(250);
-        signUpButton.setPrefHeight(50);
-        signUpButton.setStyle(
-            "-fx-background-color: " + SUCCESS_COLOR + "; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 18px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-background-radius: 25; " +
-            "-fx-cursor: hand; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 3);"
-        );
-        signUpButton.setOnMouseEntered(e ->
-            signUpButton.setStyle(signUpButton.getStyle() + "-fx-background-color: #059669;"));
-        signUpButton.setOnMouseExited(e ->
-            signUpButton.setStyle(signUpButton.getStyle()
-                .replace("-fx-background-color: #059669;", "-fx-background-color: " + SUCCESS_COLOR + ";")));
+        Button signUpButton = new Button("Create Account");
+        signUpButton.setPrefWidth(250); signUpButton.setPrefHeight(50);
+        signUpButton.setStyle("-fx-background-color: " + SUCCESS_COLOR + "; -fx-text-fill: white; " +
+                "-fx-font-size: 18px; -fx-font-weight: bold; -fx-background-radius: 25; -fx-cursor: hand; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 3);");
 
         Label messageLabel = new Label();
         messageLabel.setFont(Font.font("System", 15));
@@ -180,97 +128,60 @@ public class SignUpController {
 
         signUpButton.setOnAction(e -> {
             try {
-                String name         = nameField.getText().trim();
-                String email        = emailField.getText().trim();
-                String password     = passwordField.getText();
-                String confirmPwd   = confirmPasswordField.getText();
-                String phone        = phoneField.getText().trim();
-                String ageText      = ageField.getText().trim();
-                String street       = streetField.getText().trim();
-                String city         = cityField.getText().trim();
-                String buildingText = buildingField.getText().trim();
+                String name     = nameField.getText().trim();
+                String email    = emailField.getText().trim();
+                String password = passwordField.getText();
+                String confirmP = confirmPasswordField.getText();
+                String phone    = phoneField.getText().trim();
+                String ageText  = ageField.getText().trim();
+                String street   = streetField.getText().trim();
+                String city     = cityField.getText().trim();
+                String bText    = buildingField.getText().trim();
 
-                // ── Blank check ───────────────────────────────────────────────
                 if (name.isEmpty() || email.isEmpty() || password.isEmpty() ||
                         phone.isEmpty() || ageText.isEmpty() || street.isEmpty() ||
-                        city.isEmpty() || buildingText.isEmpty()) {
-                    showError(messageLabel, "All fields are required!");
-                    return;
+                        city.isEmpty() || bText.isEmpty()) {
+                    showError(messageLabel, "All fields are required!"); return;
                 }
-
-                // ── Email validation ──────────────────────────────────────────
                 if (!isValidEmail(email)) {
-                    showError(messageLabel,
-                        "Please enter a valid email address (e.g. user@example.com)");
-                    emailField.requestFocus();
-                    return;
+                    showError(messageLabel, "Please enter a valid email address."); return;
                 }
-
-                // ── Phone validation ──────────────────────────────────────────
                 if (!isValidEgyptianPhone(phone)) {
                     showError(messageLabel,
-                        "Phone must be 11 digits and start with 010, 011, 012, or 015");
-                    phoneField.requestFocus();
-                    return;
+                            "Phone must be 11 digits starting with 010, 011, 012, or 015"); return;
                 }
-
-                // ── Password checks ───────────────────────────────────────────
-                if (!password.equals(confirmPwd)) {
-                    showError(messageLabel, "Passwords do not match!");
-                    return;
+                if (!password.equals(confirmP)) {
+                    showError(messageLabel, "Passwords do not match!"); return;
                 }
                 if (password.length() < 6) {
-                    showError(messageLabel, "Password must be at least 6 characters!");
-                    return;
+                    showError(messageLabel, "Password must be at least 6 characters!"); return;
                 }
 
-                int age = Integer.parseInt(ageText);
+                int age      = Integer.parseInt(ageText);
+                int building = Integer.parseInt(bText);
+
                 if (age < 1 || age > 120) {
-                    showError(messageLabel, "Please enter a valid age (1-120)!");
-                    return;
+                    showError(messageLabel, "Please enter a valid age (1-120)!"); return;
                 }
 
-                int building = Integer.parseInt(buildingText);
-
-                // ── Persist the address first so we get its generated ID ──────
+                // Persist address
                 Address address = new Address(street, city, building);
-                addressService.addAddress(address);   // sets address.getId()
+                addressService.addAddress(address);
 
-                // ── Create the user account (also creates the cart row) ───────
+                // Create user (also creates cart row via UserRepoImpl.addUser)
                 User user = new User(null, name, age, phone, email, password, null);
                 boolean success = userService.createAccount(user);
 
                 if (success) {
-                    // ── Link address → user in user_addresses junction table ──
-                    if (address.getId() != null && user.getId() != null) {
-                        try (java.sql.Connection conn =
-                                     javaproject1.DAL.DataBase.DBConnection.getConnection();
-                             java.sql.PreparedStatement stmt = conn.prepareStatement(
-                                     "INSERT INTO user_addresses (user_id, address_id) VALUES (?, ?)")) {
-                            stmt.setInt(1, Integer.parseInt(user.getId()));
-                            stmt.setString(2, address.getId());
-                            stmt.executeUpdate();
-                            System.out.println("✓ Address " + address.getId()
-                                    + " linked to user " + user.getId());
-                        } catch (Exception ex) {
-                            System.err.println("Error linking address to user: " + ex.getMessage());
-                            ex.printStackTrace();
-                        }
-                    }
+                    // Link address to user via JPA — no raw SQL
+                    linkAddressToUser(Integer.parseInt(address.getId()),
+                            Integer.parseInt(user.getId()));
 
-                    showSuccess(messageLabel,
-                        "Account created successfully! Redirecting to sign in...");
-
+                    showSuccess(messageLabel, "Account created! Redirecting to sign in...");
                     new Thread(() -> {
-                        try {
-                            Thread.sleep(1500);
-                            javafx.application.Platform.runLater(() ->
-                                    SignInController.show(stage));
-                        } catch (InterruptedException ex) {
-                            ex.printStackTrace();
-                        }
+                        try { Thread.sleep(1500); } catch (InterruptedException ex2) { /* ignore */ }
+                        javafx.application.Platform.runLater(() -> SignInController.show(stage));
                     }).start();
-
                 } else {
                     showError(messageLabel, "Email already exists!");
                 }
@@ -292,129 +203,115 @@ public class SignUpController {
 
         ScrollPane scrollPane = new ScrollPane(formBox);
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle(
-            "-fx-background: " + BACKGROUND_DARK + "; -fx-background-color: transparent;");
+        scrollPane.setStyle("-fx-background: " + BACKGROUND_DARK + "; -fx-background-color: transparent;");
 
         root.setCenter(scrollPane);
-        Scene scene = new Scene(root, 1000, 700);
-        stage.setScene(scene);
+        stage.setScene(new Scene(root, 1000, 700));
     }
 
-    // ── Validation helpers ────────────────────────────────────────────────────
+    // ── JPA helper — replaces raw "INSERT INTO user_addresses" ────────────────
 
     /**
-     * Validates email using a standard pattern:
-     * local-part @ domain . TLD  (TLD >= 2 chars).
+     * Adds the address to the user's address set via JPA (ManyToMany).
+     * This writes the user_addresses junction row without any raw SQL.
      */
+    private static void linkAddressToUser(int addressId, int userId) {
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            javaproject1.plato.Users u =
+                    em.find(javaproject1.plato.Users.class, userId);
+            javaproject1.plato.Address a =
+                    em.find(javaproject1.plato.Address.class, addressId);
+
+            if (u != null && a != null) {
+                if (u.getAddressSet() == null) u.setAddressSet(new java.util.HashSet<>());
+                u.getAddressSet().add(a);
+                em.merge(u);
+                System.out.println("Linked address " + addressId + " to user " + userId);
+            }
+
+            em.getTransaction().commit();
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            System.err.println("Error linking address to user: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            em.close();
+        }
+    }
+
+    // ── Validation ────────────────────────────────────────────────────────────
+
     private static final Set<String> ALLOWED_DOMAINS = Set.of(
-        "gmail.com",
-        "yahoo.com",
-        "outlook.com",
-        "hotmail.com",
-        "live.com",
-        "icloud.com"
-    );
-    
+            "gmail.com", "yahoo.com", "outlook.com",
+            "hotmail.com", "live.com", "icloud.com");
+
     private static boolean isValidEmail(String email) {
         if (email == null || email.isEmpty()) return false;
-    
-        // 1. Check format + .com
-        boolean validFormat = email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9-]+\\.com$");
-        if (!validFormat) return false;
-    
-        // 2. Check domain is popular
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9-]+\\.com$")) return false;
         String domain = email.substring(email.indexOf("@") + 1);
         return ALLOWED_DOMAINS.contains(domain);
     }
 
-    /**
-     * Egyptian mobile numbers: exactly 11 digits, prefix 010 / 011 / 012 / 015.
-     */
     private static boolean isValidEgyptianPhone(String phone) {
         if (phone == null) return false;
         return phone.matches("^(010|011|012|015)\\d{8}$");
     }
 
-    // ── UI factory helpers ────────────────────────────────────────────────────
-
-    private static Label createInlineValidLabel() {
-        Label label = new Label();
-        label.setFont(Font.font("System", 13));
-        label.setWrapText(true);
-        label.setMaxWidth(350);
-        return label;
-    }
+    // ── UI helpers ────────────────────────────────────────────────────────────
 
     private static HBox createHeader(Stage stage) {
         HBox header = new HBox();
         header.setPadding(new Insets(20, 30, 20, 30));
-        header.setStyle("-fx-background-color: " + CARD_BACKGROUND
-                + "; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 8, 0, 0, 3);");
+        header.setStyle("-fx-background-color: " + CARD_BACKGROUND + ";");
 
-        Button backButton = new Button("← Back");
-        backButton.setStyle(
-            "-fx-background-color: transparent; " +
-            "-fx-text-fill: " + PRIMARY_COLOR + "; " +
-            "-fx-font-size: 16px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-cursor: hand;"
-        );
-        backButton.setOnMouseEntered(e ->
-            backButton.setStyle(backButton.getStyle() + "-fx-text-fill: " + ACCENT_GOLD + ";"));
-        backButton.setOnMouseExited(e ->
-            backButton.setStyle(backButton.getStyle()
-                .replace("-fx-text-fill: " + ACCENT_GOLD + ";",
-                         "-fx-text-fill: " + PRIMARY_COLOR + ";")));
-        backButton.setOnAction(e -> WelcomeController.show(stage));
-
-        header.getChildren().add(backButton);
+        Button back = new Button("Back");
+        back.setStyle("-fx-background-color: transparent; -fx-text-fill: " + PRIMARY_COLOR + "; " +
+                "-fx-font-size: 16px; -fx-font-weight: bold; -fx-cursor: hand;");
+        back.setOnAction(e -> WelcomeController.show(stage));
+        header.getChildren().add(back);
         return header;
     }
 
     private static TextField createTextField(String prompt) {
-        TextField field = new TextField();
-        field.setPromptText(prompt);
-        field.setPrefWidth(350);
-        field.setStyle(
-            "-fx-padding: 12; " +
-            "-fx-font-size: 15px; " +
-            "-fx-background-color: " + ITEM_BACKGROUND + "; " +
-            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
-            "-fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
-            "-fx-background-radius: 8;"
-        );
-        return field;
+        TextField f = new TextField();
+        f.setPromptText(prompt); f.setPrefWidth(350);
+        f.setStyle("-fx-padding: 12; -fx-font-size: 15px; -fx-background-color: " + ITEM_BACKGROUND + "; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+                "-fx-background-radius: 8;");
+        return f;
     }
 
     private static PasswordField createPasswordField(String prompt) {
-        PasswordField field = new PasswordField();
-        field.setPromptText(prompt);
-        field.setPrefWidth(350);
-        field.setStyle(
-            "-fx-padding: 12; " +
-            "-fx-font-size: 15px; " +
-            "-fx-background-color: " + ITEM_BACKGROUND + "; " +
-            "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; " +
-            "-fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
-            "-fx-background-radius: 8;"
-        );
-        return field;
+        PasswordField f = new PasswordField();
+        f.setPromptText(prompt); f.setPrefWidth(350);
+        f.setStyle("-fx-padding: 12; -fx-font-size: 15px; -fx-background-color: " + ITEM_BACKGROUND + "; " +
+                "-fx-text-fill: " + TEXT_COLOR_LIGHT + "; -fx-prompt-text-fill: " + TEXT_COLOR_SECONDARY + "; " +
+                "-fx-background-radius: 8;");
+        return f;
     }
 
     private static Label createFormLabel(String text) {
-        Label label = new Label(text);
-        label.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-        label.setTextFill(Color.web(TEXT_COLOR_LIGHT));
-        return label;
+        Label l = new Label(text);
+        l.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        l.setTextFill(Color.web(TEXT_COLOR_LIGHT));
+        return l;
     }
 
-    private static void showError(Label label, String message) {
-        label.setText("❌ " + message);
-        label.setTextFill(Color.web(ERROR_COLOR));
+    private static Label createInlineValidLabel() {
+        Label l = new Label();
+        l.setFont(Font.font("System", 13));
+        l.setWrapText(true); l.setMaxWidth(350);
+        return l;
     }
 
-    private static void showSuccess(Label label, String message) {
-        label.setText("✓ " + message);
-        label.setTextFill(Color.web(SUCCESS_COLOR));
+    private static void showError(Label l, String msg) {
+        l.setText(msg); l.setTextFill(Color.web(ERROR_COLOR));
+    }
+
+    private static void showSuccess(Label l, String msg) {
+        l.setText(msg); l.setTextFill(Color.web(SUCCESS_COLOR));
     }
 }

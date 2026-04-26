@@ -16,23 +16,25 @@ import javaproject1.DAL.Enums.OrderStatus;
 import javaproject1.DAL.Enums.PaymentM;
 import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 import javaproject1.DAL.Repo.Implementation.DeliveryRepoImpl;
+import javaproject1.plato.JPAUtil;
 
+import javax.persistence.EntityManager;
 import java.util.*;
 
 public class CheckoutController {
-    private static OrderServiceImpl    orderService    = new OrderServiceImpl();
-    private static CartServiceImpl     cartService     = new CartServiceImpl();
-    private static PaymentServiceImpl  paymentService  = new PaymentServiceImpl();
-    private static RestaurantRepoImpl  restaurantRepo  = new RestaurantRepoImpl();
-    private static DeliveryServiceImpl deliveryService = new DeliveryServiceImpl();
-    private static DeliveryRepoImpl    deliveryRepo    = new DeliveryRepoImpl();
+
+    private static final OrderServiceImpl    orderService    = new OrderServiceImpl();
+    private static final CartServiceImpl     cartService     = new CartServiceImpl();
+    private static final PaymentServiceImpl  paymentService  = new PaymentServiceImpl();
+    private static final RestaurantRepoImpl  restaurantRepo  = new RestaurantRepoImpl();
+    private static final DeliveryServiceImpl deliveryService = new DeliveryServiceImpl();
+    private static final DeliveryRepoImpl    deliveryRepo    = new DeliveryRepoImpl();
 
     public static void show(Stage stage, User user) {
         Cart cart = user.getCart();
 
         if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Your cart is empty!");
-            alert.showAndWait();
+            new Alert(Alert.AlertType.WARNING, "Your cart is empty!").showAndWait();
             CartController.show(stage, user);
             return;
         }
@@ -48,14 +50,11 @@ public class CheckoutController {
         contentBox.setMaxWidth(800);
 
         Label titleLabel = new Label("Checkout");
-        titleLabel.setStyle(
-            "-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+        titleLabel.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #000000;");
 
         // ── Calculate totals ──────────────────────────────────────────────────
-        double subtotal = 0.0;
-        for (CartItem item : cart.getItems()) {
-            subtotal += item.getSubPrice();
-        }
+        double subtotal = cart.getItems().stream()
+                .mapToDouble(CartItem::getSubPrice).sum();
         double tax         = subtotal * 0.1;
         double deliveryFee = 30.0;
         double discount    = 0.0;
@@ -66,108 +65,82 @@ public class CheckoutController {
 
         VBox summaryBox  = createSummaryBox(cart, subtotal, tax, deliveryFee, discount, total);
         VBox addressBox  = createAddressBox(user);
-        ComboBox<Address> addressCombo =
-            (ComboBox<Address>) addressBox.lookup(".combo-box");
+        ComboBox<Address> addressCombo = (ComboBox<Address>) addressBox.lookup(".combo-box");
 
         VBox paymentBox  = createPaymentBox();
         ToggleGroup paymentGroup = (ToggleGroup) paymentBox.getUserData();
         VBox cardDetailsBox =
-            (VBox) paymentBox.getChildren().get(paymentBox.getChildren().size() - 1);
+                (VBox) paymentBox.getChildren().get(paymentBox.getChildren().size() - 1);
 
         Button placeOrderButton = new Button("Place Order");
         placeOrderButton.setPrefWidth(300);
         placeOrderButton.setStyle(
-            "-fx-background-color: #27ae60; -fx-text-fill: white; " +
-            "-fx-font-size: 18px; -fx-font-weight: bold; " +
-            "-fx-padding: 15 30; -fx-background-radius: 25; -fx-cursor: hand;");
+                "-fx-background-color: #27ae60; -fx-text-fill: white; " +
+                "-fx-font-size: 18px; -fx-font-weight: bold; " +
+                "-fx-padding: 15 30; -fx-background-radius: 25; -fx-cursor: hand;");
 
         Label orderMessageLabel = new Label();
         orderMessageLabel.setFont(Font.font("System", 14));
         orderMessageLabel.setWrapText(true);
 
         placeOrderButton.setOnAction(e -> {
-            // ── Address check ─────────────────────────────────────────────────
+            // ── Validate address ──────────────────────────────────────────────
             if (user.getAddresses() == null || user.getAddresses().isEmpty()) {
                 new Alert(Alert.AlertType.ERROR,
-                    "Please add a delivery address in your profile first!")
-                    .showAndWait();
+                        "Please add a delivery address in your profile first!").showAndWait();
                 return;
             }
 
             Address selectedAddress = addressCombo != null ? addressCombo.getValue() : null;
             if (selectedAddress == null) {
-                new Alert(Alert.AlertType.ERROR, "Please select a delivery address!")
-                    .showAndWait();
+                new Alert(Alert.AlertType.ERROR,
+                        "Please select a delivery address!").showAndWait();
                 return;
             }
 
-            // ── Payment method check ──────────────────────────────────────────
-            RadioButton selectedPayment =
-                (RadioButton) paymentGroup.getSelectedToggle();
+            // ── Validate payment ──────────────────────────────────────────────
+            RadioButton selectedPayment = (RadioButton) paymentGroup.getSelectedToggle();
             if (selectedPayment == null) {
-                new Alert(Alert.AlertType.ERROR, "Please select a payment method!")
-                    .showAndWait();
+                new Alert(Alert.AlertType.ERROR,
+                        "Please select a payment method!").showAndWait();
                 return;
             }
 
             boolean isCreditCard = selectedPayment.getText().contains("Credit Card");
 
             if (isCreditCard) {
-                TextField cardNumberField =
-                    (TextField) cardDetailsBox.lookup("#cardNumber");
-                TextField cardHolderField =
-                    (TextField) cardDetailsBox.lookup("#cardHolder");
-                TextField expiryField =
-                    (TextField) cardDetailsBox.lookup("#expiry");
-                TextField cvvField =
-                    (TextField) cardDetailsBox.lookup("#cvv");
+                TextField cardNumberField = (TextField) cardDetailsBox.lookup("#cardNumber");
+                TextField cardHolderField = (TextField) cardDetailsBox.lookup("#cardHolder");
+                TextField expiryField     = (TextField) cardDetailsBox.lookup("#expiry");
+                TextField cvvField        = (TextField) cardDetailsBox.lookup("#cvv");
 
                 if (cardNumberField.getText().trim().isEmpty() ||
                         cardHolderField.getText().trim().isEmpty() ||
                         expiryField.getText().trim().isEmpty() ||
                         cvvField.getText().trim().isEmpty()) {
                     new Alert(Alert.AlertType.ERROR,
-                        "Please fill in all credit card details!").showAndWait();
+                            "Please fill in all credit card details!").showAndWait();
                     return;
                 }
 
-                String cardNumber =
-                    cardNumberField.getText().trim().replaceAll("\\s+", "");
+                String cardNumber = cardNumberField.getText().trim().replaceAll("\\s+", "");
                 String cvv = cvvField.getText().trim();
 
                 if (!cardNumber.matches("\\d{16}")) {
-                    new Alert(Alert.AlertType.ERROR,
-                        "Card number must be 16 digits!").showAndWait();
+                    new Alert(Alert.AlertType.ERROR, "Card number must be 16 digits!").showAndWait();
                     return;
                 }
                 if (!cvv.matches("\\d{3,4}")) {
-                    new Alert(Alert.AlertType.ERROR,
-                        "CVV must be 3 or 4 digits!").showAndWait();
+                    new Alert(Alert.AlertType.ERROR, "CVV must be 3 or 4 digits!").showAndWait();
                     return;
                 }
             }
 
-            // ── Determine restaurant from cart items ──────────────────────────
-            Restaurant restaurant = null;
-            if (!cart.getItems().isEmpty()) {
-                MenuItem firstItem = cart.getItems().get(0).getMenuItem();
-                List<Restaurant> restaurants = restaurantRepo.getAllRestaurants();
-                outer:
-                for (Restaurant r : restaurants) {
-                    if (r.getMenu() != null && r.getMenu().getItems() != null) {
-                        for (MenuItem mi : r.getMenu().getItems()) {
-                            if (mi.getItemId().equals(firstItem.getItemId())) {
-                                restaurant = r;
-                                break outer;
-                            }
-                        }
-                    }
-                }
-            }
-
+            // ── Resolve restaurant from cart ──────────────────────────────────
+            Restaurant restaurant = resolveRestaurant(cart);
             if (restaurant == null) {
                 new Alert(Alert.AlertType.ERROR,
-                    "Could not determine restaurant. Please try again.").showAndWait();
+                        "Could not determine restaurant. Please try again.").showAndWait();
                 return;
             }
 
@@ -178,16 +151,14 @@ public class CheckoutController {
             try {
                 System.out.println("=== STARTING ORDER CREATION ===");
 
-                // ── 1. Create Delivery record ─────────────────────────────────
+                // 1. Create Delivery record
                 Delivery delivery = new Delivery();
                 delivery.setDeliveryId("DEL" + System.currentTimeMillis());
                 delivery.setStatus("Pending Assignment");
-                delivery.setEstimatedDeliveryTime(null);
-                delivery.setDeliveryPerson(null);
                 deliveryRepo.addDelivery(delivery);
-                System.out.println("✓ Delivery created: " + delivery.getDeliveryId());
+                System.out.println("Delivery created: " + delivery.getDeliveryId());
 
-                // ── 2. Process & persist Payment ──────────────────────────────
+                // 2. Process Payment
                 Payment payment = new Payment();
                 payment.setPaymentId("PAY" + System.currentTimeMillis());
                 payment.setAmount(total);
@@ -195,15 +166,13 @@ public class CheckoutController {
                 payment.setStatus("Pending");
                 payment.setTransactionDate(new Date());
 
-                boolean paymentSuccess = paymentService.processPayment(payment);
-                if (!paymentSuccess) {
+                if (!paymentService.processPayment(payment)) {
                     throw new Exception("Payment processing failed!");
                 }
                 paymentService.addPayment(payment);
-                System.out.println("✓ Payment created: " + payment.getPaymentId());
+                System.out.println("Payment created: " + payment.getPaymentId());
 
-                // ── 3. Create Order ───────────────────────────────────────────
-                // Snapshot the cart items before clearing
+                // 3. Create Order (snapshot items before cart clear)
                 List<CartItem> orderedItems = new ArrayList<>(cart.getItems());
 
                 Order order = new Order();
@@ -218,71 +187,34 @@ public class CheckoutController {
                 order.setDelivery(delivery);
 
                 orderService.addOrder(order);
-                System.out.println("✓ Order created: " + order.getOrderId());
+                System.out.println("Order created: " + order.getOrderId());
 
                 if (order.getOrderId() == null || order.getOrderId().isEmpty()) {
-                    throw new Exception(
-                        "Failed to create order — no order ID generated!");
+                    throw new Exception("Failed to create order — no ID generated!");
                 }
 
-                // Update payment with the real order ID
+                // Update payment with real order ID
                 payment.setOrderId(order.getOrderId());
                 paymentService.updatePayment(payment);
-                System.out.println("✓ Payment updated with order ID");
 
-                // ── 4. Link cart items → order_items, then DELETE them from cart ──
-                try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection
-                        .getConnection()) {
+                // 4. Link cart items → order_items via JPA, then delete cart_item rows
+                linkAndClearOrderItems(order, orderedItems, cart);
 
-                    // 4a. Insert into order_items
-                    String insertSql =
-                        "INSERT INTO order_items (order_id, cart_item_id) VALUES (?, ?)";
-                    try (java.sql.PreparedStatement stmt =
-                                 conn.prepareStatement(insertSql)) {
-                        for (CartItem item : orderedItems) {
-                            if (item.getCartItemID() > 0) {
-                                stmt.setString(1, order.getOrderId());
-                                stmt.setInt(2, item.getCartItemID());
-                                stmt.addBatch();
-                            }
-                        }
-                        int[] results = stmt.executeBatch();
-                        System.out.println("✓ Linked " + results.length
-                                + " cart items to order");
-                    }
-
-                    // 4b. CRITICAL FIX: physically delete cart_item rows from DB
-                    //     so they never reappear when the user logs back in.
-                    String deleteSql =
-                        "DELETE FROM cart_item WHERE cart_id = ?";
-                    try (java.sql.PreparedStatement stmt =
-                                 conn.prepareStatement(deleteSql)) {
-                        stmt.setInt(1, cart.getCartId());
-                        int deleted = stmt.executeUpdate();
-                        System.out.println("✓ Deleted " + deleted
-                                + " cart_item rows from DB for cart "
-                                + cart.getCartId());
-                    }
-                }
-
-                // ── 5. Clear the in-memory cart list ──────────────────────────
+                // 5. Clear in-memory cart
                 cart.getItems().clear();
-                System.out.println("✓ In-memory cart cleared");
                 System.out.println("=== ORDER CREATION COMPLETE ===");
 
-                // ── 6. Success alert & navigate home ─────────────────────────
-                Alert success = new Alert(Alert.AlertType.INFORMATION,
-                    "Order placed successfully!\n\n" +
-                    "Order ID: "    + order.getOrderId() + "\n" +
-                    "Restaurant: "  + restaurant.getName() + "\n" +
-                    "Delivery to: " + selectedAddress.getStreet()
-                                    + ", " + selectedAddress.getCity() + "\n" +
-                    "Total: $"      + String.format("%.2f", total) + "\n" +
-                    "Payment: "     + (isCreditCard ? "Credit Card" : "Cash on Delivery")
-                                    + "\n\n" +
-                    "You can track your order in 'My Orders'.");
-                success.setTitle("Order Confirmed");
-                success.showAndWait();
+                // 6. Success
+                new Alert(Alert.AlertType.INFORMATION,
+                        "Order placed successfully!\n\n" +
+                        "Order ID: "    + order.getOrderId() + "\n" +
+                        "Restaurant: "  + restaurant.getName() + "\n" +
+                        "Delivery to: " + selectedAddress.getStreet()
+                                        + ", " + selectedAddress.getCity() + "\n" +
+                        "Total: $"      + String.format("%.2f", total) + "\n" +
+                        "Payment: "     + (isCreditCard ? "Credit Card" : "Cash on Delivery")
+                                        + "\n\nYou can track your order in 'My Orders'.")
+                        .showAndWait();
 
                 ClientMainController.show(stage, user);
 
@@ -290,16 +222,15 @@ public class CheckoutController {
                 placeOrderButton.setDisable(false);
                 orderMessageLabel.setText("Error: " + ex.getMessage());
                 orderMessageLabel.setTextFill(Color.web("#e74c3c"));
-
                 new Alert(Alert.AlertType.ERROR,
-                    "Error placing order: " + ex.getMessage()).showAndWait();
+                        "Error placing order: " + ex.getMessage()).showAndWait();
                 ex.printStackTrace();
             }
         });
 
         contentBox.getChildren().addAll(
-            titleLabel, summaryBox, addressBox, paymentBox,
-            placeOrderButton, orderMessageLabel);
+                titleLabel, summaryBox, addressBox, paymentBox,
+                placeOrderButton, orderMessageLabel);
         contentBox.setAlignment(Pos.TOP_CENTER);
 
         ScrollPane scrollPane = new ScrollPane(contentBox);
@@ -307,41 +238,106 @@ public class CheckoutController {
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
         root.setCenter(scrollPane);
-        Scene scene = new Scene(root, 1000, 700);
-        stage.setScene(scene);
+        
+        stage.setScene(new Scene(root, 1000, 700));
     }
 
-    // ── Summary box ───────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Finds the restaurant that owns the first menu item in the cart.
+     * Uses JPA — no JDBC.
+     */
+    private static Restaurant resolveRestaurant(Cart cart) {
+        if (cart.getItems().isEmpty()) return null;
+
+        String firstItemId = cart.getItems().get(0).getMenuItem().getItemId();
+        List<javaproject1.DAL.Entity.Restaurant> all = restaurantRepo.getAllRestaurants();
+
+        for (javaproject1.DAL.Entity.Restaurant r : all) {
+            if (r.getMenu() == null || r.getMenu().getItems() == null) continue;
+            for (MenuItem mi : r.getMenu().getItems()) {
+                if (mi.getItemId().equals(firstItemId)) return r;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Inserts order_items rows and removes the corresponding cart_item rows,
+     * both in a single JPA transaction — no raw SQL, no PreparedStatement.
+     */
+    private static void linkAndClearOrderItems(Order order,
+                                               List<CartItem> orderedItems,
+                                               Cart cart) {
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            javaproject1.plato.Orders jpaOrder = em.find(
+                    javaproject1.plato.Orders.class,
+                    Integer.parseInt(order.getOrderId()));
+
+            if (jpaOrder != null) {
+                int linked = 0;
+                for (CartItem item : orderedItems) {
+                    if (item.getCartItemID() <= 0) continue;
+
+                    javaproject1.plato.CartItem jpaItem = em.find(
+                            javaproject1.plato.CartItem.class, item.getCartItemID());
+                    if (jpaItem == null) continue;
+
+                    javaproject1.plato.OrderItems oi = new javaproject1.plato.OrderItems();
+                    oi.setOrderId(jpaOrder);
+                    oi.setCartItemId(jpaItem);
+                    em.persist(oi);
+                    linked++;
+                }
+                System.out.println("Linked " + linked + " cart items to order");
+            }
+
+            // Delete all cart_item rows for this cart so they never reappear
+            int deleted = em
+                    .createQuery("DELETE FROM CartItem ci WHERE ci.cartId.cartId = :cartId")
+                    .setParameter("cartId", cart.getCartId())
+                    .executeUpdate();
+            System.out.println("Deleted " + deleted + " cart_item rows for cart "
+                    + cart.getCartId());
+
+            em.getTransaction().commit();
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            System.err.println("Error linking order items: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            em.close();
+        }
+    }
+
+    // ── UI builders (unchanged) ───────────────────────────────────────────────
 
     private static VBox createSummaryBox(Cart cart, double subtotal, double tax,
                                          double deliveryFee, double discount, double total) {
         VBox summaryBox = new VBox(15);
         summaryBox.setPadding(new Insets(20));
         summaryBox.setStyle(
-            "-fx-background-color: white; -fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);");
+                "-fx-background-color: white; -fx-background-radius: 15; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);");
 
         Label summaryTitle = new Label("Order Summary");
-        summaryTitle.setStyle(
-            "-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+        summaryTitle.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #000000;");
 
         VBox itemsBox = new VBox(10);
         for (CartItem item : cart.getItems()) {
-            HBox itemRow = new HBox(10);
-            itemRow.setAlignment(Pos.CENTER_LEFT);
-
-            Label itemName = new Label(item.getMenuItem().getName() + " x" + item.getQuantity());
-            itemName.setStyle("-fx-font-size: 14px; -fx-text-fill: #000000;");
-
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-
-            Label itemPrice = new Label("$" + String.format("%.2f", item.getSubPrice()));
-            itemPrice.setStyle(
-                "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #000000;");
-
-            itemRow.getChildren().addAll(itemName, spacer, itemPrice);
-            itemsBox.getChildren().add(itemRow);
+            HBox row = new HBox(10);
+            row.setAlignment(Pos.CENTER_LEFT);
+            Label name  = new Label(item.getMenuItem().getName() + " x" + item.getQuantity());
+            name.setStyle("-fx-font-size: 14px; -fx-text-fill: #000000;");
+            Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
+            Label price = new Label("$" + String.format("%.2f", item.getSubPrice()));
+            price.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+            row.getChildren().addAll(name, sp, price);
+            itemsBox.getChildren().add(row);
         }
 
         HBox subtotalRow  = createSummaryRow("Subtotal:", "$" + String.format("%.2f", subtotal));
@@ -353,16 +349,14 @@ public class CheckoutController {
 
         if (discount > 0) {
             HBox discountRow = createSummaryRow(
-                "Elite Discount (10%):", "-$" + String.format("%.2f", discount));
-            Label discountLabel = (Label) discountRow.getChildren().get(2);
-            discountLabel.setStyle(
-                "-fx-font-size: 14px; -fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                    "Elite Discount (10%):", "-$" + String.format("%.2f", discount));
+            ((Label) discountRow.getChildren().get(2))
+                    .setStyle("-fx-font-size: 14px; -fx-text-fill: #27ae60; -fx-font-weight: bold;");
             allRows.getChildren().add(discountRow);
         }
 
         Label totalLabel = new Label("Total: $" + String.format("%.2f", total));
-        totalLabel.setStyle(
-            "-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #667eea;");
+        totalLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #667eea;");
 
         summaryBox.getChildren().addAll(summaryTitle, itemsBox, allRows, totalLabel);
         return summaryBox;
@@ -371,135 +365,92 @@ public class CheckoutController {
     private static HBox createSummaryRow(String label, String value) {
         HBox row = new HBox(10);
         row.setAlignment(Pos.CENTER_LEFT);
-
-        Label labelLbl = new Label(label);
-        labelLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #4a5568;");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        Label valueLbl = new Label(value);
-        valueLbl.setStyle("-fx-font-size: 14px; -fx-text-fill: #000000;");
-
-        row.getChildren().addAll(labelLbl, spacer, valueLbl);
+        Label l = new Label(label); l.setStyle("-fx-font-size: 14px; -fx-text-fill: #4a5568;");
+        Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
+        Label v = new Label(value); v.setStyle("-fx-font-size: 14px; -fx-text-fill: #000000;");
+        row.getChildren().addAll(l, sp, v);
         return row;
     }
 
-    // ── Address box ───────────────────────────────────────────────────────────
-
     private static VBox createAddressBox(User user) {
-        VBox addressBox = new VBox(15);
-        addressBox.setPadding(new Insets(20));
-        addressBox.setStyle(
-            "-fx-background-color: white; -fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);");
+        VBox box = new VBox(15);
+        box.setPadding(new Insets(20));
+        box.setStyle("-fx-background-color: white; -fx-background-radius: 15; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);");
 
-        Label addressTitle = new Label("Delivery Address");
-        addressTitle.setStyle(
-            "-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+        Label title = new Label("Delivery Address");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #000000;");
 
-        ComboBox<Address> addressCombo = new ComboBox<>();
-        addressCombo.getStyleClass().add("combo-box");
+        ComboBox<Address> combo = new ComboBox<>();
+        combo.getStyleClass().add("combo-box");
 
         if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
-            addressCombo.getItems().addAll(user.getAddresses());
-            addressCombo.setValue(user.getAddresses().get(0));
-            addressCombo.setPrefWidth(500);
-            addressCombo.setStyle("-fx-font-size: 14px;");
-            addressBox.getChildren().addAll(addressTitle, addressCombo);
+            combo.getItems().addAll(user.getAddresses());
+            combo.setValue(user.getAddresses().get(0));
+            combo.setPrefWidth(500);
+            combo.setStyle("-fx-font-size: 14px;");
+            box.getChildren().addAll(title, combo);
         } else {
-            Label noAddress = new Label(
-                "No addresses available. Please add an address in your profile.");
-            noAddress.setStyle("-fx-font-size: 14px; -fx-text-fill: #e74c3c;");
-            addressBox.getChildren().addAll(addressTitle, noAddress);
+            Label none = new Label("No addresses available. Please add one in your profile.");
+            none.setStyle("-fx-font-size: 14px; -fx-text-fill: #e74c3c;");
+            box.getChildren().addAll(title, none);
         }
-
-        return addressBox;
+        return box;
     }
 
-    // ── Payment box ───────────────────────────────────────────────────────────
-
     private static VBox createPaymentBox() {
-        VBox paymentBox = new VBox(15);
-        paymentBox.setPadding(new Insets(20));
-        paymentBox.setStyle(
-            "-fx-background-color: white; -fx-background-radius: 15; " +
-            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);");
+        VBox box = new VBox(15);
+        box.setPadding(new Insets(20));
+        box.setStyle("-fx-background-color: white; -fx-background-radius: 15; " +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 3);");
 
-        Label paymentTitle = new Label("Payment Method");
-        paymentTitle.setStyle(
-            "-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+        Label title = new Label("Payment Method");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #000000;");
 
-        ToggleGroup paymentGroup = new ToggleGroup();
+        ToggleGroup group = new ToggleGroup();
 
-        RadioButton cashRadio = new RadioButton("Cash on Delivery");
-        cashRadio.setToggleGroup(paymentGroup);
-        cashRadio.setSelected(true);
-        cashRadio.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
+        RadioButton cash = new RadioButton("Cash on Delivery");
+        cash.setToggleGroup(group);
+        cash.setSelected(true);
+        cash.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
 
-        RadioButton cardRadio = new RadioButton("Credit Card");
-        cardRadio.setToggleGroup(paymentGroup);
-        cardRadio.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
+        RadioButton card = new RadioButton("Credit Card");
+        card.setToggleGroup(group);
+        card.setStyle("-fx-text-fill: #000000; -fx-font-size: 14px;");
 
-        VBox cardDetailsBox = new VBox(10);
-        cardDetailsBox.setPadding(new Insets(15, 0, 0, 30));
-        cardDetailsBox.setVisible(false);
-        cardDetailsBox.setManaged(false);
-        cardDetailsBox.setStyle(
-            "-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8;");
+        VBox cardDetails = new VBox(10);
+        cardDetails.setPadding(new Insets(15, 0, 0, 30));
+        cardDetails.setVisible(false);
+        cardDetails.setManaged(false);
+        cardDetails.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8;");
 
-        GridPane cardGrid = new GridPane();
-        cardGrid.setHgap(10);
-        cardGrid.setVgap(10);
+        GridPane grid = new GridPane();
+        grid.setHgap(10); grid.setVgap(10);
 
-        TextField cardNumberField = new TextField();
-        cardNumberField.setId("cardNumber");
-        cardNumberField.setPromptText("1234 5678 9012 3456");
-        cardNumberField.setPrefWidth(300);
+        TextField cardNum  = new TextField(); cardNum.setId("cardNumber");  cardNum.setPromptText("1234 5678 9012 3456"); cardNum.setPrefWidth(300);
+        TextField holder   = new TextField(); holder.setId("cardHolder");   holder.setPromptText("John Doe");             holder.setPrefWidth(300);
+        TextField expiry   = new TextField(); expiry.setId("expiry");       expiry.setPromptText("MM/YY");                expiry.setPrefWidth(100);
+        TextField cvv      = new TextField(); cvv.setId("cvv");             cvv.setPromptText("123");                     cvv.setPrefWidth(80);
 
-        TextField cardHolderField = new TextField();
-        cardHolderField.setId("cardHolder");
-        cardHolderField.setPromptText("John Doe");
-        cardHolderField.setPrefWidth(300);
-
-        TextField expiryField = new TextField();
-        expiryField.setId("expiry");
-        expiryField.setPromptText("MM/YY");
-        expiryField.setPrefWidth(100);
-
-        TextField cvvField = new TextField();
-        cvvField.setId("cvv");
-        cvvField.setPromptText("123");
-        cvvField.setPrefWidth(80);
-
-        cardGrid.add(new Label("Card Number:"), 0, 0);
-        cardGrid.add(cardNumberField, 1, 0);
-        cardGrid.add(new Label("Card Holder:"), 0, 1);
-        cardGrid.add(cardHolderField, 1, 1);
-
+        grid.add(new Label("Card Number:"), 0, 0); grid.add(cardNum, 1, 0);
+        grid.add(new Label("Card Holder:"), 0, 1); grid.add(holder, 1, 1);
         HBox expiryRow = new HBox(10);
-        expiryRow.getChildren().addAll(
-            new Label("Expiry:"), expiryField, new Label("CVV:"), cvvField);
-        cardGrid.add(expiryRow, 1, 2);
+        expiryRow.getChildren().addAll(new Label("Expiry:"), expiry, new Label("CVV:"), cvv);
+        grid.add(expiryRow, 1, 2);
 
-        Label secureLabel = new Label(
-            "🔒 Your payment information is secure and encrypted");
-        secureLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #27ae60;");
+        Label secure = new Label("Your payment information is secure and encrypted");
+        secure.setStyle("-fx-font-size: 12px; -fx-text-fill: #27ae60;");
 
-        cardDetailsBox.getChildren().addAll(cardGrid, secureLabel);
+        cardDetails.getChildren().addAll(grid, secure);
 
-        paymentGroup.selectedToggleProperty().addListener((obs, old, newVal) -> {
-            if (newVal == cardRadio) {
-                cardDetailsBox.setVisible(true);
-                cardDetailsBox.setManaged(true);
-            } else {
-                cardDetailsBox.setVisible(false);
-                cardDetailsBox.setManaged(false);
-            }
+        group.selectedToggleProperty().addListener((obs, old, nv) -> {
+            boolean show = nv == card;
+            cardDetails.setVisible(show);
+            cardDetails.setManaged(show);
         });
 
-        paymentBox.setUserData(paymentGroup);
-        paymentBox.getChildren().addAll(paymentTitle, cashRadio, cardRadio, cardDetailsBox);
-        return paymentBox;
+        box.setUserData(group);
+        box.getChildren().addAll(title, cash, card, cardDetails);
+        return box;
     }
 }

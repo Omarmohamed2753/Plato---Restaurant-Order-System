@@ -60,7 +60,7 @@ public class DeliveryServiceImpl implements IDeliveryService {
             System.out.println("Invalid input: delivery, employee, or order is null.");
             return;
         }
-        if (!person.getRole().equalsIgnoreCase("DeliveryPerson")) {
+        if (!person.getRole().equalsIgnoreCase("Delivery")) {
             System.out.println("Cannot assign: employee is not a delivery person!");
             return;
         }

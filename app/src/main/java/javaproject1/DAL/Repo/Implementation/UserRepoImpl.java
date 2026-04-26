@@ -1,390 +1,266 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.*;
 import javaproject1.DAL.Repo.abstraction.IUserRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 public class UserRepoImpl implements IUserRepo {
 
-    public UserRepoImpl() {
-    }
+    // ── CRUD ──────────────────────────────────────────────────────────────────
 
     @Override
     public void addUser(User user) {
-        String sql = "INSERT INTO users (name, age, phone, email, password, is_elite) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, user.getName());
-            stmt.setInt(2, user.getAge());
-            stmt.setString(3, user.getPhoneNumber());
-            stmt.setString(4, user.getEmail());
-            stmt.setString(5, user.getPassword());
-            stmt.setBoolean(6, user.isElite());
-            stmt.executeUpdate();
+        javaproject1.plato.Users u = new javaproject1.plato.Users();
+        u.setName(user.getName());
+        u.setAge(user.getAge());
+        u.setPhone(user.getPhoneNumber());
+        u.setEmail(user.getEmail());
+        u.setPassword(user.getPassword());
+        u.setIsElite(user.isElite());
 
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    int userId = rs.getInt(1);
-                    user.setId(String.valueOf(userId));
+        em.persist(u);
 
-                    // CRITICAL: Create cart for new user
-                    createCartForUser(conn, userId);
+        // Create a cart row for the new user right here in the same transaction
+        javaproject1.plato.Cart cart = new javaproject1.plato.Cart();
+        cart.setUserId(u);
+        em.persist(cart);
 
-                    System.out.println("User added with ID: " + userId);
-                }
-            }
+        em.getTransaction().commit();
 
-        } catch (SQLException e) {
-            System.out.println("Add User Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
+        user.setId(String.valueOf(u.getUserId()));
+        // Attach an empty in-memory cart so callers never see null
+        Cart domainCart = new Cart();
+        domainCart.setCartId(cart.getCartId());
+        user.setCart(domainCart);
 
-    /**
-     * Create a cart row for a user (called once on registration).
-     */
-    private void createCartForUser(Connection conn, int userId) throws SQLException {
-        String sql = "INSERT INTO cart (user_id) VALUES (?)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            stmt.executeUpdate();
-            System.out.println("Cart created for user ID: " + userId);
-        }
+        em.close();
+        System.out.println("User added with ID: " + user.getId()
+                + " | Cart ID: " + cart.getCartId());
     }
 
     @Override
     public User getUserById(int id) {
-        String sql = "SELECT * FROM users WHERE user_id = ?";
-        User user = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                user = mapToUser(rs, conn);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Get User Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return user;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Users u = em.find(javaproject1.plato.Users.class, id);
+        em.close();
+        return u == null ? null : mapToDomain(u);
     }
 
     @Override
     public void updateUser(User user) {
-        String sql = "UPDATE users SET name=?, age=?, phone=?, email=?, password=?, is_elite=? WHERE user_id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, user.getName());
-            stmt.setInt(2, user.getAge());
-            stmt.setString(3, user.getPhoneNumber());
-            stmt.setString(4, user.getEmail());
-            stmt.setString(5, user.getPassword());
-            stmt.setBoolean(6, user.isElite());
-            stmt.setString(7, user.getId());
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.out.println("Update User Error: " + e.getMessage());
-            e.printStackTrace();
+        javaproject1.plato.Users u = em.find(
+                javaproject1.plato.Users.class, Integer.parseInt(user.getId()));
+        if (u != null) {
+            u.setName(user.getName());
+            u.setAge(user.getAge());
+            u.setPhone(user.getPhoneNumber());
+            u.setEmail(user.getEmail());
+            u.setPassword(user.getPassword());
+            u.setIsElite(user.isElite());
+            em.merge(u);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteUser(int id) {
-        String sql = "DELETE FROM users WHERE user_id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.out.println("Delete User Error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Users u = em.find(javaproject1.plato.Users.class, id);
+        if (u != null) em.remove(u);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("User deleted with ID: " + id);
     }
 
     @Override
     public List<User> getAllUsers() {
-        String sql = "SELECT * FROM users";
-        List<User> users = new ArrayList<>();
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Users> jpaList = em
+                .createQuery("SELECT u FROM Users u", javaproject1.plato.Users.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                users.add(mapToUser(rs, conn));
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Get All Users Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return users;
+        List<User> result = new ArrayList<>();
+        for (javaproject1.plato.Users u : jpaList) result.add(mapToDomain(u));
+        return result;
     }
 
     @Override
     public User getUserByEmail(String email) {
-        String sql = "SELECT * FROM users WHERE email = ?";
-        User user = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                user = mapToUser(rs, conn);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Get User By Email Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return user;
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Users> results = em
+                .createQuery("SELECT u FROM Users u WHERE u.email = :email",
+                        javaproject1.plato.Users.class)
+                .setParameter("email", email)
+                .getResultList();
+        em.close();
+        return results.isEmpty() ? null : mapToDomain(results.get(0));
     }
 
     // ── Mapping ───────────────────────────────────────────────────────────────
 
-    private User mapToUser(ResultSet rs, Connection conn) throws SQLException {
+    private User mapToDomain(javaproject1.plato.Users u) {
         User user = new User();
-        int userId = rs.getInt("user_id");
+        user.setId(String.valueOf(u.getUserId()));
+        user.setName(u.getName() != null ? u.getName() : "");
+        user.setAge(u.getAge());
+        user.setPhoneNumber(u.getPhone() != null ? u.getPhone() : "");
+        user.setEmail(u.getEmail() != null ? u.getEmail() : "");
+        user.setPassword(u.getPassword() != null ? u.getPassword() : "");
+        user.setElite(Boolean.TRUE.equals(u.getIsElite()));
 
-        user.setId(String.valueOf(userId));
-        user.setName(rs.getString("name") != null ? rs.getString("name") : "");
-        user.setAge(rs.getInt("age"));
-        user.setPhoneNumber(rs.getString("phone") != null ? rs.getString("phone") : "");
-        user.setEmail(rs.getString("email") != null ? rs.getString("email") : "");
-        user.setPassword(rs.getString("password") != null ? rs.getString("password") : "");
-        user.setElite(rs.getBoolean("is_elite"));
+        user.setAddresses(mapAddresses(u));
+        user.setOrders(mapOrders(u));
+        user.setSubscription(mapSubscription(u));
+        user.setCart(mapCart(u));
 
-        System.out.println("DEBUG UserRepo - Mapping user ID: " + userId);
-
-        user.setAddresses(loadAddresses(conn, userId));
-        user.setOrders(loadOrders(conn, userId));
-        user.setSubscription(loadSubscription(conn, userId));
-        user.setCart(loadOrCreateCart(conn, userId));
-
+        System.out.println("DEBUG UserRepo - Mapped user ID: " + user.getId());
         return user;
     }
 
     // ── Cart ──────────────────────────────────────────────────────────────────
 
-    /**
-     * Loads the user's cart, creating the row if it is missing.
-     * Only items that are NOT already referenced in order_items are loaded —
-     * this prevents "ghost" items reappearing after a completed checkout.
-     */
-    private Cart loadOrCreateCart(Connection conn, int userId) throws SQLException {
-        String sql = "SELECT cart_id FROM cart WHERE user_id = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    int cartId = rs.getInt("cart_id");
-                    return loadCartItems(conn, cartId);
-                }
-            }
+    private Cart mapCart(javaproject1.plato.Users u) {
+        if (u.getCartSet() == null || u.getCartSet().isEmpty()) {
+            // No cart yet — return an empty placeholder (addUser creates one on registration)
+            Cart empty = new Cart();
+            System.out.println("DEBUG UserRepo - No cart found for user " + u.getUserId());
+            return empty;
         }
 
-        // Cart doesn't exist yet – create it
-        createCartForUser(conn, userId);
-
-        // Re-query to get the new cart_id
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    int cartId = rs.getInt("cart_id");
-                    Cart cart = new Cart();
-                    cart.setCartId(cartId);
-                    System.out.println("Created new cart for user " + userId + " with ID: " + cartId);
-                    return cart;
-                }
-            }
-        }
-
-        // Fallback — should never reach here
+        javaproject1.plato.Cart jpaCart = u.getCartSet().iterator().next();
         Cart cart = new Cart();
-        System.out.println("DEBUG UserRepo - Returning empty cart for user " + userId);
+        cart.setCartId(jpaCart.getCartId());
+
+        List<CartItem> activeItems = new ArrayList<>();
+        if (jpaCart.getCartItemSet() != null) {
+            for (javaproject1.plato.CartItem ci : jpaCart.getCartItemSet()) {
+                // Skip items that are already part of a completed order
+                if (isAlreadyOrdered(ci)) continue;
+
+                CartItem item = buildCartItem(ci);
+                activeItems.add(item);
+            }
+        }
+        cart.setItems(activeItems);
+        System.out.println("DEBUG UserRepo - Loaded " + activeItems.size()
+                + " active (non-ordered) items in cart " + jpaCart.getCartId());
         return cart;
     }
 
     /**
-     * Loads cart items for the given cart_id, EXCLUDING any items that have
-     * already been claimed by an order (present in the order_items table).
-     *
-     * This is the key fix: after a checkout the cart_item rows are deleted
-     * from the cart, but even if any survived they will not reappear here
-     * because they are already in order_items.
+     * Returns true when the cart_item is already referenced in order_items,
+     * meaning it belongs to a placed order and must not re-appear in the cart.
      */
-    private Cart loadCartItems(Connection conn, int cartId) throws SQLException {
-        Cart cart = new Cart();
-        cart.setCartId(cartId);
+    private boolean isAlreadyOrdered(javaproject1.plato.CartItem ci) {
+        if (ci.getOrderItemsSet() == null) return false;
+        return !ci.getOrderItemsSet().isEmpty();
+    }
 
-        /*
-         * Only select cart_item rows that belong to this cart AND are NOT
-         * already referenced in order_items (i.e. not part of any placed order).
-         */
-        String sql =
-            "SELECT ci.cart_item_id, ci.quantity, ci.sub_price, " +
-            "       mi.id AS menu_item_id, mi.name, mi.price, " +
-            "       mi.description, mi.category, mi.image_path " +
-            "FROM   cart_item ci " +
-            "JOIN   menu_items mi ON ci.menu_item_id = mi.id " +
-            "WHERE  ci.cart_id = ? " +
-            "  AND  ci.cart_item_id NOT IN " +
-            "       (SELECT cart_item_id FROM order_items)";
+    private CartItem buildCartItem(javaproject1.plato.CartItem ci) {
+        CartItem item = new CartItem();
+        item.setCartItemID(ci.getCartItemId());
+        item.setQuantity(ci.getQuantity());
+        item.setSubPrice(ci.getSubPrice() != null ? ci.getSubPrice().doubleValue() : 0.0);
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, cartId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                List<CartItem> items = new ArrayList<>();
-                while (rs.next()) {
-                    CartItem item = new CartItem();
-                    item.setCartItemID(rs.getInt("cart_item_id"));
-
-                    MenuItem menuItem = new MenuItem();
-                    menuItem.setItemId(rs.getString("menu_item_id"));
-                    menuItem.setName(rs.getString("name") != null ? rs.getString("name") : "");
-                    menuItem.setPrice(rs.getDouble("price"));
-                    menuItem.setDescription(rs.getString("description") != null
-                            ? rs.getString("description") : "");
-                    menuItem.setCategory(rs.getString("category") != null
-                            ? rs.getString("category") : "");
-                    menuItem.setImagePath(rs.getString("image_path") != null
-                            ? rs.getString("image_path") : "");
-                    item.setMenuItem(menuItem);
-
-                    item.setQuantity(rs.getInt("quantity"));
-                    item.setSubPrice(rs.getDouble("sub_price"));
-
-                    items.add(item);
-                }
-                cart.setItems(items);
-            }
+        if (ci.getMenuItemId() != null) {
+            MenuItem mi = new MenuItem();
+            mi.setItemId(String.valueOf(ci.getMenuItemId().getId()));
+            mi.setName(ci.getMenuItemId().getName() != null ? ci.getMenuItemId().getName() : "");
+            mi.setPrice(ci.getMenuItemId().getPrice() != null
+                    ? ci.getMenuItemId().getPrice().doubleValue() : 0.0);
+            mi.setDescription(ci.getMenuItemId().getDescription() != null
+                    ? ci.getMenuItemId().getDescription() : "");
+            mi.setCategory(ci.getMenuItemId().getCategory() != null
+                    ? ci.getMenuItemId().getCategory() : "");
+            mi.setImagePath(ci.getMenuItemId().getImagePath() != null
+                    ? ci.getMenuItemId().getImagePath() : "");
+            item.setMenuItem(mi);
         }
-
-        System.out.println("DEBUG UserRepo - Loaded " + cart.getItems().size()
-                + " active (non-ordered) items in cart " + cartId);
-        return cart;
+        return item;
     }
 
     // ── Orders ────────────────────────────────────────────────────────────────
 
-    private List<Order> loadOrders(Connection conn, int userId) throws SQLException {
+    private List<Order> mapOrders(javaproject1.plato.Users u) {
         List<Order> orders = new ArrayList<>();
-        String sql = "SELECT * FROM orders WHERE user_id = ?";
+        if (u.getOrdersSet() == null) return orders;
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Order order = new Order();
-                    order.setOrderId(rs.getString("order_id"));
-                    order.setTotalAmount(rs.getDouble("total_amount"));
+        for (javaproject1.plato.Orders o : u.getOrdersSet()) {
+            Order order = new Order();
+            order.setOrderId(String.valueOf(o.getOrderId()));
+            order.setTotalAmount(o.getTotalAmount() != null
+                    ? o.getTotalAmount().doubleValue() : 0.0);
+            order.setOrderDate(o.getOrderDate());
 
-                    String statusStr = rs.getString("status");
-                    if (statusStr != null) {
-                        try {
-                            order.setStatus(
-                                javaproject1.DAL.Enums.OrderStatus.valueOf(statusStr.toUpperCase()));
-                        } catch (IllegalArgumentException e) {
-                            order.setStatus(javaproject1.DAL.Enums.OrderStatus.PENDING);
-                        }
-                    }
-
-                    Timestamp orderDate = rs.getTimestamp("order_date");
-                    if (orderDate != null) {
-                        order.setOrderDate(new java.util.Date(orderDate.getTime()));
-                    }
-                    orders.add(order);
+            if (o.getStatus() != null) {
+                try {
+                    order.setStatus(javaproject1.DAL.Enums.OrderStatus
+                            .valueOf(o.getStatus().toUpperCase()));
+                } catch (IllegalArgumentException ex) {
+                    order.setStatus(javaproject1.DAL.Enums.OrderStatus.PENDING);
                 }
             }
+            orders.add(order);
         }
-
         System.out.println("DEBUG UserRepo - Loaded " + orders.size()
-                + " orders for user " + userId);
+                + " orders for user " + u.getUserId());
         return orders;
     }
 
     // ── Addresses ─────────────────────────────────────────────────────────────
 
-    private List<Address> loadAddresses(Connection conn, int userId) throws SQLException {
+    private List<Address> mapAddresses(javaproject1.plato.Users u) {
         List<Address> addresses = new ArrayList<>();
-        String sql =
-            "SELECT a.* FROM address a " +
-            "INNER JOIN user_addresses ua ON a.id = ua.address_id " +
-            "WHERE ua.user_id = ?";
+        if (u.getAddressSet() == null) return addresses;
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Address address = new Address();
-                    address.setId(rs.getString("id"));
-                    address.setStreet(rs.getString("street") != null
-                            ? rs.getString("street") : "");
-                    address.setCity(rs.getString("city") != null
-                            ? rs.getString("city") : "");
-                    address.setBuildingNumber(rs.getInt("building_number"));
-                    addresses.add(address);
-                }
-            }
+        for (javaproject1.plato.Address a : u.getAddressSet()) {
+            Address domain = new Address();
+            domain.setId(String.valueOf(a.getId()));
+            domain.setStreet(a.getStreet() != null ? a.getStreet() : "");
+            domain.setCity(a.getCity() != null ? a.getCity() : "");
+            domain.setBuildingNumber(a.getBuildingNumber());
+            addresses.add(domain);
         }
-
         System.out.println("DEBUG UserRepo - Loaded " + addresses.size()
-                + " addresses for user " + userId);
+                + " addresses for user " + u.getUserId());
         return addresses;
     }
 
     // ── Subscription ──────────────────────────────────────────────────────────
 
-    private Subscription loadSubscription(Connection conn, int userId) throws SQLException {
-        String sql =
-            "SELECT * FROM subscriptions " +
-            "WHERE user_id = ? AND active = TRUE " +
-            "ORDER BY subscription_id DESC LIMIT 1";
+    private Subscription mapSubscription(javaproject1.plato.Users u) {
+        if (u.getSubscriptionsSet() == null) return null;
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    java.sql.Date startDateSql = rs.getDate("start_date");
-                    java.sql.Date endDateSql   = rs.getDate("end_date");
-
-                    java.util.Date startDate = (startDateSql != null)
-                            ? new java.util.Date(startDateSql.getTime()) : null;
-                    java.util.Date endDate   = (endDateSql != null)
-                            ? new java.util.Date(endDateSql.getTime()) : null;
-
-                    Subscription subscription = new Subscription(startDate, endDate);
-                    subscription.setId(rs.getInt("subscription_id"));
-                    subscription.setActive(rs.getBoolean("active"));
-
+        return u.getSubscriptionsSet().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getActive()))
+                .findFirst()
+                .map(s -> {
+                    Subscription sub = new Subscription(s.getStartDate(), s.getEndDate());
+                    sub.setId(s.getSubscriptionId());
+                    sub.setActive(Boolean.TRUE.equals(s.getActive()));
                     System.out.println("DEBUG UserRepo - Loaded subscription for user "
-                            + userId + ", active: " + subscription.isActive());
-                    return subscription;
-                }
-            }
-        }
-
-        System.out.println("DEBUG UserRepo - No active subscription for user " + userId);
-        return null;
+                            + u.getUserId() + ", active: " + sub.isActive());
+                    return sub;
+                })
+                .orElseGet(() -> {
+                    System.out.println("DEBUG UserRepo - No active subscription for user "
+                            + u.getUserId());
+                    return null;
+                });
     }
 }

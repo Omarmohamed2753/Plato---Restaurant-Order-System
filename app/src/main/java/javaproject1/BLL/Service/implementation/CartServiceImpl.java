@@ -6,7 +6,9 @@ import javaproject1.DAL.Entity.CartItem;
 import javaproject1.DAL.Repo.Implementation.CartItemRepoImpl;
 import javaproject1.DAL.Repo.Implementation.CartRepoImpl;
 import javaproject1.DAL.Repo.abstraction.ICartRepo;
+import javaproject1.plato.JPAUtil;
 
+import javax.persistence.EntityManager;
 import java.util.List;
 
 public class CartServiceImpl implements ICartService {
@@ -62,37 +64,28 @@ public class CartServiceImpl implements ICartService {
             return;
         }
 
-        // Calculate subtotal
         newItem.calculateSubtotal();
 
-        // Check if item already exists in cart (in memory)
         boolean found = false;
         for (CartItem item : cart.getItems()) {
             if (item.getMenuItem().getItemId().equals(newItem.getMenuItem().getItemId())) {
-                // Update existing item
                 int newQuantity = item.getQuantity() + newItem.getQuantity();
                 item.setQuantity(newQuantity);
                 item.calculateSubtotal();
-                
-                // Update in database
                 cartItemRepo.updateCartItem(item);
                 found = true;
-                System.out.println("Updated existing cart item: " + item.getMenuItem().getName() + 
-                                 " (new quantity: " + newQuantity + ")");
+                System.out.println("Updated existing cart item: " + item.getMenuItem().getName()
+                        + " (new quantity: " + newQuantity + ")");
                 break;
             }
         }
 
         if (!found) {
-            // Add new item to database
             cartItemRepo.addCartItemWithCartId(newItem, cart.getCartId());
-            
-            // Add to in-memory list
             cart.getItems().add(newItem);
             System.out.println("Added new item to cart: " + newItem.getMenuItem().getName());
         }
 
-        // Update cart timestamp if needed
         cartRepo.updateCart(cart);
     }
 
@@ -103,23 +96,18 @@ public class CartServiceImpl implements ICartService {
             return;
         }
 
-        // Remove from database
         if (item.getCartItemID() > 0) {
             cartItemRepo.deleteCartItem(item.getCartItemID());
         }
 
-        // Remove from in-memory list
         cart.getItems().remove(item);
-        
         System.out.println("Item removed from cart ID: " + cart.getCartId());
     }
 
     @Override
     public double calculateTotal(Cart cart) {
-        if (cart == null || cart.getItems() == null) {
-            return 0.0;
-        }
-        
+        if (cart == null || cart.getItems() == null) return 0.0;
+
         double total = 0.0;
         for (CartItem item : cart.getItems()) {
             total += item.calculateSubtotal();
@@ -130,12 +118,14 @@ public class CartServiceImpl implements ICartService {
     @Override
     public double checkout(Cart cart) {
         if (cart == null) return 0.0;
-        
-        double total = calculateTotal(cart);
-        // Note: Don't clear cart here - it will be cleared after order is placed
-        return total;
+        return calculateTotal(cart);
     }
 
+    /**
+     * Deletes all cart_item rows that belong to this cart via JPA,
+     * then clears the in-memory list.
+     * No raw JDBC — EntityManager handles everything.
+     */
     @Override
     public void clearCart(Cart cart) {
         if (cart == null) {
@@ -143,22 +133,27 @@ public class CartServiceImpl implements ICartService {
             return;
         }
 
-        // Delete all cart items from database
-        try (java.sql.Connection conn = javaproject1.DAL.DataBase.DBConnection.getConnection()) {
-            String sql = "DELETE FROM cart_item WHERE cart_id = ?";
-            try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, cart.getCartId());
-                int deleted = stmt.executeUpdate();
-                System.out.println("Deleted " + deleted + " cart items from database");
-            }
+        EntityManager em = JPAUtil.getEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            int deleted = em
+                    .createQuery("DELETE FROM CartItem ci WHERE ci.cartId.cartId = :cartId")
+                    .setParameter("cartId", cart.getCartId())
+                    .executeUpdate();
+
+            em.getTransaction().commit();
+            System.out.println("Deleted " + deleted
+                    + " cart items via JPA for cart " + cart.getCartId());
         } catch (Exception e) {
-            System.err.println("Error clearing cart from database: " + e.getMessage());
+            if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            System.err.println("Error clearing cart: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            em.close();
         }
 
-        // Clear in-memory list
         cart.getItems().clear();
-        
         System.out.println("Cart cleared. ID: " + cart.getCartId());
     }
 }
