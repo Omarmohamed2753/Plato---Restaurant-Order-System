@@ -1,80 +1,55 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Menu;
 import javaproject1.DAL.Repo.abstraction.IMenuRepo;
-import java.sql.*;
+import javaproject1.plato.JPAUtil;
+
+import javax.persistence.EntityManager;
 
 public class MenuRepoImpl implements IMenuRepo {
-    
+
     @Override
     public void addMenu(Menu menu) {
-        String sql = "INSERT INTO menu (menu_id) VALUES (?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, menu.getMenuId());
-            stmt.executeUpdate();
-            System.out.println("Menu added successfully with ID: " + menu.getMenuId());
-        } catch (SQLException e) {
-            System.err.println("Add Menu Error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+
+        javaproject1.plato.Menu m = new javaproject1.plato.Menu();
+        m.setMenuId(menu.getMenuId());
+
+        em.persist(m);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("Menu added with ID: " + menu.getMenuId());
     }
 
     @Override
     public Menu getMenuById(int id) {
-        String sql = "SELECT * FROM menu WHERE menu_id = ?";
-        Menu menu = null;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Menu m = em.find(
+                javaproject1.plato.Menu.class, String.valueOf(id));
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                menu = new Menu();
-                menu.setMenuId(rs.getString("menu_id"));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Get Menu Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return menu;
+        if (m == null) return null;
+        Menu domain = new Menu();
+        domain.setMenuId(m.getMenuId());
+        return domain;
     }
 
     @Override
     public void updateMenu(Menu menu) {
-        String sql = "UPDATE menu SET menu_id = ? WHERE menu_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, menu.getMenuId());
-            stmt.setString(2, menu.getMenuId());
-            stmt.executeUpdate();
-            System.out.println("Menu updated successfully");
-
-        } catch (SQLException e) {
-            System.err.println("Update Menu Error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Menu only has menu_id as PK — nothing meaningful to update
+        System.out.println("Menu updated: " + menu.getMenuId());
     }
 
     @Override
     public void deleteMenu(int id) {
-        String sql = "DELETE FROM menu WHERE menu_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-            System.out.println("Menu deleted successfully");
-
-        } catch (SQLException e) {
-            System.err.println("Delete Menu Error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Menu m = em.find(
+                javaproject1.plato.Menu.class, String.valueOf(id));
+        if (m != null) em.remove(m);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("Menu deleted with ID: " + id);
     }
 }

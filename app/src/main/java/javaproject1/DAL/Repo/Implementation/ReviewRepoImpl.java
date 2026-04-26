@@ -1,10 +1,12 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
-import javaproject1.DAL.Entity.*;
+import javaproject1.DAL.Entity.Restaurant;
+import javaproject1.DAL.Entity.Review;
+import javaproject1.DAL.Entity.User;
 import javaproject1.DAL.Repo.abstraction.IReviewRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,177 +14,102 @@ public class ReviewRepoImpl implements IReviewRepo {
 
     @Override
     public void addReview(Review review) {
-        String sql = "INSERT INTO reviews (user_id, restaurant_id, rating, comment) VALUES (?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, review.getUser() != null ? review.getUser().getId() : "");
-            stmt.setString(2, review.getRestaurant() != null ? review.getRestaurant().getRestaurantId() : "");
-            stmt.setInt(3, review.getRating());
-            stmt.setString(4, review.getComment());
-            stmt.executeUpdate();
+        javaproject1.plato.Reviews r = new javaproject1.plato.Reviews();
+        r.setRating(review.getRating());
+        r.setComment(review.getComment());
 
-            // Get generated review ID
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    review.setReviewId(rs.getString(1));
-                }
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Add Review Error: " + e.getMessage());
-            e.printStackTrace();
+        if (review.getUser() != null && review.getUser().getId() != null) {
+            javaproject1.plato.Users u = em.find(
+                    javaproject1.plato.Users.class,
+                    Integer.parseInt(review.getUser().getId()));
+            r.setUserId(u);
         }
+        if (review.getRestaurant() != null && review.getRestaurant().getRestaurantId() != null) {
+            javaproject1.plato.Restaurants rest = em.find(
+                    javaproject1.plato.Restaurants.class,
+                    Integer.parseInt(review.getRestaurant().getRestaurantId()));
+            r.setRestaurantId(rest);
+        }
+
+        em.persist(r);
+        em.getTransaction().commit();
+        review.setReviewId(String.valueOf(r.getReviewId()));
+        em.close();
     }
 
     @Override
     public Review getReviewById(int id) {
-        String sql = "SELECT * FROM reviews WHERE review_id = ?";
-        Review review = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                review = mapToReview(rs, conn);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Get Review Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return review;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Reviews r = em.find(javaproject1.plato.Reviews.class, id);
+        em.close();
+        return r == null ? null : mapToDomain(r);
     }
 
     @Override
     public void updateReview(Review review) {
-        String sql = "UPDATE reviews SET user_id=?, restaurant_id=?, rating=?, comment=? WHERE review_id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, review.getUser() != null ? review.getUser().getId() : "");
-            stmt.setString(2, review.getRestaurant() != null ? review.getRestaurant().getRestaurantId() : "");
-            stmt.setInt(3, review.getRating());
-            stmt.setString(4, review.getComment());
-            stmt.setString(5, review.getReviewId());
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.out.println("Update Review Error: " + e.getMessage());
-            e.printStackTrace();
+        javaproject1.plato.Reviews r = em.find(
+                javaproject1.plato.Reviews.class, Integer.parseInt(review.getReviewId()));
+        if (r != null) {
+            r.setRating(review.getRating());
+            r.setComment(review.getComment());
+            em.merge(r);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteReview(int id) {
-        String sql = "DELETE FROM reviews WHERE review_id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.out.println("Delete Review Error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Reviews r = em.find(javaproject1.plato.Reviews.class, id);
+        if (r != null) em.remove(r);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public List<Review> getAllReviews() {
-        String sql = "SELECT * FROM reviews";
-        List<Review> reviews = new ArrayList<>();
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Reviews> jpaList = em
+                .createQuery("SELECT r FROM Reviews r", javaproject1.plato.Reviews.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                reviews.add(mapToReview(rs, conn));
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Get All Reviews Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return reviews;
+        List<Review> result = new ArrayList<>();
+        for (javaproject1.plato.Reviews r : jpaList) result.add(mapToDomain(r));
+        return result;
     }
 
-    /**
-     * Maps a ResultSet row to a Review object with full user details loaded
-     */
-    private Review mapToReview(ResultSet rs, Connection conn) throws SQLException {
-        Review review = new Review();
-        review.setReviewId(rs.getString("review_id"));
-        review.setRating(rs.getInt("rating"));
-        review.setComment(rs.getString("comment"));
+    private Review mapToDomain(javaproject1.plato.Reviews r) {
+        Review domain = new Review();
+        domain.setReviewId(String.valueOf(r.getReviewId()));
+        domain.setRating(r.getRating());
+        domain.setComment(r.getComment());
 
-        // Load full user details from users table
-        int userId = rs.getInt("user_id");
-        if (!rs.wasNull() && userId > 0) {
-            User user = loadUserDetails(conn, userId);
-            review.setUser(user);
-        } else {
-            // Fallback: create anonymous user
-            User anonymousUser = new User();
-            anonymousUser.setName("Anonymous");
-            review.setUser(anonymousUser);
+        if (r.getUserId() != null) {
+            User user = new User();
+            user.setId(String.valueOf(r.getUserId().getUserId()));
+            user.setName(r.getUserId().getName() != null ?
+                    r.getUserId().getName() : "User #" + r.getUserId().getUserId());
+            user.setEmail(r.getUserId().getEmail());
+            domain.setUser(user);
         }
 
-        // Load restaurant reference (lightweight - just ID)
-        int restaurantId = rs.getInt("restaurant_id");
-        if (!rs.wasNull() && restaurantId > 0) {
-            Restaurant restaurant = new Restaurant();
-            restaurant.setRestaurantId(String.valueOf(restaurantId));
-            review.setRestaurant(restaurant);
+        if (r.getRestaurantId() != null) {
+            Restaurant rest = new Restaurant();
+            rest.setRestaurantId(String.valueOf(r.getRestaurantId().getRestaurantId()));
+            rest.setName(r.getRestaurantId().getName());
+            domain.setRestaurant(rest);
         }
 
-        return review;
-    }
-
-    /**
-     * Loads complete user details from the users table
-     * This fixes the "Anonymous" issue by fetching actual user data
-     */
-    private User loadUserDetails(Connection conn, int userId) throws SQLException {
-        String sql = "SELECT user_id, name, email, age, phone, is_elite FROM users WHERE user_id = ?";
-        
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    User user = new User();
-                    user.setId(String.valueOf(rs.getInt("user_id")));
-                    
-                    // Get name with fallback
-                    String name = rs.getString("name");
-                    user.setName(name != null && !name.trim().isEmpty() ? name : "User #" + userId);
-                    
-                    // Get other details
-                    user.setEmail(rs.getString("email"));
-                    user.setAge(rs.getInt("age"));
-                    user.setPhoneNumber(rs.getString("phone"));
-                    user.setElite(rs.getBoolean("is_elite"));
-                    
-                    System.out.println("DEBUG ReviewRepo: Loaded user " + user.getName() + " (ID: " + userId + ")");
-                    return user;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error loading user details for user_id " + userId + ": " + e.getMessage());
-            // Don't throw - return fallback instead
-        }
-        
-        // Fallback: return user with just ID and generic name
-        User fallbackUser = new User();
-        fallbackUser.setId(String.valueOf(userId));
-        fallbackUser.setName("User #" + userId);
-        System.out.println("DEBUG ReviewRepo: Using fallback for user ID " + userId);
-        return fallbackUser;
+        return domain;
     }
 }

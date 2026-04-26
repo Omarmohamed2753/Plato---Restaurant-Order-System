@@ -1,11 +1,12 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.CartItem;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Repo.abstraction.ICartItemRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,158 +14,100 @@ public class CartItemRepoImpl implements ICartItemRepo {
 
     @Override
     public void addCartItem(CartItem cartItem) {
-        String sql = "INSERT INTO cart_item (cart_id, menu_item_id, quantity, sub_price) VALUES (?, ?, ?, ?)";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            stmt.setInt(1, cartItem.getCartItemID()); // Temporarily stores cart_id
-            stmt.setString(2, cartItem.getMenuItem().getItemId());
-            stmt.setInt(3, cartItem.getQuantity());
-            stmt.setDouble(4, cartItem.getSubPrice());
-            stmt.executeUpdate();
-
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    cartItem.setCartItemID(rs.getInt(1));
-                    System.out.println("CartItem added with ID: " + cartItem.getCartItemID());
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error adding cart item: " + e.getMessage());
-            e.printStackTrace();
-        }
+        addCartItemWithCartId(cartItem, cartItem.getCartItemID());
     }
-    
-    /**
-     * Add cart item with explicit cart_id
-     */
+
     public void addCartItemWithCartId(CartItem cartItem, int cartId) {
-        String sql = "INSERT INTO cart_item (cart_id, menu_item_id, quantity, sub_price) VALUES (?, ?, ?, ?)";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        javaproject1.plato.CartItem ci = new javaproject1.plato.CartItem();
+        ci.setQuantity(cartItem.getQuantity());
+        ci.setSubPrice(BigDecimal.valueOf(cartItem.getSubPrice()));
 
-            stmt.setInt(1, cartId);
-            stmt.setString(2, cartItem.getMenuItem().getItemId());
-            stmt.setInt(3, cartItem.getQuantity());
-            stmt.setDouble(4, cartItem.getSubPrice());
-            stmt.executeUpdate();
+        javaproject1.plato.Cart cart = em.find(javaproject1.plato.Cart.class, cartId);
+        ci.setCartId(cart);
 
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    cartItem.setCartItemID(rs.getInt(1));
-                    System.out.println("CartItem added with ID: " + cartItem.getCartItemID() + " to cart: " + cartId);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error adding cart item: " + e.getMessage());
-            e.printStackTrace();
+        if (cartItem.getMenuItem() != null && cartItem.getMenuItem().getItemId() != null) {
+            javaproject1.plato.MenuItems mi = em.find(
+                    javaproject1.plato.MenuItems.class,
+                    Integer.parseInt(cartItem.getMenuItem().getItemId()));
+            ci.setMenuItemId(mi);
         }
+
+        em.persist(ci);
+        em.getTransaction().commit();
+        cartItem.setCartItemID(ci.getCartItemId());
+        em.close();
+        System.out.println("CartItem added with ID: " + cartItem.getCartItemID());
     }
 
     @Override
     public CartItem getCartItemById(int id) {
-        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
-                     "FROM cart_item ci " +
-                     "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
-                     "WHERE ci.cart_item_id = ?";
-        CartItem cartItem = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    cartItem = extractCartItemFromResultSet(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching cart item by ID: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return cartItem;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.CartItem ci = em.find(javaproject1.plato.CartItem.class, id);
+        em.close();
+        return ci == null ? null : mapToDomain(ci);
     }
 
     @Override
     public void updateCartItem(CartItem cartItem) {
-        String sql = "UPDATE cart_item SET menu_item_id = ?, quantity = ?, sub_price = ? WHERE cart_item_id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, cartItem.getMenuItem().getItemId());
-            stmt.setInt(2, cartItem.getQuantity());
-            stmt.setDouble(3, cartItem.getSubPrice());
-            stmt.setInt(4, cartItem.getCartItemID());
-
-            stmt.executeUpdate();
-            System.out.println("CartItem updated with ID: " + cartItem.getCartItemID());
-
-        } catch (SQLException e) {
-            System.err.println("Error updating cart item: " + e.getMessage());
-            e.printStackTrace();
+        javaproject1.plato.CartItem ci = em.find(
+                javaproject1.plato.CartItem.class, cartItem.getCartItemID());
+        if (ci != null) {
+            ci.setQuantity(cartItem.getQuantity());
+            ci.setSubPrice(BigDecimal.valueOf(cartItem.getSubPrice()));
+            em.merge(ci);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteCartItem(int id) {
-        String sql = "DELETE FROM cart_item WHERE cart_item_id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-            System.out.println("CartItem deleted with ID: " + id);
-
-        } catch (SQLException e) {
-            System.err.println("Error deleting cart item: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.CartItem ci = em.find(javaproject1.plato.CartItem.class, id);
+        if (ci != null) em.remove(ci);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("CartItem deleted with ID: " + id);
     }
 
     @Override
     public List<CartItem> getAllCartItems() {
-        List<CartItem> items = new ArrayList<>();
-        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
-                     "FROM cart_item ci " +
-                     "JOIN menu_items mi ON ci.menu_item_id = mi.id";
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.CartItem> jpaList = em
+                .createQuery("SELECT c FROM CartItem c", javaproject1.plato.CartItem.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                items.add(extractCartItemFromResultSet(rs));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching all cart items: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return items;
+        List<CartItem> result = new ArrayList<>();
+        for (javaproject1.plato.CartItem ci : jpaList) result.add(mapToDomain(ci));
+        return result;
     }
 
-    private CartItem extractCartItemFromResultSet(ResultSet rs) throws SQLException {
-        CartItem cartItem = new CartItem();
-        cartItem.setCartItemID(rs.getInt("cart_item_id"));
-        cartItem.setQuantity(rs.getInt("quantity"));
-        cartItem.setSubPrice(rs.getDouble("sub_price"));
+    private CartItem mapToDomain(javaproject1.plato.CartItem ci) {
+        CartItem domain = new CartItem();
+        domain.setCartItemID(ci.getCartItemId());
+        domain.setQuantity(ci.getQuantity());
+        domain.setSubPrice(ci.getSubPrice() != null ? ci.getSubPrice().doubleValue() : 0.0);
 
-        MenuItem menuItem = new MenuItem();
-        menuItem.setItemId(rs.getString("menu_item_id"));
-        menuItem.setName(rs.getString("name"));
-        menuItem.setPrice(rs.getDouble("price"));
-        menuItem.setDescription(rs.getString("description"));
-        menuItem.setCategory(rs.getString("category"));
-        menuItem.setImagePath(rs.getString("image_path"));
-        cartItem.setMenuItem(menuItem);
-
-        return cartItem;
+        if (ci.getMenuItemId() != null) {
+            MenuItem mi = new MenuItem();
+            mi.setItemId(String.valueOf(ci.getMenuItemId().getId()));
+            mi.setName(ci.getMenuItemId().getName());
+            mi.setPrice(ci.getMenuItemId().getPrice() != null ?
+                    ci.getMenuItemId().getPrice().doubleValue() : 0.0);
+            mi.setDescription(ci.getMenuItemId().getDescription());
+            mi.setCategory(ci.getMenuItemId().getCategory());
+            mi.setImagePath(ci.getMenuItemId().getImagePath());
+            domain.setMenuItem(mi);
+        }
+        return domain;
     }
 }

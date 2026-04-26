@@ -1,113 +1,104 @@
-package javaproject1.DAL.Repo.Implementation;
+// package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.Repo.abstraction.IPersonRepo;
-import javaproject1.DAL.Entity.Person;
-import javaproject1.DAL.DataBase.DBConnection;
+// import javaproject1.DAL.Entity.Person;
+// import javaproject1.DAL.Repo.abstraction.IPersonRepo;
+// import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+// import javax.persistence.EntityManager;
+// import java.util.ArrayList;
+// import java.util.List;
 
-public class PersonRepoImpl implements IPersonRepo {
+// public class PersonRepoImpl implements IPersonRepo {
 
-    @Override
-    public void addPerson(Person person) {
-        String sql = "INSERT INTO persons (name, age, phone_number) VALUES (?, ?, ?)";
+//     @Override
+//     public void addPerson(Person person) {
+//         EntityManager em = JPAUtil.getEntityManager();
+//         em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+//         javaproject1.plato. p = new Person();
+//         p.setName(person.getName());
+//         p.setAge(person.getAge());
+//         p.setPhoneNumber(person.getPhoneNumber());
 
-            stmt.setString(1, person.getName());
-            stmt.setInt(2, person.getAge());
-            stmt.setString(3, person.getPhoneNumber());
-            stmt.executeUpdate();
+//         em.persist(p);
+//         em.getTransaction().commit();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+//         person.setId(String.valueOf(p.getId()));
+//         em.close();
+//     }
 
-    @Override
-    public Person getPersonById(int id) {
-        String sql = "SELECT * FROM persons WHERE id = ?";
-        Person person = null;
+//     @Override
+//     public Person getPersonById(int id) {
+//         EntityManager em = JPAUtil.getEntityManager();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+//         Person p =
+//                 em.find(Person.class, id);
 
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
+//         em.close();
+//         return p == null ? null : mapToDomain(p);
+//     }
 
-            if (rs.next()) {
-                person = mapToPerson(rs);
-            }
+//     @Override
+//     public void updatePerson(Person person) {
+//         EntityManager em = JPAUtil.getEntityManager();
+//         em.getTransaction().begin();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+//         Person p = em.find(
+//                 Person.class,
+//                 Integer.parseInt(person.getId())
+//         );
 
-        return person;
-    }
+//         if (p != null) {
+//             p.setName(person.getName());
+//             p.setAge(person.getAge());
+//             p.setPhoneNumber(person.getPhoneNumber());
+//         }
 
-    @Override
-    public void updatePerson(Person person) {
-        String sql = "UPDATE persons SET name = ?, age = ?, phone_number = ? WHERE id = ?";
+//         em.getTransaction().commit();
+//         em.close();
+//     }
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+//     @Override
+//     public void deletePerson(int id) {
+//         EntityManager em = JPAUtil.getEntityManager();
+//         em.getTransaction().begin();
 
-            stmt.setString(1, person.getName());
-            stmt.setInt(2, person.getAge());
-            stmt.setString(3, person.getPhoneNumber());
-            stmt.setString(4, person.getId());
-            stmt.executeUpdate();
+//         Person p =
+//                 em.find(Person.class, id);
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+//         if (p != null) em.remove(p);
 
-    @Override
-    public void deletePerson(int id) {
-        String sql = "DELETE FROM persons WHERE id = ?";
+//         em.getTransaction().commit();
+//         em.close();
+//     }
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+//     @Override
+//     public List<Person> getAllPersons() {
+//         EntityManager em = JPAUtil.getEntityManager();
 
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
+//         List<Person> list =
+//                 em.createQuery("SELECT p FROM Persons p",
+//                         Person.class)
+//                         .getResultList();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
+//         em.close();
 
-    @Override
-    public List<Person> getAllPersons() {
-        String sql = "SELECT * FROM persons";
-        List<Person> persons = new ArrayList<>();
+//         List<Person> result = new ArrayList<>();
+//         for (var p : list) result.add(mapToDomain(p));
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+//         return result;
+//     }
 
-            while (rs.next()) {
-                persons.add(mapToPerson(rs));
-            }
+//     // ================= Mapping =================
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+//     private Person mapToDomain(Person p) {
+//         Person person = new Person() {};
 
-        return persons;
-    }
+//         person.setId(String.valueOf(p.getId()));
+//         person.setName(p.getName() != null ? p.getName() : "");
+//         person.setAge(p.getAge());
+//         person.setPhoneNumber(p.getPhoneNumber() != null ? p.getPhoneNumber() : "");
 
-    private Person mapToPerson(ResultSet rs) throws SQLException {
-        Person p = new Person() {};
-        p.setId(rs.getString("id"));
-        p.setName(rs.getString("name"));
-        p.setAge(rs.getInt("age"));
-        p.setPhoneNumber(rs.getString("phone_number"));
-        return p;
-    }
-}
+//         return person;
+//     }
+// }

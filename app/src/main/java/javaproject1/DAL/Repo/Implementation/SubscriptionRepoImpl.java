@@ -1,10 +1,10 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Subscription;
 import javaproject1.DAL.Repo.abstraction.ISubscriptionRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,116 +12,99 @@ public class SubscriptionRepoImpl implements ISubscriptionRepo {
 
     @Override
     public void addSubscription(Subscription subscription) {
-        // Note: user_id is optional - can be set later via updateSubscription
-        String sql = "INSERT INTO subscriptions (start_date, end_date, active, user_id) VALUES (?, ?, ?, ?)";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        javaproject1.plato.Subscriptions s = new javaproject1.plato.Subscriptions();
+        s.setStartDate(subscription.getStartDate());
+        s.setEndDate(subscription.getEndDate());
+        s.setActive(subscription.getActive());
 
-            stmt.setDate(1, new Date(subscription.getStartDate().getTime()));
-            stmt.setDate(2, new Date(subscription.getEndDate().getTime()));
-            stmt.setBoolean(3, subscription.getActive());
-            // user_id is set to NULL if not provided - can be updated later
-            stmt.setNull(4, Types.INTEGER);
-            stmt.executeUpdate();
+        // user مش متحدد (زي JDBC version)
+        s.setUserId(null);
 
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    subscription.setId(rs.getInt(1));
-                }
-            }
+        em.persist(s);
+        em.getTransaction().commit();
 
-        } catch (SQLException e) {
-            System.err.println("Error adding subscription: " + e.getMessage());
-        }
+        subscription.setId(s.getSubscriptionId());
+        em.close();
+
+        System.out.println("Subscription added with ID: " + subscription.getId());
     }
 
     @Override
     public Subscription getSubscriptionById(int id) {
-        String sql = "SELECT * FROM subscriptions WHERE subscription_id = ?";
-        Subscription subscription = null;
+        EntityManager em = JPAUtil.getEntityManager();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        javaproject1.plato.Subscriptions s =
+                em.find(javaproject1.plato.Subscriptions.class, id);
 
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    subscription = extractSubscriptionFromResultSet(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching subscription by ID: " + e.getMessage());
-        }
-        return subscription;
+        em.close();
+        return s == null ? null : mapToDomain(s);
     }
 
     @Override
     public void updateSubscription(Subscription subscription) {
-        String sql = "UPDATE subscriptions SET start_date = ?, end_date = ?, active = ? WHERE subscription_id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        javaproject1.plato.Subscriptions s = em.find(
+                javaproject1.plato.Subscriptions.class,
+                subscription.getId());
 
-            stmt.setDate(1, new Date(subscription.getStartDate().getTime()));
-            stmt.setDate(2, new Date(subscription.getEndDate().getTime()));
-            stmt.setBoolean(3, subscription.getActive());
-            stmt.setInt(4, subscription.getId());
-
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Error updating subscription: " + e.getMessage());
+        if (s != null) {
+            s.setStartDate(subscription.getStartDate());
+            s.setEndDate(subscription.getEndDate());
+            s.setActive(subscription.getActive());
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteSubscription(int id) {
-        String sql = "DELETE FROM subscriptions WHERE subscription_id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        javaproject1.plato.Subscriptions s =
+                em.find(javaproject1.plato.Subscriptions.class, id);
 
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
+        if (s != null) em.remove(s);
 
-        } catch (SQLException e) {
-            System.err.println("Error deleting subscription: " + e.getMessage());
-        }
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public List<Subscription> getAllSubscriptions() {
-        List<Subscription> subscriptions = new ArrayList<>();
-        String sql = "SELECT * FROM subscriptions";
+        EntityManager em = JPAUtil.getEntityManager();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        List<javaproject1.plato.Subscriptions> list =
+                em.createQuery("SELECT s FROM Subscriptions s",
+                        javaproject1.plato.Subscriptions.class)
+                        .getResultList();
 
-            while (rs.next()) {
-                subscriptions.add(extractSubscriptionFromResultSet(rs));
-            }
+        em.close();
 
-        } catch (SQLException e) {
-            System.err.println("Error fetching subscriptions: " + e.getMessage());
-        }
-        return subscriptions;
+        List<Subscription> result = new ArrayList<>();
+        for (var s : list) result.add(mapToDomain(s));
+
+        return result;
     }
 
-    // Helper method to convert ResultSet to Subscription object
-    private Subscription extractSubscriptionFromResultSet(ResultSet rs) throws SQLException {
-        java.sql.Date startDateSql = rs.getDate("start_date");
-        java.sql.Date endDateSql = rs.getDate("end_date");
-        
-        java.util.Date startDate = (startDateSql != null) ? new java.util.Date(startDateSql.getTime()) : null;
-        java.util.Date endDate = (endDateSql != null) ? new java.util.Date(endDateSql.getTime()) : null;
-        
-        Subscription subscription = new Subscription(startDate, endDate);
-        subscription.setId(rs.getInt("subscription_id"));
-        subscription.setActive(rs.getBoolean("active"));
-        return subscription;
+    // ================= Mapping =================
+
+    private Subscription mapToDomain(javaproject1.plato.Subscriptions s) {
+
+        Subscription sub = new Subscription(
+                s.getStartDate(),
+                s.getEndDate()
+        );
+
+        sub.setId(s.getSubscriptionId());
+        sub.setActive(s.getActive());
+
+        return sub;
     }
 }
-

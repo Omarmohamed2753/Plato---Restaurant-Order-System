@@ -1,11 +1,12 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Payment;
 import javaproject1.DAL.Enums.PaymentM;
 import javaproject1.DAL.Repo.abstraction.IPaymentRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,118 +14,95 @@ public class PaymentRepoImpl implements IPaymentRepo {
 
     @Override
     public void addPayment(Payment payment) {
-        String sql = """
-            INSERT INTO payments (payment_id, order_id, amount, method, status, payment_date)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """;
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        javaproject1.plato.Payments p = new javaproject1.plato.Payments();
+        p.setPaymentId(payment.getPaymentId());
+        p.setOrderId(payment.getOrderId());
+        p.setAmount(BigDecimal.valueOf(payment.getAmount()));
+        p.setMethod(payment.getPaymentMethod() != null ?
+                payment.getPaymentMethod().toString() : "Cash");
+        p.setStatus(payment.getStatus());
+        p.setPaymentDate(payment.getTransactionDate());
 
-            stmt.setString(1, payment.getPaymentId());
-            stmt.setString(2, payment.getOrderId());
-            stmt.setDouble(3, payment.getAmount());
-            stmt.setString(4, payment.getPaymentMethod().toString());
-            stmt.setString(5, payment.getStatus());
-            stmt.setTimestamp(6, new Timestamp(payment.getTransactionDate().getTime()));
-
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        em.persist(p);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public Payment getPaymentById(int id) {
-        String sql = "SELECT * FROM payments WHERE payment_id = ?";
-        Payment payment = null;
+        EntityManager em = JPAUtil.getEntityManager();
+        // payment_id is a String in JPA entity
+        List<javaproject1.plato.Payments> result = em
+                .createQuery("SELECT p FROM Payments p WHERE p.paymentId = :pid",
+                        javaproject1.plato.Payments.class)
+                .setParameter("pid", String.valueOf(id))
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                payment = mapToPayment(rs);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return payment;
+        return result.isEmpty() ? null : mapToDomain(result.get(0));
     }
 
     @Override
     public void updatePayment(Payment payment) {
-        String sql = """
-            UPDATE payments 
-            SET order_id = ?, amount = ?, method = ?, status = ?, payment_date = ?
-            WHERE payment_id = ?
-            """;
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, payment.getOrderId());
-            stmt.setDouble(2, payment.getAmount());
-            stmt.setString(3, payment.getPaymentMethod().toString());
-            stmt.setString(4, payment.getStatus());
-            stmt.setTimestamp(5, new Timestamp(payment.getTransactionDate().getTime()));
-            stmt.setString(6, payment.getPaymentId());
-
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+        javaproject1.plato.Payments p = em.find(
+                javaproject1.plato.Payments.class, payment.getPaymentId());
+        if (p != null) {
+            p.setOrderId(payment.getOrderId());
+            p.setAmount(BigDecimal.valueOf(payment.getAmount()));
+            p.setMethod(payment.getPaymentMethod() != null ?
+                    payment.getPaymentMethod().toString() : "Cash");
+            p.setStatus(payment.getStatus());
+            p.setPaymentDate(payment.getTransactionDate());
+            em.merge(p);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deletePayment(int id) {
-        String sql = "DELETE FROM payments WHERE payment_id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Payments p = em.find(
+                javaproject1.plato.Payments.class, String.valueOf(id));
+        if (p != null) em.remove(p);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public List<Payment> getAllPayments() {
-        String sql = "SELECT * FROM payments";
-        List<Payment> payments = new ArrayList<>();
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Payments> jpaList = em
+                .createQuery("SELECT p FROM Payments p", javaproject1.plato.Payments.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                payments.add(mapToPayment(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return payments;
+        List<Payment> result = new ArrayList<>();
+        for (javaproject1.plato.Payments p : jpaList) result.add(mapToDomain(p));
+        return result;
     }
 
-    private Payment mapToPayment(ResultSet rs) throws SQLException {
-        Payment payment = new Payment();
-        payment.setPaymentId(rs.getString("payment_id"));
-        payment.setOrderId(rs.getString("order_id"));
-        payment.setAmount(rs.getDouble("amount"));
-        payment.setPaymentMethod(PaymentM.valueOf(rs.getString("method")) == PaymentM.CreditCard ? PaymentM.CreditCard : PaymentM.Cash);
-        payment.setStatus(rs.getString("status"));
-        payment.setTransactionDate(rs.getTimestamp("payment_date"));
-        return payment;
+    private Payment mapToDomain(javaproject1.plato.Payments p) {
+        Payment domain = new Payment();
+        domain.setPaymentId(p.getPaymentId());
+        domain.setOrderId(p.getOrderId());
+        domain.setAmount(p.getAmount() != null ? p.getAmount().doubleValue() : 0.0);
+        domain.setStatus(p.getStatus());
+        domain.setTransactionDate(p.getPaymentDate());
+
+        try {
+            domain.setPaymentMethod(PaymentM.valueOf(p.getMethod()));
+        } catch (Exception e) {
+            domain.setPaymentMethod(PaymentM.Cash);
+        }
+        return domain;
     }
 }

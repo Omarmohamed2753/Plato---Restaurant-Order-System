@@ -1,9 +1,10 @@
 package javaproject1.DAL.Repo.Implementation;
 
 import javaproject1.DAL.Entity.Employee;
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Repo.abstraction.IEmployeeRepo;
-import java.sql.*;
+import javaproject1.plato.JPAUtil;
+
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,169 +12,93 @@ public class EmployeeRepoImpl implements IEmployeeRepo {
 
     @Override
     public void addEmployee(Employee employee) {
-        /*
-         * CRITICAL FIX: the original query had 'id' in the column list and
-         * passed employee.getId() which is always "" (empty string from the
-         * no-arg Employee constructor).  That caused the INSERT to fail silently
-         * (caught exception, printed to console, returned).
-         * Solution: remove 'id' entirely and let the DB auto-generate it.
-         */
-        String query =
-            "INSERT INTO employees (name, age, role, phone_number, image_path, experiences_year, restaurant_id) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        javaproject1.plato.Employees e = new javaproject1.plato.Employees();
+        e.setName(employee.getName());
+        e.setAge(employee.getAge());
+        e.setRole(employee.getRole());
+        e.setPhoneNumber(employee.getPhoneNumber());
+        e.setImagePath(employee.getImagePath() != null ? employee.getImagePath() : "");
+        e.setExperiencesYear(employee.getExperiencesYear());
 
-            stmt.setString(1, employee.getName());
-            stmt.setInt(2, employee.getAge());
-            stmt.setString(3, employee.getRole());
-            stmt.setString(4, employee.getPhoneNumber());
-            stmt.setString(5, employee.getImagePath() != null ? employee.getImagePath() : "");
-            stmt.setInt(6, employee.getExperiencesYear());
-
-            // Parse restaurant_id as a proper INTEGER (original code passed a String
-            // with Types.INTEGER which silently stored NULL)
-            if (employee.getRestaurant() != null && employee.getRestaurant().getRestaurantId() != null) {
-                try {
-                    stmt.setInt(7, Integer.parseInt(employee.getRestaurant().getRestaurantId()));
-                } catch (NumberFormatException ex) {
-                    System.err.println("Invalid restaurant ID: " + employee.getRestaurant().getRestaurantId());
-                    stmt.setNull(7, Types.INTEGER);
-                }
-            } else {
-                stmt.setNull(7, Types.INTEGER);
-            }
-
-            int rows = stmt.executeUpdate();
-
-            if (rows > 0) {
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        employee.setId(rs.getString(1));
-                        System.out.println("Employee added successfully. ID=" + employee.getId()
-                            + "  restaurant_id="
-                            + (employee.getRestaurant() != null ? employee.getRestaurant().getRestaurantId() : "null"));
-                    }
-                }
-            } else {
-                System.err.println("ERROR: Employee INSERT affected 0 rows!");
-            }
-
-        } catch (SQLException e) {
-            System.err.println("SQL Error adding employee: " + e.getMessage());
-            System.err.println("SQLState=" + e.getSQLState() + "  ErrorCode=" + e.getErrorCode());
-            e.printStackTrace();
+        if (employee.getRestaurant() != null && employee.getRestaurant().getRestaurantId() != null) {
+            javaproject1.plato.Restaurants r = em.find(
+                    javaproject1.plato.Restaurants.class,
+                    Integer.parseInt(employee.getRestaurant().getRestaurantId()));
+            e.setRestaurantId(r);
         }
+
+        em.persist(e);
+        em.getTransaction().commit();
+        employee.setId(String.valueOf(e.getId()));
+        em.close();
+        System.out.println("Employee added with ID: " + employee.getId());
     }
 
     @Override
     public Employee getEmployeeById(int id) {
-        String query = "SELECT * FROM employees WHERE id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapToEmployee(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching employee by ID: " + e.getMessage());
-        }
-        return null;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Employees e = em.find(javaproject1.plato.Employees.class, id);
+        em.close();
+        return e == null ? null : mapToDomain(e);
     }
 
     @Override
     public void updateEmployee(Employee employee) {
-        String query =
-            "UPDATE employees SET name=?, age=?, role=?, phone_number=?, image_path=?, experiences_year=?, restaurant_id=? " +
-            "WHERE id=?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, employee.getName());
-            stmt.setInt(2, employee.getAge());
-            stmt.setString(3, employee.getRole());
-            stmt.setString(4, employee.getPhoneNumber());
-            stmt.setString(5, employee.getImagePath() != null ? employee.getImagePath() : "");
-            stmt.setInt(6, employee.getExperiencesYear());
-
-            if (employee.getRestaurant() != null && employee.getRestaurant().getRestaurantId() != null) {
-                try {
-                    stmt.setInt(7, Integer.parseInt(employee.getRestaurant().getRestaurantId()));
-                } catch (NumberFormatException ex) {
-                    stmt.setNull(7, Types.INTEGER);
-                }
-            } else {
-                stmt.setNull(7, Types.INTEGER);
-            }
-
-            stmt.setString(8, employee.getId());
-
-            int rows = stmt.executeUpdate();
-            if (rows > 0)
-                System.out.println("Employee updated: " + employee.getId());
-            else
-                System.err.println("No employee found with ID: " + employee.getId());
-
-        } catch (SQLException e) {
-            System.err.println("Error updating employee: " + e.getMessage());
-            e.printStackTrace();
+        javaproject1.plato.Employees e = em.find(
+                javaproject1.plato.Employees.class, Integer.parseInt(employee.getId()));
+        if (e != null) {
+            e.setName(employee.getName());
+            e.setAge(employee.getAge());
+            e.setRole(employee.getRole());
+            e.setPhoneNumber(employee.getPhoneNumber());
+            e.setImagePath(employee.getImagePath() != null ? employee.getImagePath() : "");
+            e.setExperiencesYear(employee.getExperiencesYear());
+            em.merge(e);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteEmployee(int id) {
-        String query = "DELETE FROM employees WHERE id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, id);
-            int rows = stmt.executeUpdate();
-            if (rows > 0)
-                System.out.println("Employee deleted: " + id);
-            else
-                System.err.println("No employee found with ID: " + id);
-
-        } catch (SQLException e) {
-            System.err.println("Error deleting employee: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Employees e = em.find(javaproject1.plato.Employees.class, id);
+        if (e != null) em.remove(e);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("Employee deleted with ID: " + id);
     }
 
     @Override
     public List<Employee> getAllEmployees() {
-        List<Employee> employees = new ArrayList<>();
-        String query = "SELECT * FROM employees";
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Employees> jpaList = em
+                .createQuery("SELECT e FROM Employees e", javaproject1.plato.Employees.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-
-            while (rs.next()) {
-                employees.add(mapToEmployee(rs));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching all employees: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return employees;
+        List<Employee> result = new ArrayList<>();
+        for (javaproject1.plato.Employees e : jpaList) result.add(mapToDomain(e));
+        return result;
     }
 
-    private Employee mapToEmployee(ResultSet rs) throws SQLException {
-        Employee emp = new Employee();
-        emp.setId(rs.getString("id"));
-        emp.setName(rs.getString("name"));
-        emp.setAge(rs.getInt("age"));
-        emp.setRole(rs.getString("role"));
-        emp.setPhoneNumber(rs.getString("phone_number"));
-        emp.setImagePath(rs.getString("image_path"));
-        emp.setExperiencesYear(rs.getInt("experiences_year"));
-        return emp;
+    private Employee mapToDomain(javaproject1.plato.Employees e) {
+        Employee domain = new Employee();
+        domain.setId(String.valueOf(e.getId()));
+        domain.setName(e.getName());
+        domain.setAge(e.getAge());
+        domain.setRole(e.getRole());
+        domain.setPhoneNumber(e.getPhoneNumber());
+        domain.setImagePath(e.getImagePath());
+        domain.setExperiencesYear(e.getExperiencesYear() != null ? e.getExperiencesYear() : 0);
+        return domain;
     }
 }

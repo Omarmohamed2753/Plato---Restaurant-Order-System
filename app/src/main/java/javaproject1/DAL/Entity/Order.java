@@ -1,4 +1,5 @@
 package javaproject1.DAL.Entity;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import javaproject1.DAL.Enums.OrderStatus;

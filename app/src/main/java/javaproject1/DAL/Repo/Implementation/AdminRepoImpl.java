@@ -1,12 +1,11 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Admin;
 import javaproject1.DAL.Entity.Restaurant;
-import javaproject1.DAL.Repo.Implementation.RestaurantRepoImpl;
 import javaproject1.DAL.Repo.abstraction.IAdminRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,136 +13,95 @@ public class AdminRepoImpl implements IAdminRepo {
 
     @Override
     public void addAdmin(Admin admin) {
-        String sql = "INSERT INTO admin (name, age, phone_number, email, password, restaurant_id) VALUES (?, ?, ?, ?, ?, ?)";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        javaproject1.plato.Admin a = new javaproject1.plato.Admin();
+        a.setName(admin.getName());
+        a.setAge(admin.getAge());
+        a.setPhoneNumber(admin.getPhoneNumber());
+        a.setEmail(admin.getEmail());
+        a.setPassword(admin.getPassword());
 
-            stmt.setString(1, admin.getName());
-            stmt.setInt(2, admin.getAge());
-            stmt.setString(3, admin.getPhoneNumber());
-            stmt.setString(4, admin.getEmail());
-            stmt.setString(5, admin.getPassword());
-
-            if (admin.getRestaurant() != null) {
-                stmt.setString(6, admin.getRestaurant().getRestaurantId());
-            } else {
-                stmt.setNull(6, java.sql.Types.INTEGER);
-            }
-
-            stmt.executeUpdate();
-
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    admin.setId(rs.getString(1));
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error adding admin: " + e.getMessage());
+        if (admin.getRestaurant() != null && admin.getRestaurant().getRestaurantId() != null) {
+            javaproject1.plato.Restaurants r = em.find(
+                    javaproject1.plato.Restaurants.class,
+                    Integer.parseInt(admin.getRestaurant().getRestaurantId()));
+            a.setRestaurantId(r);
         }
+
+        em.persist(a);
+        em.getTransaction().commit();
+        admin.setId(String.valueOf(a.getId()));
+        em.close();
+        System.out.println("Admin added with ID: " + admin.getId());
     }
 
     @Override
     public Admin getAdminById(int id) {
-        String sql = "SELECT * FROM admin WHERE id = ?";
-        Admin admin = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    admin = extractAdminFromResultSet(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching admin by ID: " + e.getMessage());
-        }
-
-        return admin;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Admin a = em.find(javaproject1.plato.Admin.class, id);
+        em.close();
+        return a == null ? null : mapToDomain(a);
     }
 
     @Override
     public void updateAdmin(Admin admin) {
-        String sql = "UPDATE admin SET name = ?, age = ?, phone_number = ?, email = ?, password = ?, restaurant_id = ? WHERE id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, admin.getName());
-            stmt.setInt(2, admin.getAge());
-            stmt.setString(3, admin.getPhoneNumber());
-            stmt.setString(4, admin.getEmail());
-            stmt.setString(5, admin.getPassword());
-
-            if (admin.getRestaurant() != null) {
-                stmt.setString(6, admin.getRestaurant().getRestaurantId());
-            } else {
-                stmt.setNull(6, java.sql.Types.INTEGER);
-            }
-
-            stmt.setString(7, admin.getId());
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Error updating admin: " + e.getMessage());
+        javaproject1.plato.Admin a = em.find(
+                javaproject1.plato.Admin.class, Integer.parseInt(admin.getId()));
+        if (a != null) {
+            a.setName(admin.getName());
+            a.setAge(admin.getAge());
+            a.setPhoneNumber(admin.getPhoneNumber());
+            a.setEmail(admin.getEmail());
+            a.setPassword(admin.getPassword());
+            em.merge(a);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteAdmin(int id) {
-        String sql = "DELETE FROM admin WHERE id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Error deleting admin: " + e.getMessage());
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Admin a = em.find(javaproject1.plato.Admin.class, id);
+        if (a != null) em.remove(a);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public List<Admin> getAllAdmins() {
-        List<Admin> admins = new ArrayList<>();
-        String sql = "SELECT * FROM admin";
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Admin> jpaList = em
+                .createQuery("SELECT a FROM Admin a", javaproject1.plato.Admin.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                admins.add(extractAdminFromResultSet(rs));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching admins: " + e.getMessage());
-        }
-        return admins;
+        List<Admin> result = new ArrayList<>();
+        for (javaproject1.plato.Admin a : jpaList) result.add(mapToDomain(a));
+        return result;
     }
 
-    //  Helper method
-    private Admin extractAdminFromResultSet(ResultSet rs) throws SQLException {
+    private Admin mapToDomain(javaproject1.plato.Admin a) {
         Restaurant restaurant = null;
-        int restaurantIdInt = rs.getInt("restaurant_id");
-        if (!rs.wasNull() && restaurantIdInt > 0) {
-            // Load full restaurant details
-            RestaurantRepoImpl restaurantRepo = new RestaurantRepoImpl();
-            restaurant = restaurantRepo.getRestaurantById(restaurantIdInt);
+        if (a.getRestaurantId() != null) {
+            restaurant = new Restaurant();
+            restaurant.setRestaurantId(String.valueOf(a.getRestaurantId().getRestaurantId()));
+            restaurant.setName(a.getRestaurantId().getName());
         }
-
         return new Admin(
-                rs.getString("id"),
-                rs.getString("name"),
-                rs.getInt("age"),
-                rs.getString("phone_number"),
-                rs.getString("email"),
-                rs.getString("password"),
+                String.valueOf(a.getId()),
+                a.getName(),
+                a.getAge(),
+                a.getPhoneNumber(),
+                a.getEmail(),
+                a.getPassword(),
                 restaurant
         );
     }

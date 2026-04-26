@@ -1,17 +1,17 @@
-package javaproject1.BLL.Service.abstraction;
+// package javaproject1.BLL.Service.abstraction;
 
-import javaproject1.DAL.Entity.Person;
-import java.util.List;
+// import javaproject1.DAL.Entity.Person;
+// import java.util.List;
 
-public interface PersonServiceAbs {
+// public interface PersonServiceAbs {
 
-    void addPerson(Person person);
+//     void addPerson(Person person);
 
-    Person getPersonById(int id);
+//     Person getPersonById(int id);
 
-    void updatePerson(Person person);
+//     void updatePerson(Person person);
 
-    void deletePerson(int id);
+//     void deletePerson(int id);
 
-    List<Person> getAllPersons();
-}
+//     List<Person> getAllPersons();
+// }

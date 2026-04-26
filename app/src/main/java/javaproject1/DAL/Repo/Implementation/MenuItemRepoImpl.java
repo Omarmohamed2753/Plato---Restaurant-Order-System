@@ -1,10 +1,11 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Repo.abstraction.IMenuItemRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,165 +13,105 @@ public class MenuItemRepoImpl implements IMenuItemRepo {
 
     @Override
     public void addMenuItem(MenuItem item) {
-        String sql = "INSERT INTO menu_items (name, price, description, category, image_path, menu_id) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, item.getName());
-            stmt.setDouble(2, item.getPrice());
-            stmt.setString(3, item.getDescription());
-            stmt.setString(4, item.getCategory());
-            stmt.setString(5, item.getImagePath());
-            
-            // Link to menu if available
-            if (item.getItemId() != null && !item.getItemId().isEmpty()) {
-                stmt.setString(6, item.getItemId()); // Temporarily using itemId as menu_id
-            } else {
-                stmt.setNull(6, Types.VARCHAR);
-            }
+        javaproject1.plato.MenuItems mi = new javaproject1.plato.MenuItems();
+        mi.setName(item.getName());
+        mi.setPrice(BigDecimal.valueOf(item.getPrice()));
+        mi.setDescription(item.getDescription());
+        mi.setCategory(item.getCategory());
+        mi.setImagePath(item.getImagePath());
 
-            stmt.executeUpdate();
-            
-            // Get the generated ID
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    item.setItemId(rs.getString(1));
-                }
-            }
-
-            System.out.println("MenuItem added successfully with ID: " + item.getItemId());
-
-        } catch (SQLException e) {
-            System.err.println("Error adding menu item: " + e.getMessage());
-            e.printStackTrace();
-        }
+        em.persist(mi);
+        em.getTransaction().commit();
+        item.setItemId(String.valueOf(mi.getId()));
+        em.close();
+        System.out.println("MenuItem added with ID: " + item.getItemId());
     }
-    
-    @Override
+
     public void addMenuItemWithMenuId(MenuItem item, String menuId) {
-        String sql = "INSERT INTO menu_items (name, price, description, category, image_path, menu_id) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, item.getName());
-            stmt.setDouble(2, item.getPrice());
-            stmt.setString(3, item.getDescription());
-            stmt.setString(4, item.getCategory());
-            stmt.setString(5, item.getImagePath());
-            stmt.setString(6, menuId);
+        javaproject1.plato.Menu menu = em.find(javaproject1.plato.Menu.class, menuId);
 
-            stmt.executeUpdate();
-            
-            // Get the generated ID
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    item.setItemId(rs.getString(1));
-                }
-            }
+        javaproject1.plato.MenuItems mi = new javaproject1.plato.MenuItems();
+        mi.setName(item.getName());
+        mi.setPrice(BigDecimal.valueOf(item.getPrice()));
+        mi.setDescription(item.getDescription());
+        mi.setCategory(item.getCategory());
+        mi.setImagePath(item.getImagePath());
+        mi.setMenuId(menu);
 
-            System.out.println("MenuItem added successfully with ID: " + item.getItemId() + " to menu: " + menuId);
-
-        } catch (SQLException e) {
-            System.err.println("Error adding menu item: " + e.getMessage());
-            e.printStackTrace();
-        }
+        em.persist(mi);
+        em.getTransaction().commit();
+        item.setItemId(String.valueOf(mi.getId()));
+        em.close();
+        System.out.println("MenuItem added with ID: " + item.getItemId() + " to menu: " + menuId);
     }
 
     @Override
     public MenuItem getMenuItemById(int id) {
-        String sql = "SELECT * FROM menu_items WHERE id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return extractMenuItemFromResultSet(rs);
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching menu item: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.MenuItems mi = em.find(javaproject1.plato.MenuItems.class, id);
+        em.close();
+        return mi == null ? null : mapToDomain(mi);
     }
 
     @Override
     public void updateMenuItem(MenuItem item) {
-        String sql = "UPDATE menu_items SET name=?, price=?, description=?, category=?, image_path=? WHERE id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-            stmt.setString(1, item.getName());
-            stmt.setDouble(2, item.getPrice());
-            stmt.setString(3, item.getDescription());
-            stmt.setString(4, item.getCategory());
-            stmt.setString(5, item.getImagePath());
-            stmt.setString(6, item.getItemId());
-
-            int rows = stmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("MenuItem updated successfully.");
-            } else {
-                System.out.println("No MenuItem found with ID: " + item.getItemId());
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error updating menu item: " + e.getMessage());
-            e.printStackTrace();
+        javaproject1.plato.MenuItems mi = em.find(
+                javaproject1.plato.MenuItems.class, Integer.parseInt(item.getItemId()));
+        if (mi != null) {
+            mi.setName(item.getName());
+            mi.setPrice(BigDecimal.valueOf(item.getPrice()));
+            mi.setDescription(item.getDescription());
+            mi.setCategory(item.getCategory());
+            mi.setImagePath(item.getImagePath());
+            em.merge(mi);
+            System.out.println("MenuItem updated: " + item.getItemId());
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteMenuItem(int id) {
-        String sql = "DELETE FROM menu_items WHERE id=?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            int rows = stmt.executeUpdate();
-
-            if (rows > 0) {
-                System.out.println("MenuItem deleted successfully.");
-            } else {
-                System.out.println("No MenuItem found with ID: " + id);
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error deleting menu item: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.MenuItems mi = em.find(javaproject1.plato.MenuItems.class, id);
+        if (mi != null) em.remove(mi);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("MenuItem deleted with ID: " + id);
     }
 
     @Override
     public List<MenuItem> getAllMenuItems() {
-        List<MenuItem> items = new ArrayList<>();
-        String sql = "SELECT * FROM menu_items";
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.MenuItems> jpaList = em
+                .createQuery("SELECT m FROM MenuItems m", javaproject1.plato.MenuItems.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                items.add(extractMenuItemFromResultSet(rs));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching menu items: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return items;
+        List<MenuItem> result = new ArrayList<>();
+        for (javaproject1.plato.MenuItems mi : jpaList) result.add(mapToDomain(mi));
+        return result;
     }
-    
-    private MenuItem extractMenuItemFromResultSet(ResultSet rs) throws SQLException {
-        MenuItem item = new MenuItem();
-        item.setItemId(rs.getString("id"));
-        item.setName(rs.getString("name"));
-        item.setPrice(rs.getDouble("price"));
-        item.setDescription(rs.getString("description"));
-        item.setCategory(rs.getString("category"));
-        item.setImagePath(rs.getString("image_path"));
-        return item;
+
+    private MenuItem mapToDomain(javaproject1.plato.MenuItems mi) {
+        MenuItem domain = new MenuItem();
+        domain.setItemId(String.valueOf(mi.getId()));
+        domain.setName(mi.getName());
+        domain.setPrice(mi.getPrice() != null ? mi.getPrice().doubleValue() : 0.0);
+        domain.setDescription(mi.getDescription());
+        domain.setCategory(mi.getCategory());
+        domain.setImagePath(mi.getImagePath());
+        return domain;
     }
 }

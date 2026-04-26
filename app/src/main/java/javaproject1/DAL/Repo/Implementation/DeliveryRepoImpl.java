@@ -3,9 +3,9 @@ package javaproject1.DAL.Repo.Implementation;
 import javaproject1.DAL.Entity.Delivery;
 import javaproject1.DAL.Entity.Employee;
 import javaproject1.DAL.Repo.abstraction.IDeliveryRepo;
-import javaproject1.DAL.DataBase.DBConnection;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,123 +13,90 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
 
     @Override
     public void addDelivery(Delivery delivery) {
-        String sql = "INSERT INTO delivery (delivery_id, delivery_person_id, status, estimated_delivery_time) VALUES (?, ?, ?, ?)";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        javaproject1.plato.Delivery d = new javaproject1.plato.Delivery();
+        d.setDeliveryId(delivery.getDeliveryId());
+        d.setStatus(delivery.getStatus());
 
-            stmt.setString(1, delivery.getDeliveryId());
-            if (delivery.getDeliveryPerson() != null) {
-                stmt.setString(2, delivery.getDeliveryPerson().getId());
-            } else {
-                stmt.setNull(2, Types.INTEGER);
-            }
-            stmt.setString(3, delivery.getStatus());
-            if (delivery.getEstimatedDeliveryTime() != null) {
-                stmt.setTimestamp(4, new Timestamp(delivery.getEstimatedDeliveryTime().getTime()));
-            } else {
-                stmt.setNull(4, Types.TIMESTAMP);
-            }
-
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (delivery.getDeliveryPerson() != null && delivery.getDeliveryPerson().getId() != null) {
+            d.setDeliveryPersonId(Integer.parseInt(delivery.getDeliveryPerson().getId()));
         }
+        if (delivery.getEstimatedDeliveryTime() != null) {
+            d.setEstimatedDeliveryTime(delivery.getEstimatedDeliveryTime());
+        }
+
+        em.persist(d);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public Delivery getDeliveryById(int id) {
-        String sql = "SELECT * FROM delivery WHERE delivery_id = ?";
-        Delivery delivery = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                delivery = mapToDelivery(rs);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return delivery;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Delivery d = em.find(javaproject1.plato.Delivery.class,
+                String.valueOf(id));
+        em.close();
+        return d == null ? null : mapToDomain(d);
     }
 
     @Override
     public void updateDelivery(Delivery delivery) {
-        String sql = "UPDATE delivery SET delivery_person_id = ?, status = ?, estimated_delivery_time = ? WHERE delivery_id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        javaproject1.plato.Delivery d = em.find(
+                javaproject1.plato.Delivery.class, delivery.getDeliveryId());
+        if (d != null) {
+            d.setStatus(delivery.getStatus());
             if (delivery.getDeliveryPerson() != null) {
-                stmt.setString(1, delivery.getDeliveryPerson().getId());
-            } else {
-                stmt.setNull(1, Types.INTEGER);
+                d.setDeliveryPersonId(Integer.parseInt(delivery.getDeliveryPerson().getId()));
             }
-            stmt.setString(2, delivery.getStatus());
             if (delivery.getEstimatedDeliveryTime() != null) {
-                stmt.setTimestamp(3, new Timestamp(delivery.getEstimatedDeliveryTime().getTime()));
-            } else {
-                stmt.setNull(3, Types.TIMESTAMP);
+                d.setEstimatedDeliveryTime(delivery.getEstimatedDeliveryTime());
             }
-            stmt.setString(4, delivery.getDeliveryId());
-
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+            em.merge(d);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteDelivery(int id) {
-        String sql = "DELETE FROM delivery WHERE delivery_id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setLong(1, id);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Delivery d = em.find(javaproject1.plato.Delivery.class,
+                String.valueOf(id));
+        if (d != null) em.remove(d);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public List<Delivery> getAllDeliveries() {
-        String sql = "SELECT * FROM delivery";
-        List<Delivery> deliveries = new ArrayList<>();
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Delivery> jpaList = em
+                .createQuery("SELECT d FROM Delivery d", javaproject1.plato.Delivery.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                deliveries.add(mapToDelivery(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return deliveries;
+        List<Delivery> result = new ArrayList<>();
+        for (javaproject1.plato.Delivery d : jpaList) result.add(mapToDomain(d));
+        return result;
     }
-    // Helper to map ResultSet to Delivery object
-    private Delivery mapToDelivery(ResultSet rs) throws SQLException {
-        String deliveryId = rs.getString("delivery_id");
-        int deliveryPersonId = rs.getInt("delivery_person_id");
-        Employee employee = null;
-        if (deliveryPersonId > 0) {
-            employee = new Employee();
-            employee.setId(String.valueOf(deliveryPersonId));
+
+    private Delivery mapToDomain(javaproject1.plato.Delivery d) {
+        Delivery domain = new Delivery(d.getDeliveryId());
+        domain.setStatus(d.getStatus());
+        domain.setEstimatedDeliveryTime(d.getEstimatedDeliveryTime());
+
+        if (d.getDeliveryPersonId() != null) {
+            Employee emp = new Employee();
+            emp.setId(String.valueOf(d.getDeliveryPersonId()));
+            domain.setDeliveryPerson(emp);
         }
-        return new Delivery(deliveryId.toString());
+        return domain;
     }
 }

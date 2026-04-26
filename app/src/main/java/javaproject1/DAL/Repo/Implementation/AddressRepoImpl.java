@@ -1,10 +1,10 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Address;
 import javaproject1.DAL.Repo.abstraction.IAddressRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,108 +12,76 @@ public class AddressRepoImpl implements IAddressRepo {
 
     @Override
     public void addAddress(Address address) {
-        String sql = "INSERT INTO address (street, city, building_number) VALUES (?, ?, ?)";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        javaproject1.plato.Address a = new javaproject1.plato.Address();
+        a.setStreet(address.getStreet());
+        a.setCity(address.getCity());
+        a.setBuildingNumber(address.getBuildingNumber());
 
-            stmt.setString(1, address.getStreet());
-            stmt.setString(2, address.getCity());
-            stmt.setInt(3, address.getBuildingNumber());
-            stmt.executeUpdate();
-
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    address.setId(rs.getString(1));
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error adding address: " + e.getMessage());
-        }
+        em.persist(a);
+        em.getTransaction().commit();
+        address.setId(String.valueOf(a.getId()));
+        em.close();
+        System.out.println("Address added with ID: " + address.getId());
     }
 
     @Override
     public Address getAddressById(int id) {
-        String sql = "SELECT * FROM address WHERE id = ?";
-        Address address = null;
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    address = extractAddressFromResultSet(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching address by ID: " + e.getMessage());
-        }
-        return address;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Address a = em.find(javaproject1.plato.Address.class, id);
+        em.close();
+        return a == null ? null : mapToDomain(a);
     }
 
     @Override
     public void updateAddress(Address address) {
-        String sql = "UPDATE address SET street = ?, city = ?, building_number = ? WHERE id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, address.getStreet());
-            stmt.setString(2, address.getCity());
-            stmt.setInt(3, address.getBuildingNumber());
-            stmt.setString(4, address.getId());
-
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Error updating address: " + e.getMessage());
+        javaproject1.plato.Address a = em.find(
+                javaproject1.plato.Address.class, Integer.parseInt(address.getId()));
+        if (a != null) {
+            a.setStreet(address.getStreet());
+            a.setCity(address.getCity());
+            a.setBuildingNumber(address.getBuildingNumber());
+            em.merge(a);
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteAddress(int id) {
-        String sql = "DELETE FROM address WHERE id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            System.err.println("Error deleting address: " + e.getMessage());
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Address a = em.find(javaproject1.plato.Address.class, id);
+        if (a != null) em.remove(a);
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public List<Address> getAllAddresses() {
-        List<Address> addresses = new ArrayList<>();
-        String sql = "SELECT * FROM address";
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Address> jpaList = em
+                .createQuery("SELECT a FROM Address a", javaproject1.plato.Address.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                addresses.add(extractAddressFromResultSet(rs));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching addresses: " + e.getMessage());
-        }
-        return addresses;
+        List<Address> result = new ArrayList<>();
+        for (javaproject1.plato.Address a : jpaList) result.add(mapToDomain(a));
+        return result;
     }
 
-    // Helper method to convert ResultSet to Address
-    private Address extractAddressFromResultSet(ResultSet rs) throws SQLException {
-        Address address = new Address();
-        address.setId(rs.getString("id"));
-        address.setStreet(rs.getString("street"));
-        address.setCity(rs.getString("city"));
-        address.setBuildingNumber(rs.getInt("building_number"));
-        return address;
+    private Address mapToDomain(javaproject1.plato.Address a) {
+        Address domain = new Address();
+        domain.setId(String.valueOf(a.getId()));
+        domain.setStreet(a.getStreet() != null ? a.getStreet() : "");
+        domain.setCity(a.getCity() != null ? a.getCity() : "");
+        domain.setBuildingNumber(a.getBuildingNumber());
+        return domain;
     }
 }

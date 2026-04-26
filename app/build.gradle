@@ -20,7 +20,13 @@ dependencies {
     // JUnit Jupiter for testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    
+    // EclipseLink (JPA implementation)
+    implementation 'org.eclipse.persistence:eclipselink:2.7.12'
+
+    // JPA API
+    implementation 'javax.persistence:javax.persistence-api:2.2'
+    // Fix for javax.xml.bind (removed from Java 11+)
+    implementation 'javax.xml.bind:jaxb-api:2.3.1'
     // Guava
     implementation 'com.google.guava:guava:32.1.3-jre'
 }

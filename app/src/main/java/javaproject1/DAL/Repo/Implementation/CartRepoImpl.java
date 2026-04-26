@@ -1,212 +1,128 @@
 package javaproject1.DAL.Repo.Implementation;
 
-import javaproject1.DAL.DataBase.DBConnection;
 import javaproject1.DAL.Entity.Cart;
 import javaproject1.DAL.Entity.CartItem;
 import javaproject1.DAL.Entity.MenuItem;
 import javaproject1.DAL.Repo.abstraction.ICartRepo;
+import javaproject1.plato.JPAUtil;
 
-import java.sql.*;
+import javax.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class CartRepoImpl implements ICartRepo {
 
     @Override
     public void addCart(Cart cart) {
-        // First, check if cart already exists for this user
-        String checkSql = "SELECT cart_id FROM cart WHERE user_id = ?";
-        String insertSql = "INSERT INTO cart (user_id) VALUES (?)";
-        
-        try (Connection conn = DBConnection.getConnection()) {
-            // Check if cart exists
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setInt(1, cart.getCartId()); // Assuming cartId is temporarily storing userId
-                ResultSet rs = checkStmt.executeQuery();
-                
-                if (rs.next()) {
-                    // Cart already exists, just set the ID
-                    cart.setCartId(rs.getInt("cart_id"));
-                    System.out.println("Cart already exists with ID: " + cart.getCartId());
-                    return;
-                }
-            }
-            
-            // Create new cart
-            try (PreparedStatement stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setInt(1, cart.getCartId()); // userId
-                stmt.executeUpdate();
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        int cartId = rs.getInt(1);
-                        cart.setCartId(cartId);
-                        System.out.println("New cart created with ID: " + cartId);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error adding cart: " + e.getMessage());
-            e.printStackTrace();
-        }
+        javaproject1.plato.Cart c = new javaproject1.plato.Cart();
+        em.persist(c);
+        em.getTransaction().commit();
+        cart.setCartId(c.getCartId());
+        em.close();
+        System.out.println("Cart created with ID: " + cart.getCartId());
     }
 
     @Override
     public Cart getCartById(int id) {
-        Cart cart = new Cart();
-        cart.setCartId(id);
-        
-        String sql = "SELECT ci.*, mi.id as menu_item_id, mi.name, mi.price, mi.description, mi.category, mi.image_path " +
-                     "FROM cart_item ci " +
-                     "JOIN menu_items mi ON ci.menu_item_id = mi.id " +
-                     "WHERE ci.cart_id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                List<CartItem> items = new ArrayList<>();
-                while (rs.next()) {
-                    CartItem item = new CartItem();
-                    item.setCartItemID(rs.getInt("cart_item_id"));
-                    
-                    MenuItem menuItem = new MenuItem();
-                    menuItem.setItemId(rs.getString("menu_item_id"));
-                    menuItem.setName(rs.getString("name"));
-                    menuItem.setPrice(rs.getDouble("price"));
-                    menuItem.setDescription(rs.getString("description"));
-                    menuItem.setCategory(rs.getString("category"));
-                    menuItem.setImagePath(rs.getString("image_path"));
-                    item.setMenuItem(menuItem);
-                    
-                    item.setQuantity(rs.getInt("quantity"));
-                    item.setSubPrice(rs.getDouble("sub_price"));
-
-                    items.add(item);
-                }
-                cart.setItems(items);
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error getting cart by ID: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return cart;
+        EntityManager em = JPAUtil.getEntityManager();
+        javaproject1.plato.Cart c = em.find(javaproject1.plato.Cart.class, id);
+        em.close();
+        return c == null ? new Cart() : mapToDomain(c);
     }
 
     @Override
     public void updateCart(Cart cart) {
-        // Update existing items
-        String updateSql = "UPDATE cart_item SET quantity = ?, sub_price = ? WHERE cart_item_id = ?";
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(updateSql)) {
-
-            for (CartItem item : cart.getItems()) {
-                if (item.getCartItemID() > 0) { // Only update existing items
-                    stmt.setInt(1, item.getQuantity());
-                    stmt.setDouble(2, item.getSubPrice());
-                    stmt.setInt(3, item.getCartItemID());
-                    stmt.addBatch();
+        for (CartItem item : cart.getItems()) {
+            if (item.getCartItemID() > 0) {
+                javaproject1.plato.CartItem ci = em.find(
+                        javaproject1.plato.CartItem.class, item.getCartItemID());
+                if (ci != null) {
+                    ci.setQuantity(item.getQuantity());
+                    ci.setSubPrice(java.math.BigDecimal.valueOf(item.getSubPrice()));
+                    em.merge(ci);
                 }
             }
-            stmt.executeBatch();
-            System.out.println("Cart updated with ID: " + cart.getCartId());
-
-        } catch (SQLException e) {
-            System.err.println("Error updating cart: " + e.getMessage());
-            e.printStackTrace();
         }
+
+        em.getTransaction().commit();
+        em.close();
     }
 
     @Override
     public void deleteCart(int id) {
-        String deleteItemsSql = "DELETE FROM cart_item WHERE cart_id = ?";
-        String deleteCartSql = "DELETE FROM cart WHERE cart_id = ?";
-
-        try (Connection conn = DBConnection.getConnection()) {
-            // First delete all items
-            try (PreparedStatement stmt = conn.prepareStatement(deleteItemsSql)) {
-                stmt.setInt(1, id);
-                stmt.executeUpdate();
-            }
-            
-            // Then delete cart
-            try (PreparedStatement stmt = conn.prepareStatement(deleteCartSql)) {
-                stmt.setInt(1, id);
-                stmt.executeUpdate();
-            }
-            
-            System.out.println("Cart deleted with ID: " + id);
-
-        } catch (SQLException e) {
-            System.err.println("Error deleting cart: " + e.getMessage());
-            e.printStackTrace();
-        }
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        javaproject1.plato.Cart c = em.find(javaproject1.plato.Cart.class, id);
+        if (c != null) em.remove(c);
+        em.getTransaction().commit();
+        em.close();
+        System.out.println("Cart deleted with ID: " + id);
     }
 
     @Override
     public List<Cart> getAllCarts() {
-        List<Cart> carts = new ArrayList<>();
-        String sql = "SELECT DISTINCT cart_id FROM cart";
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Cart> jpaList = em
+                .createQuery("SELECT c FROM Cart c", javaproject1.plato.Cart.class)
+                .getResultList();
+        em.close();
 
-        try (Connection conn = DBConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                int cartId = rs.getInt("cart_id");
-                carts.add(getCartById(cartId));
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error fetching all carts: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return carts;
+        List<Cart> result = new ArrayList<>();
+        for (javaproject1.plato.Cart c : jpaList) result.add(mapToDomain(c));
+        return result;
     }
-    
-    /**
-     * Get or create cart for a user
-     */
-    public Cart getOrCreateCartForUser(int userId) {
-        String checkSql = "SELECT cart_id FROM cart WHERE user_id = ?";
-        String insertSql = "INSERT INTO cart (user_id) VALUES (?)";
-        
-        try (Connection conn = DBConnection.getConnection()) {
-            // Check if cart exists
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setInt(1, userId);
-                ResultSet rs = checkStmt.executeQuery();
-                
-                if (rs.next()) {
-                    int cartId = rs.getInt("cart_id");
-                    return getCartById(cartId);
-                }
-            }
-            
-            // Create new cart
-            try (PreparedStatement stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setInt(1, userId);
-                stmt.executeUpdate();
 
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        int cartId = rs.getInt(1);
-                        Cart cart = new Cart();
-                        cart.setCartId(cartId);
-                        return cart;
-                    }
+    public Cart getOrCreateCartForUser(int userId) {
+        EntityManager em = JPAUtil.getEntityManager();
+        List<javaproject1.plato.Cart> existing = em
+                .createQuery("SELECT c FROM Cart c WHERE c.userId.userId = :uid",
+                        javaproject1.plato.Cart.class)
+                .setParameter("uid", userId)
+                .getResultList();
+        em.close();
+
+        if (!existing.isEmpty()) return mapToDomain(existing.get(0));
+
+        // Create new cart
+        Cart newCart = new Cart();
+        addCart(newCart);
+        return newCart;
+    }
+
+    private Cart mapToDomain(javaproject1.plato.Cart c) {
+        Cart domain = new Cart();
+        domain.setCartId(c.getCartId());
+
+        List<CartItem> items = new ArrayList<>();
+        if (c.getCartItemSet() != null) {
+            for (javaproject1.plato.CartItem ci : c.getCartItemSet()) {
+                CartItem item = new CartItem();
+                item.setCartItemID(ci.getCartItemId());
+                item.setQuantity(ci.getQuantity());
+                item.setSubPrice(ci.getSubPrice() != null ? ci.getSubPrice().doubleValue() : 0.0);
+
+                if (ci.getMenuItemId() != null) {
+                    MenuItem mi = new MenuItem();
+                    mi.setItemId(String.valueOf(ci.getMenuItemId().getId()));
+                    mi.setName(ci.getMenuItemId().getName());
+                    mi.setPrice(ci.getMenuItemId().getPrice() != null ?
+                            ci.getMenuItemId().getPrice().doubleValue() : 0.0);
+                    mi.setDescription(ci.getMenuItemId().getDescription());
+                    mi.setCategory(ci.getMenuItemId().getCategory());
+                    mi.setImagePath(ci.getMenuItemId().getImagePath());
+                    item.setMenuItem(mi);
                 }
+                items.add(item);
             }
-        } catch (SQLException e) {
-            System.err.println("Error getting/creating cart for user: " + e.getMessage());
-            e.printStackTrace();
         }
-        
-        return new Cart(); // Return empty cart as fallback
+        domain.setItems(items);
+        return domain;
     }
 }
