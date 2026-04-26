@@ -50,7 +50,7 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
                 javaproject1.plato.Delivery.class, delivery.getDeliveryId());
         if (d != null) {
             d.setStatus(delivery.getStatus());
-            if (delivery.getDeliveryPerson() != null) {
+            if (delivery.getDeliveryPerson() != null && delivery.getDeliveryPerson().getId() != null) {
                 d.setDeliveryPersonId(Integer.parseInt(delivery.getDeliveryPerson().getId()));
             }
             if (delivery.getEstimatedDeliveryTime() != null) {
@@ -87,15 +87,39 @@ public class DeliveryRepoImpl implements IDeliveryRepo {
         return result;
     }
 
+    /**
+     * Loads the full Employee from the employees table when delivery_person_id is set.
+     * This fixes the "Not Assigned" display bug caused by only storing the ID stub.
+     */
     private Delivery mapToDomain(javaproject1.plato.Delivery d) {
         Delivery domain = new Delivery(d.getDeliveryId());
         domain.setStatus(d.getStatus());
         domain.setEstimatedDeliveryTime(d.getEstimatedDeliveryTime());
 
         if (d.getDeliveryPersonId() != null) {
-            Employee emp = new Employee();
-            emp.setId(String.valueOf(d.getDeliveryPersonId()));
-            domain.setDeliveryPerson(emp);
+            // Load the full employee record from DB so name/phone are available
+            EntityManager em = JPAUtil.getEntityManager();
+            try {
+                javaproject1.plato.Employees empJpa =
+                        em.find(javaproject1.plato.Employees.class, d.getDeliveryPersonId());
+                if (empJpa != null) {
+                    Employee emp = new Employee();
+                    emp.setId(String.valueOf(empJpa.getId()));
+                    emp.setName(empJpa.getName() != null ? empJpa.getName() : "Unknown");
+                    emp.setRole(empJpa.getRole() != null ? empJpa.getRole() : "Delivery");
+                    emp.setPhoneNumber(empJpa.getPhoneNumber() != null ? empJpa.getPhoneNumber() : "");
+                    emp.setExperiencesYear(empJpa.getExperiencesYear() != null ? empJpa.getExperiencesYear() : 0);
+                    domain.setDeliveryPerson(emp);
+                } else {
+                    // Fallback: at least store the ID so it's not null
+                    Employee emp = new Employee();
+                    emp.setId(String.valueOf(d.getDeliveryPersonId()));
+                    emp.setName("Employee #" + d.getDeliveryPersonId());
+                    domain.setDeliveryPerson(emp);
+                }
+            } finally {
+                em.close();
+            }
         }
         return domain;
     }

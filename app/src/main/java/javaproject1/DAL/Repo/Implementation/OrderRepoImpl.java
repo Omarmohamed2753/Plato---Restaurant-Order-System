@@ -84,6 +84,14 @@ public class OrderRepoImpl implements IOrderRepo {
             o.setTotalAmount(BigDecimal.valueOf(order.getTotalAmount()));
             o.setStatus(order.getStatus() != null ? order.getStatus().name() : "PENDING");
             o.setOrderDate(order.getOrderDate());
+
+            // Also update the delivery link if it changed
+            if (order.getDelivery() != null && order.getDelivery().getDeliveryId() != null) {
+                javaproject1.plato.Delivery d = em.find(
+                        javaproject1.plato.Delivery.class, order.getDelivery().getDeliveryId());
+                o.setDeliveryId(d);
+            }
+
             em.merge(o);
         }
 
@@ -169,10 +177,35 @@ public class OrderRepoImpl implements IOrderRepo {
             domain.setPayment(p);
         }
 
-        // Delivery
+        // Delivery — FIXED: now loads the full employee from the employees table
         if (o.getDeliveryId() != null) {
-            Delivery d = new Delivery(o.getDeliveryId().getDeliveryId());
-            d.setStatus(o.getDeliveryId().getStatus());
+            javaproject1.plato.Delivery jpaDelivery = o.getDeliveryId();
+            Delivery d = new Delivery(jpaDelivery.getDeliveryId());
+            d.setStatus(jpaDelivery.getStatus());
+            d.setEstimatedDeliveryTime(jpaDelivery.getEstimatedDeliveryTime());
+
+            // Load the full employee if delivery_person_id is set
+            if (jpaDelivery.getDeliveryPersonId() != null) {
+                EntityManager em2 = JPAUtil.getEntityManager();
+                try {
+                    javaproject1.plato.Employees empJpa = em2.find(
+                            javaproject1.plato.Employees.class,
+                            jpaDelivery.getDeliveryPersonId());
+                    if (empJpa != null) {
+                        Employee emp = new Employee();
+                        emp.setId(String.valueOf(empJpa.getId()));
+                        emp.setName(empJpa.getName() != null ? empJpa.getName() : "Unknown");
+                        emp.setRole(empJpa.getRole() != null ? empJpa.getRole() : "Delivery");
+                        emp.setPhoneNumber(empJpa.getPhoneNumber() != null ? empJpa.getPhoneNumber() : "");
+                        emp.setExperiencesYear(empJpa.getExperiencesYear() != null ? empJpa.getExperiencesYear() : 0);
+                        d.setDeliveryPerson(emp);
+                        System.out.println("  Loaded delivery person: " + emp.getName()
+                                + " for order #" + o.getOrderId());
+                    }
+                } finally {
+                    em2.close();
+                }
+            }
             domain.setDelivery(d);
         }
 
