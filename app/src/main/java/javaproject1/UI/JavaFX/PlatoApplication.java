@@ -14,7 +14,10 @@ public class PlatoApplication extends Application {
         primaryStage.setTitle("Plato Restaurant Order System");
         primaryStage.setMinWidth(800);
         primaryStage.setMinHeight(600);
-        
+        primaryStage.setMaximized(true);
+        primaryStage.maximizedProperty().addListener((obs, wasMaximized, isMaximized) -> {
+        if (!isMaximized) primaryStage.setMaximized(true);
+        });
         WelcomeController.show(primaryStage);
         
         primaryStage.show();

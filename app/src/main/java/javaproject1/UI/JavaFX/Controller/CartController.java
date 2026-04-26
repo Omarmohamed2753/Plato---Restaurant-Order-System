@@ -102,7 +102,9 @@ public class CartController {
         }
 
         root.setCenter(contentBox);
-        Scene scene = new Scene(root, 1200, 800);
+        Scene scene = new Scene(root, 
+            stage.getWidth() > 0 ? stage.getWidth() : 1200,
+            stage.getHeight() > 0 ? stage.getHeight() : 750);
         stage.setScene(scene);
     }
 

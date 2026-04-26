@@ -239,7 +239,9 @@ public class CheckoutController {
 
         root.setCenter(scrollPane);
         
-        stage.setScene(new Scene(root, 1000, 700));
+        stage.setScene(new Scene(root, 
+            stage.getWidth() > 0 ? stage.getWidth() : 1200,
+            stage.getHeight() > 0 ? stage.getHeight() : 750));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

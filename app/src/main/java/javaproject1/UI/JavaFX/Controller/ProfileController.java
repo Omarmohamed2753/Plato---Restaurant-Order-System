@@ -66,7 +66,9 @@ public class ProfileController {
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
         root.setCenter(scrollPane);
-        stage.setScene(new Scene(root, 1200, 800));
+        stage.setScene(new Scene(root, 
+            stage.getWidth() > 0 ? stage.getWidth() : 1200,
+            stage.getHeight() > 0 ? stage.getHeight() : 750));
     }
 
     // ── Profile card ──────────────────────────────────────────────────────────
