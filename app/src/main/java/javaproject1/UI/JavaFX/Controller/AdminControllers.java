@@ -574,8 +574,8 @@ public class AdminControllers {
                         priceField.clear();
                         descField.clear();
                         catField.clear();
-
-                        loadMenuData(table, admin);
+                        javafx.application.Platform.runLater(() -> loadMenuData(table, admin));
+                        // loadMenuData(table, admin);
                         showStyledAlert("Menu item added successfully!", Alert.AlertType.INFORMATION);
                     }
                 } catch (NumberFormatException ex) {
@@ -593,27 +593,59 @@ public class AdminControllers {
         }
 
         private static void loadMenuData(TableView<MenuItem> table, Admin admin) {
-            if (admin.getRestaurant() != null) {
-                try {
-                    Restaurant freshRestaurant = restaurantService.getRestaurantById(
-                        Integer.parseInt(admin.getRestaurant().getRestaurantId())
-                    );
-
-                    if (freshRestaurant != null) {
-                        admin.setRestaurant(freshRestaurant);
-                        Menu menu = freshRestaurant.getMenu();
-
-                        if (menu != null && menu.getItems() != null) {
-                            table.setItems(FXCollections.observableArrayList(menu.getItems()));
-                        } else {
-                            table.setItems(FXCollections.observableArrayList());
-                        }
-                        table.refresh();
-                    }
-                } catch (Exception e) {
-                    System.err.println("Error loading menu data: " + e.getMessage());
-                    e.printStackTrace();
+            if (admin.getRestaurant() == null) return;
+            try {
+                EntityManager em = JPAUtil.getEntityManager();
+        
+                // Find the menu for this restaurant
+                List<javaproject1.plato.Menu> menus = em
+                    .createQuery(
+                        "SELECT m FROM Menu m WHERE m.restaurantId.restaurantId = :rid",
+                        javaproject1.plato.Menu.class)
+                    .setParameter("rid", Integer.parseInt(admin.getRestaurant().getRestaurantId()))
+                    .setHint("eclipselink.refresh", "true")  // force fresh from DB
+                    .getResultList();
+        
+                if (menus.isEmpty()) {
+                    table.setItems(FXCollections.observableArrayList());
+                    table.refresh();
+                    em.close();
+                    return;
                 }
+        
+                javaproject1.plato.Menu jpaMenu = menus.get(0);
+                em.refresh(jpaMenu); // evict cache for this menu
+        
+                // Load all items for this menu fresh from DB
+                List<javaproject1.plato.MenuItems> jpaItems = em
+                    .createQuery(
+                        "SELECT mi FROM MenuItems mi WHERE mi.menuId.menuId = :mid",
+                        javaproject1.plato.MenuItems.class)
+                    .setParameter("mid", jpaMenu.getMenuId())
+                    .setHint("eclipselink.refresh", "true")  //force fresh from DB
+                    .getResultList();
+        
+                // Map to domain
+                List<MenuItem> items = new ArrayList<>();
+                for (javaproject1.plato.MenuItems mi : jpaItems) {
+                    MenuItem item = new MenuItem();
+                    item.setItemId(String.valueOf(mi.getId()));
+                    item.setName(mi.getName() != null ? mi.getName() : "");
+                    item.setPrice(mi.getPrice() != null ? mi.getPrice().doubleValue() : 0.0);
+                    item.setDescription(mi.getDescription() != null ? mi.getDescription() : "");
+                    item.setCategory(mi.getCategory() != null ? mi.getCategory() : "");
+                    item.setImagePath(mi.getImagePath() != null ? mi.getImagePath() : "");
+                    items.add(item);
+                }
+        
+                em.close();
+        
+                table.setItems(FXCollections.observableArrayList(items));
+                table.refresh();
+        
+            } catch (Exception e) {
+                System.err.println("Error loading menu data: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -764,13 +796,8 @@ public class AdminControllers {
                 newEmp.setAge(25);
                 newEmp.setPhoneNumber(phone.isEmpty() ? "N/A" : phone);
                 newEmp.setExperiencesYear(0);
-                newEmp.setRestaurant(admin.getRestaurant()); // ← CRITICAL: set before DB insert
-
-                // ── Persist to database (includes restaurant_id) ──────────────
+                newEmp.setRestaurant(admin.getRestaurant()); 
                 employeeService.addEmployee(newEmp);
-                restaurantService.hireEmployee(admin.getRestaurant(), newEmp);
-                    table.getItems().add(newEmp);
-
                 // ── Clear fields ──────────────────────────────────────────────
                 nameField.clear();
                 roleField.clear();

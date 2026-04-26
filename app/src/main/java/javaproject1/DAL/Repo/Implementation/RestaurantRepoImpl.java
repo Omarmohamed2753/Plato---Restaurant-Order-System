@@ -36,6 +36,9 @@ public class RestaurantRepoImpl implements IRestaurantRepo {
     public Restaurant getRestaurantById(int id) {
         EntityManager em = JPAUtil.getEntityManager();
         javaproject1.plato.Restaurants r = em.find(javaproject1.plato.Restaurants.class, id);
+        if (r != null) {
+            em.refresh(r); 
+        }
         em.close();
         return r == null ? null : mapToDomain(r);
     }

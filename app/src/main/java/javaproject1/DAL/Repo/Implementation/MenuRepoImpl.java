@@ -25,8 +25,10 @@ public class MenuRepoImpl implements IMenuRepo {
     @Override
     public Menu getMenuById(int id) {
         EntityManager em = JPAUtil.getEntityManager();
-        javaproject1.plato.Menu m = em.find(
-                javaproject1.plato.Menu.class, String.valueOf(id));
+        javaproject1.plato.Menu m = em.find(javaproject1.plato.Menu.class, String.valueOf(id));
+        if (m != null) {
+            em.refresh(m);
+        }
         em.close();
 
         if (m == null) return null;
